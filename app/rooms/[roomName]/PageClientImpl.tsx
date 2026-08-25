@@ -29,6 +29,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useSetupE2EE } from '@/lib/useSetupE2EE';
 import { useLowCPUOptimizer } from '@/lib/usePerfomanceOptimiser';
+import { MediaDeviceGuard } from '@/lib/MediaDeviceGuard';
 
 const CONN_DETAILS_ENDPOINT =
   process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT ?? '/api/connection-details';
@@ -44,13 +45,14 @@ export function PageClientImpl(props: {
   const [preJoinChoices, setPreJoinChoices] = React.useState<LocalUserChoices | undefined>(
     undefined,
   );
+  const [continueWithoutMedia, setContinueWithoutMedia] = React.useState(false);
   const preJoinDefaults = React.useMemo(() => {
     return {
       username: '',
-      videoEnabled: true,
-      audioEnabled: true,
+      videoEnabled: !continueWithoutMedia,
+      audioEnabled: !continueWithoutMedia,
     };
-  }, []);
+  }, [continueWithoutMedia]);
   const [connectionDetails, setConnectionDetails] = React.useState<ConnectionDetails | undefined>(
     undefined,
   );
@@ -69,15 +71,104 @@ export function PageClientImpl(props: {
   }, []);
   const handlePreJoinError = React.useCallback((e: any) => console.error(e), []);
 
+  const handleContinueWithoutMedia = React.useCallback(() => {
+    setContinueWithoutMedia(true);
+  }, []);
+
+  const joinWithoutMedia = React.useCallback(
+    (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const formData = new FormData(e.currentTarget);
+      const username = String(formData.get('username') || '').trim();
+      handlePreJoinSubmit({
+        username,
+        videoEnabled: false,
+        audioEnabled: false,
+        videoDeviceId: '',
+        audioDeviceId: '',
+      });
+    },
+    [handlePreJoinSubmit],
+  );
+
   return (
     <main data-lk-theme="default" style={{ height: '100%' }}>
       {connectionDetails === undefined || preJoinChoices === undefined ? (
         <div style={{ display: 'grid', placeItems: 'center', height: '100%' }}>
-          <PreJoin
-            defaults={preJoinDefaults}
-            onSubmit={handlePreJoinSubmit}
-            onError={handlePreJoinError}
-          />
+          {continueWithoutMedia ? (
+            <form
+              onSubmit={joinWithoutMedia}
+              style={{
+                width: '100%',
+                maxWidth: '380px',
+                background: 'var(--lk-bg2, #1c1c1c)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '16px',
+                padding: '2rem',
+              }}
+            >
+              <h1
+                style={{
+                  fontSize: '1.25rem',
+                  fontWeight: 600,
+                  margin: '0 0 0.5rem',
+                  color: 'var(--lk-fg, #fff)',
+                  textAlign: 'center',
+                }}
+              >
+                Join without camera/mic
+              </h1>
+              <p
+                style={{
+                  fontSize: '0.9rem',
+                  color: 'rgba(255,255,255,0.7)',
+                  textAlign: 'center',
+                  margin: '0 0 1.25rem',
+                }}
+              >
+                You can watch, share your screen, and chat. Add a camera and mic anytime.
+              </p>
+              <input
+                name="username"
+                required
+                placeholder="Your name"
+                style={{
+                  width: '100%',
+                  padding: '0.7rem 0.9rem',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  background: 'var(--lk-bg, #111)',
+                  color: 'var(--lk-fg, #fff)',
+                  fontSize: '1rem',
+                  marginBottom: '1rem',
+                }}
+              />
+              <button
+                type="submit"
+                style={{
+                  width: '100%',
+                  padding: '0.7rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#0090ff',
+                  color: '#fff',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Join meeting
+              </button>
+            </form>
+          ) : (
+            <MediaDeviceGuard onContinueWithoutMedia={handleContinueWithoutMedia}>
+              <PreJoin
+                defaults={preJoinDefaults}
+                onSubmit={handlePreJoinSubmit}
+                onError={handlePreJoinError}
+              />
+            </MediaDeviceGuard>
+          )}
         </div>
       ) : (
         <VideoConferenceComponent
