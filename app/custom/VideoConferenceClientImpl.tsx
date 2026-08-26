@@ -1,6 +1,6 @@
 'use client';
 
-import { formatChatMessageLinks, RoomContext, VideoConference } from '@livekit/components-react';
+import { formatChatMessageLinks, RoomContext } from '@livekit/components-react';
 import {
   ExternalE2EEKeyProvider,
   LogLevel,
@@ -14,6 +14,7 @@ import { DebugMode } from '@/lib/Debug';
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardShortcuts } from '@/lib/KeyboardShortcuts';
 import { SettingsMenu } from '@/lib/SettingsMenu';
+import { AILinkRoom } from '@/lib/ailink/AILinkRoom';
 import { useSetupE2EE } from '@/lib/useSetupE2EE';
 import { useLowCPUOptimizer } from '@/lib/usePerfomanceOptimiser';
 
@@ -82,10 +83,10 @@ export function VideoConferenceClientImpl(props: {
   useLowCPUOptimizer(room);
 
   return (
-    <div className="lk-room-container">
+    <div className="lk-room-container" style={{ height: '100%' }}>
       <RoomContext.Provider value={room}>
         <KeyboardShortcuts />
-        <VideoConference
+        <AILinkRoom
           chatMessageFormatter={formatChatMessageLinks}
           SettingsComponent={
             process.env.NEXT_PUBLIC_SHOW_SETTINGS_MENU === 'true' ? SettingsMenu : undefined

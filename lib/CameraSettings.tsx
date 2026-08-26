@@ -8,13 +8,11 @@ import {
 } from '@livekit/components-react';
 import { BackgroundBlur, VirtualBackground } from '@livekit/track-processors';
 import { isLocalTrack, LocalTrackPublication, Track } from 'livekit-client';
-import Desk from '../public/background-images/samantha-gades-BlIhVfXbi9s-unsplash.jpg';
-import Nature from '../public/background-images/ali-kazal-tbw_KQE3Cbg-unsplash.jpg';
 
-// Background image paths
+// Background image paths (served from /public)
 const BACKGROUND_IMAGES = [
-  { name: 'Desk', path: Desk },
-  { name: 'Nature', path: Nature },
+  { name: 'Desk', path: '/background-images/samantha-gades-BlIhVfXbi9s-unsplash.jpg' },
+  { name: 'Nature', path: '/background-images/ali-kazal-tbw_KQE3Cbg-unsplash.jpg' },
 ];
 
 // Background options
@@ -90,7 +88,7 @@ export function CameraSettings() {
             className="lk-button"
             aria-pressed={backgroundType === 'none'}
             style={{
-              border: backgroundType === 'none' ? '2px solid #0090ff' : '1px solid #d1d1d1',
+              border: backgroundType === 'none' ? '2px solid #5b5bd6' : '1px solid #d1d1d1',
               minWidth: '80px',
             }}
           >
@@ -102,7 +100,7 @@ export function CameraSettings() {
             className="lk-button"
             aria-pressed={backgroundType === 'blur'}
             style={{
-              border: backgroundType === 'blur' ? '2px solid #0090ff' : '1px solid #d1d1d1',
+              border: backgroundType === 'blur' ? '2px solid #5b5bd6' : '1px solid #d1d1d1',
               minWidth: '80px',
               backgroundColor: '#f0f0f0',
               position: 'relative',
@@ -138,21 +136,21 @@ export function CameraSettings() {
 
           {BACKGROUND_IMAGES.map((image) => (
             <button
-              key={image.path.src}
-              onClick={() => selectBackground('image', image.path.src)}
+              key={image.path}
+              onClick={() => selectBackground('image', image.path)}
               className="lk-button"
               aria-pressed={
-                backgroundType === 'image' && virtualBackgroundImagePath === image.path.src
+                backgroundType === 'image' && virtualBackgroundImagePath === image.path
               }
               style={{
-                backgroundImage: `url(${image.path.src})`,
+                backgroundImage: `url(${image.path})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 width: '80px',
                 height: '60px',
                 border:
-                  backgroundType === 'image' && virtualBackgroundImagePath === image.path.src
-                    ? '2px solid #0090ff'
+                  backgroundType === 'image' && virtualBackgroundImagePath === image.path
+                    ? '2px solid #5b5bd6'
                     : '1px solid #d1d1d1',
               }}
             >

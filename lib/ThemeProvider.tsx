@@ -4,8 +4,6 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 
 export type Theme = 'dark' | 'light';
 
-const STORAGE_KEY = 'livekit-meet-theme';
-
 type ThemeContextValue = {
   theme: Theme;
   setTheme: (theme: Theme) => void;
@@ -13,36 +11,20 @@ type ThemeContextValue = {
 };
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'dark',
+  theme: 'light',
   setTheme: () => {},
   toggleTheme: () => {},
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark');
+  const [theme] = useState<Theme>('light');
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === 'light' || stored === 'dark') {
-      setThemeState(stored);
-    }
+    document.documentElement.setAttribute('data-lk-theme', 'light');
   }, []);
 
-  useEffect(() => {
-    // LiveKit ships its dark theme under the `default` name; `light` is our custom theme.
-    document.documentElement.setAttribute('data-lk-theme', theme === 'dark' ? 'default' : 'light');
-    try {
-      window.localStorage.setItem(STORAGE_KEY, theme);
-    } catch {
-      // ignore storage errors (e.g. private mode)
-    }
-  }, [theme]);
-
-  const setTheme = useCallback((next: Theme) => setThemeState(next), []);
-  const toggleTheme = useCallback(
-    () => setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark')),
-    [],
-  );
+  const setTheme = useCallback(() => {}, []);
+  const toggleTheme = useCallback(() => {}, []);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>

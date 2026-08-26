@@ -1,0 +1,1102 @@
+/* ============================================================
+   AI Link — premium AI-native meeting UI
+   Light, minimal, indigo/violet accents. 8px spacing system.
+   ============================================================ */
+
+:root {
+  --ail-bg: #f7f8fb;
+  --ail-surface: #ffffff;
+  --ail-surface-2: #fafafc;
+  --ail-fg: #12142b;
+  --ail-fg-2: #4c5170;
+  --ail-fg-3: #878ca7;
+  --ail-border: rgba(18, 20, 43, 0.09);
+  --ail-border-strong: rgba(18, 20, 43, 0.16);
+  --ail-accent: #5b5bd6;
+  --ail-accent-hover: #4f4fc9;
+  --ail-accent-deep: #4343ad;
+  --ail-violet: #7c5cff;
+  --ail-blue: #3e63dd;
+  --ail-accent-soft: rgba(91, 91, 214, 0.09);
+  --ail-accent-softer: rgba(91, 91, 214, 0.06);
+  --ail-accent-border: rgba(91, 91, 214, 0.28);
+  --ail-danger: #e5484d;
+  --ail-danger-soft: rgba(229, 72, 77, 0.09);
+  --ail-danger-border: rgba(229, 72, 77, 0.32);
+  --ail-success: #17a56b;
+  --ail-success-soft: rgba(23, 165, 107, 0.1);
+  --ail-warning: #cf8500;
+  --ail-warning-soft: rgba(207, 133, 0, 0.12);
+  --ail-tile-bg: #101322;
+  --ail-chip-bg: rgba(13, 15, 30, 0.55);
+  --ail-radius-sm: 8px;
+  --ail-radius-md: 12px;
+  --ail-radius-lg: 16px;
+  --ail-nav-h: 56px;
+  --ail-dock-h: 72px;
+  --ail-shadow-sm: 0 1px 2px rgba(18, 20, 43, 0.06);
+  --ail-shadow-md:
+    0 1px 2px rgba(18, 20, 43, 0.05), 0 12px 32px -12px rgba(18, 20, 43, 0.18);
+  --ail-font:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ---------- base shell ---------- */
+
+.ail-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  position: relative;
+  background-color: var(--ail-bg);
+  background-image:
+    radial-gradient(52rem 22rem at 12% -6%, rgba(124, 92, 252, 0.055), transparent 60%),
+    radial-gradient(48rem 20rem at 88% -8%, rgba(62, 99, 221, 0.05), transparent 60%);
+  font-family: var(--ail-font);
+  color: var(--ail-fg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.ail-root button {
+  font-family: inherit;
+}
+
+.ail-root :focus-visible {
+  outline: 2px solid var(--ail-accent);
+  outline-offset: 2px;
+  border-radius: var(--ail-radius-sm);
+}
+
+/* ---------- shared bits ---------- */
+
+.ail-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  flex: none;
+}
+
+.ail-dot--pulse {
+  animation: ail-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes ail-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+
+@keyframes ail-rec-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.ail-spinner {
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  border: 2px solid var(--ail-border-strong);
+  border-top-color: currentColor;
+  animation: ail-spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes ail-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ail-icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  min-width: 34px;
+  padding: 0 7px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ail-fg-2);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.ail-icon-btn:hover {
+  background: rgba(18, 20, 43, 0.055);
+  color: var(--ail-fg);
+}
+
+.ail-icon-btn--active {
+  background: var(--ail-accent-soft);
+  border-color: var(--ail-accent-border);
+  color: var(--ail-accent);
+}
+
+.ail-count-badge {
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--ail-accent-soft);
+  color: var(--ail-accent);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.ail-v-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--ail-border-strong);
+  margin: 0 4px;
+  flex: none;
+}
+
+.ail-h-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 12px 6px;
+  background: var(--ail-border);
+  flex: none;
+}
+
+/* ---------- top navigation ---------- */
+
+.ail-nav {
+  height: var(--ail-nav-h);
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px 0 20px;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--ail-border);
+  z-index: 30;
+}
+
+.ail-nav-left,
+.ail-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ail-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--ail-radius-sm);
+}
+
+.ail-brand-name {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ail-fg);
+  white-space: nowrap;
+}
+
+.ail-room {
+  position: relative;
+  min-width: 0;
+}
+
+.ail-room-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  max-width: 320px;
+}
+
+.ail-room-trigger:hover {
+  background: rgba(18, 20, 43, 0.055);
+}
+
+.ail-room-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ail-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ail-caret {
+  color: var(--ail-fg-3);
+  flex: none;
+  transition: transform 0.15s ease;
+}
+
+.ail-room-trigger[aria-expanded='true'] .ail-caret {
+  transform: rotate(180deg);
+}
+
+.ail-secure {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--ail-success-soft);
+  color: var(--ail-success);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* room dropdown card */
+
+.ail-room-card {
+  width: 280px;
+}
+
+.ail-room-card-title {
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--ail-fg);
+  padding: 4px 12px 2px;
+}
+
+.ail-room-card-id {
+  font-size: 12px;
+  color: var(--ail-fg-3);
+  padding: 0 12px 10px;
+  word-break: break-all;
+  border-bottom: 1px solid var(--ail-border);
+}
+
+.ail-room-card-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  color: var(--ail-fg-2);
+}
+
+.ail-room-card-row--secure {
+  color: var(--ail-success);
+}
+
+/* ---------- menus ---------- */
+
+.ail-menu {
+  position: relative;
+}
+
+.ail-menu-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  min-width: 200px;
+  background: var(--ail-surface);
+  border: 1px solid var(--ail-border);
+  border-radius: var(--ail-radius-lg);
+  box-shadow: var(--ail-shadow-md);
+  padding: 6px;
+  z-index: 60;
+  animation: ail-pop 0.14s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes ail-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ail-menu-popover--left {
+  left: 0;
+}
+
+.ail-menu-popover--right {
+  right: 0;
+}
+
+.ail-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ail-fg-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background-color 0.13s ease,
+    color 0.13s ease;
+}
+
+.ail-menu-item:hover {
+  background: var(--ail-accent-softer);
+  color: var(--ail-fg);
+}
+
+.ail-menu-item[aria-checked='true'] {
+  color: var(--ail-accent);
+}
+
+.ail-menu-item svg {
+  flex: none;
+}
+
+.ail-check {
+  margin-left: auto;
+}
+
+/* ---------- recording indicators ---------- */
+
+.ail-rec-pill,
+.ail-rec-float {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--ail-surface);
+  border: 1px solid var(--ail-danger-border);
+  box-shadow: var(--ail-shadow-sm);
+}
+
+.ail-rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--ail-danger);
+  animation: ail-rec-blink 1.4s ease-in-out infinite;
+  flex: none;
+}
+
+.ail-rec-label {
+  font-size: 11.5px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  color: var(--ail-danger);
+}
+
+.ail-rec-time {
+  font-size: 12px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  color: var(--ail-fg-2);
+}
+
+.ail-rec-float {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--ail-dock-h) + 16px);
+  transform: translateX(-50%);
+  z-index: 25;
+}
+
+/* ---------- video stage ---------- */
+
+.ail-stage-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding: 16px 20px 10px;
+}
+
+.ail-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  max-width: 1560px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ail-stage-top {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 12;
+  display: flex;
+  gap: 8px;
+}
+
+.ail-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  grid-auto-rows: 1fr;
+}
+
+.ail-focus {
+  flex: 1;
+  min-height: 0;
+}
+
+.ail-filmstrip {
+  flex: none;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.ail-filmstrip .ail-tile {
+  width: 184px;
+  aspect-ratio: 16 / 9;
+  flex: none;
+}
+
+/* tiles */
+
+.ail-tile {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border-radius: var(--ail-radius-lg);
+  overflow: hidden;
+  background: var(--ail-tile-bg);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: var(--ail-shadow-md);
+  isolation: isolate;
+}
+
+.ail-tile--speaking {
+  box-shadow:
+    0 0 0 2px rgba(124, 92, 252, 0.65),
+    0 0 24px -6px rgba(124, 92, 252, 0.45);
+}
+
+.ail-tile-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ail-tile-avatar {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background:
+    radial-gradient(120% 120% at 30% 0%, rgba(124, 92, 252, 0.16), transparent 55%),
+    var(--ail-tile-bg);
+}
+
+.ail-tile-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 500;
+}
+
+.ail-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  user-select: none;
+  background: linear-gradient(135deg, var(--ail-blue) 0%, var(--ail-accent) 45%, var(--ail-violet) 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+/* video overlays */
+
+.ail-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  color: rgba(255, 255, 255, 0.94);
+  background: var(--ail-chip-bg);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+
+.ail-name-pill {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 6;
+  max-width: calc(100% - 64px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ail-mic-badge {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 6;
+  width: 26px;
+  padding: 0;
+  justify-content: center;
+  background: rgba(229, 72, 77, 0.85);
+  color: #fff;
+}
+
+.ail-conn {
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.ail-conn .ail-dot {
+  background: #2bd47f;
+}
+
+.ail-conn--warn .ail-dot {
+  background: #f5b83d;
+}
+
+.ail-conn--bad {
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.ail-conn--bad .ail-dot {
+  background: var(--ail-danger);
+}
+
+.ail-fullscreen-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 12;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.92);
+  background: var(--ail-chip-bg);
+  backdrop-filter: blur(8px);
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.ail-fullscreen-btn:hover {
+  background: rgba(13, 15, 30, 0.75);
+}
+
+.ail-fullscreen-btn:active {
+  transform: scale(0.94);
+}
+
+/* ---------- control dock ---------- */
+
+.ail-dock {
+  flex: none;
+  height: var(--ail-dock-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--ail-border);
+  z-index: 30;
+}
+
+.ail-dock-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 68px;
+  height: 54px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--ail-radius-md);
+  background: transparent;
+  color: var(--ail-fg-2);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ail-dock-btn:hover:not(:disabled) {
+  background: rgba(18, 20, 43, 0.05);
+  color: var(--ail-fg);
+}
+
+.ail-dock-btn:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+
+.ail-dock-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ail-dock-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+}
+
+.ail-dock-btn-label {
+  font-size: 11px;
+  font-weight: 550;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.ail-dock-btn--on {
+  background: var(--ail-accent-soft);
+  border-color: var(--ail-accent-border);
+  color: var(--ail-accent);
+}
+
+.ail-dock-btn--on:hover:not(:disabled) {
+  background: var(--ail-accent-soft);
+  color: var(--ail-accent-hover);
+}
+
+.ail-dock-btn--danger.ail-dock-btn--on {
+  background: var(--ail-danger-soft);
+  border-color: var(--ail-danger-border);
+  color: var(--ail-danger);
+}
+
+.ail-dock-btn--danger.ail-dock-btn--on:hover:not(:disabled) {
+  background: var(--ail-danger-soft);
+  color: var(--ail-danger);
+}
+
+.ail-dock-btn--processing {
+  color: var(--ail-fg-3);
+}
+
+/* ---------- leave button ---------- */
+
+.ail-leave {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  margin-left: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--ail-danger-border);
+  background: var(--ail-surface);
+  color: var(--ail-danger);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 0 0 3px rgba(229, 72, 77, 0.04);
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    color 0.15s ease;
+}
+
+.ail-leave:hover {
+  background: var(--ail-danger-soft);
+  box-shadow: 0 0 0 3px rgba(229, 72, 77, 0.08);
+}
+
+.ail-leave:active {
+  transform: translateY(0.5px);
+}
+
+/* ---------- side panels ---------- */
+
+.ail-panel {
+  position: absolute;
+  top: calc(var(--ail-nav-h) + 10px);
+  bottom: calc(var(--ail-dock-h) + 10px);
+  right: 12px;
+  width: min(384px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  background: var(--ail-surface);
+  border: 1px solid var(--ail-border);
+  border-radius: var(--ail-radius-lg);
+  box-shadow: var(--ail-shadow-md);
+  z-index: 40;
+  opacity: 0;
+  transform: translateX(10px);
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    visibility 0.18s;
+}
+
+.ail-panel--open {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.ail-panel-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 10px 10px 18px;
+  border-bottom: 1px solid var(--ail-border);
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--ail-fg);
+}
+
+.ail-panel-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: 8px;
+  border-radius: 999px;
+  background: var(--ail-accent-soft);
+  color: var(--ail-accent);
+  font-size: 11.5px;
+  font-weight: 650;
+  vertical-align: 1px;
+}
+
+.ail-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+/* participants list */
+
+.ail-people {
+  list-style: none;
+  margin: 0;
+  padding: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ail-person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  transition: background-color 0.13s ease;
+}
+
+.ail-person:hover {
+  background: var(--ail-surface-2);
+}
+
+.ail-person-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 550;
+  color: var(--ail-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ail-you-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--ail-accent-soft);
+  color: var(--ail-accent);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  vertical-align: 1.5px;
+}
+
+.ail-person-state {
+  display: inline-flex;
+  color: var(--ail-success);
+}
+
+.ail-person-state--off {
+  color: var(--ail-fg-3);
+}
+
+/* ---------- chat panel overrides ---------- */
+
+.ail-chat-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.ail-chat-body > .lk-chat,
+.ail-chat-body > * {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  background: transparent !important;
+}
+
+.ail-chat .lk-chat-header {
+  display: none;
+}
+
+.ail-chat .lk-chat-messages {
+  padding: 12px 14px;
+}
+
+.ail-chat .lk-chat-form {
+  padding: 12px;
+  border-top: 1px solid var(--ail-border);
+  gap: 8px;
+}
+
+.ail-chat .lk-chat-form-input {
+  background: var(--ail-surface-2);
+  border: 1px solid var(--ail-border);
+  border-radius: 10px;
+  color: var(--ail-fg);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 10px 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ail-chat .lk-chat-form-input:focus {
+  outline: none;
+  border-color: var(--ail-accent-border);
+  box-shadow: 0 0 0 3px var(--ail-accent-softer);
+}
+
+.ail-chat .lk-chat-form button,
+.ail-chat .lk-chat-form .lk-button {
+  background: var(--ail-accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-weight: 600;
+  transition: background-color 0.15s ease;
+}
+
+.ail-chat .lk-chat-form button:hover,
+.ail-chat .lk-chat-form .lk-button:hover {
+  background: var(--ail-accent-hover);
+}
+
+.ail-chat .lk-chat-entry {
+  --lk-fg: var(--ail-fg);
+  color: var(--ail-fg);
+}
+
+.ail-chat .lk-chat-entry-container {
+  margin: 0;
+}
+
+.ail-chat .lk-chat-entry-metadata {
+  color: var(--ail-fg-3);
+}
+
+.ail-chat .lk-chat-entry-content {
+  background: var(--ail-surface-2);
+  border: 1px solid var(--ail-border);
+  border-radius: 12px;
+  color: var(--ail-fg);
+  font-size: 13px;
+}
+
+/* ---------- settings menu overrides ---------- */
+
+.ail-panel-body .settings-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-family: inherit;
+  color: var(--ail-fg);
+}
+
+.ail-panel-body .settings-menu h3 {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ail-fg-3);
+  margin: 6px 0 2px;
+}
+
+.ail-panel-body .settings-menu .tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ail-panel-body .settings-menu section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ail-panel-body .settings-menu p {
+  font-size: 13px;
+  color: var(--ail-fg-2);
+  margin: 0;
+}
+
+/* ---------- start audio fallback ---------- */
+
+.ail-start-audio {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--ail-dock-h) + 16px);
+  transform: translateX(-50%);
+  z-index: 45;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--ail-accent), var(--ail-violet));
+  box-shadow: var(--ail-shadow-md);
+}
+
+.ail-start-audio:hover {
+  filter: brightness(1.05);
+}
+
+/* ---------- scrollbars ---------- */
+
+.ail-root ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.ail-root ::-webkit-scrollbar-thumb {
+  background: rgba(18, 20, 43, 0.16);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+.ail-root ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 1060px) {
+  .ail-secure span {
+    display: none;
+  }
+
+  .ail-secure {
+    width: 27px;
+    justify-content: center;
+    padding: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .ail-brand-name {
+    display: none;
+  }
+
+  .ail-dock {
+    gap: 2px;
+  }
+
+  .ail-dock-btn-label {
+    display: none;
+  }
+
+  .ail-dock-btn {
+    min-width: 48px;
+    height: 48px;
+  }
+
+  .ail-stage-wrap {
+    padding: 10px 12px 8px;
+  }
+
+  .ail-grid {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ail-room-card {
+    width: min(300px, calc(100vw - 32px));
+  }
+
+  .ail-rec-time {
+    display: none;
+  }
+}

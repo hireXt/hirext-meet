@@ -4,15 +4,14 @@ import React from 'react';
 import { decodePassphrase } from '@/lib/client-utils';
 import { DebugMode } from '@/lib/Debug';
 import { KeyboardShortcuts } from '@/lib/KeyboardShortcuts';
-import { RecordingIndicator } from '@/lib/RecordingIndicator';
 import { SettingsMenu } from '@/lib/SettingsMenu';
+import { AILinkRoom } from '@/lib/ailink/AILinkRoom';
 import { ConnectionDetails } from '@/lib/types';
 import {
   formatChatMessageLinks,
   LocalUserChoices,
   PreJoin,
   RoomContext,
-  VideoConference,
 } from '@livekit/components-react';
 import {
   ExternalE2EEKeyProvider,
@@ -32,7 +31,6 @@ import { useRouter } from 'next/navigation';
 import { useSetupE2EE } from '@/lib/useSetupE2EE';
 import { useLowCPUOptimizer } from '@/lib/usePerfomanceOptimiser';
 import { MediaDeviceGuard } from '@/lib/MediaDeviceGuard';
-import { ThemeSwitcher } from '@/lib/ThemeSwitcher';
 
 const CONN_DETAILS_ENDPOINT =
   process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT ?? '/api/connection-details';
@@ -98,20 +96,17 @@ export function PageClientImpl(props: {
     <main style={{ height: '100%', position: 'relative' }}>
       {connectionDetails === undefined || preJoinChoices === undefined ? (
         <div style={{ display: 'grid', placeItems: 'center', height: '100%' }}>
-          <div style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', zIndex: 10 }}>
-            <ThemeSwitcher />
-          </div>
           {continueWithoutMedia ? (
             <form
               onSubmit={joinWithoutMedia}
               style={{
                 width: '100%',
                 maxWidth: '380px',
-                background: 'var(--lk-bg2, #1c1c1c)',
-                border: '1px solid var(--lk-border-color, rgba(255,255,255,0.12))',
-                borderRadius: '20px',
+                background: 'var(--lk-bg2, #ffffff)',
+                border: '1px solid var(--lk-border-color, rgba(18,20,43,0.12))',
+                borderRadius: '16px',
                 padding: '2rem',
-                boxShadow: 'var(--lk-box-shadow, 0 8px 32px rgba(0,0,0,0.3))',
+                boxShadow: 'var(--lk-box-shadow, 0 12px 32px -12px rgba(18,20,43,0.16))',
               }}
             >
               <h1
@@ -119,7 +114,7 @@ export function PageClientImpl(props: {
                   fontSize: '1.25rem',
                   fontWeight: 600,
                   margin: '0 0 0.5rem',
-                  color: 'var(--lk-fg, #fff)',
+                  color: 'var(--lk-fg, #12142b)',
                   textAlign: 'center',
                 }}
               >
@@ -128,7 +123,7 @@ export function PageClientImpl(props: {
               <p
                 style={{
                   fontSize: '0.9rem',
-                  color: 'var(--lk-fg5, rgba(255,255,255,0.7))',
+                  color: 'var(--lk-fg5, #6f7390)',
                   textAlign: 'center',
                   margin: '0 0 1.25rem',
                 }}
@@ -143,9 +138,9 @@ export function PageClientImpl(props: {
                   width: '100%',
                   padding: '0.7rem 0.9rem',
                   borderRadius: '10px',
-                  border: '1px solid var(--lk-border-color, rgba(255,255,255,0.25))',
-                  background: 'var(--lk-control-bg, #111)',
-                  color: 'var(--lk-fg, #fff)',
+                  border: '1px solid var(--lk-border-color, rgba(18,20,43,0.2))',
+                  background: 'var(--lk-bg2, #fff)',
+                  color: 'var(--lk-fg, #12142b)',
                   fontSize: '1rem',
                   marginBottom: '1rem',
                 }}
@@ -157,8 +152,8 @@ export function PageClientImpl(props: {
                   padding: '0.7rem',
                   borderRadius: '10px',
                   border: 'none',
-                  background: 'var(--lk-accent-bg, #0090ff)',
-                  color: 'var(--lk-accent-fg, #fff)',
+                  background: 'var(--lk-accent-bg, #5b5bd6)',
+                  color: '#fff',
                   fontSize: '1rem',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -326,15 +321,15 @@ function VideoConferenceComponent(props: {
   }, [lowPowerMode]);
 
   return (
-    <div className="lk-room-container">
+    <div className="lk-room-container" style={{ height: '100%' }}>
       <RoomContext.Provider value={room}>
         <KeyboardShortcuts />
-        <VideoConference
+        <AILinkRoom
           chatMessageFormatter={formatChatMessageLinks}
           SettingsComponent={SHOW_SETTINGS_MENU ? SettingsMenu : undefined}
+          label={`HireXt Meet`}
         />
         <DebugMode />
-        <RecordingIndicator />
       </RoomContext.Provider>
     </div>
   );

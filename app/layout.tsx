@@ -1,4 +1,5 @@
 import '../styles/globals.css';
+import '../styles/ailink.css';
 import '@livekit/components-styles';
 import '@livekit/components-styles/prefabs';
 import type { Metadata, Viewport } from 'next';
@@ -7,27 +8,13 @@ import { ThemeProvider } from '@/lib/ThemeProvider';
 
 export const metadata: Metadata = {
   title: {
-    default: 'LiveKit Meet | Conference app build with LiveKit open source',
-    template: '%s',
+    default: 'HireXt Meet | Secure AI-powered video meetings',
+    template: '%s | HireXt Meet',
   },
   description:
-    'LiveKit is an open source WebRTC project that gives you everything needed to build scalable and real-time audio and/or video experiences in your applications.',
+    'HireXt Meet is an AI-native video meeting platform with secure real-time connections, screen sharing, chat and recording.',
   twitter: {
-    creator: '@livekitted',
-    site: '@livekitted',
     card: 'summary_large_image',
-  },
-  openGraph: {
-    url: 'https://meet.livekit.io',
-    images: [
-      {
-        url: 'https://meet.livekit.io/images/livekit-meet-open-graph.png',
-        width: 2000,
-        height: 1000,
-        type: 'image/png',
-      },
-    ],
-    siteName: 'LiveKit Meet',
   },
   icons: {
     icon: {
@@ -40,19 +27,18 @@ export const metadata: Metadata = {
         url: '/images/livekit-apple-touch.png',
         sizes: '180x180',
       },
-      { rel: 'mask-icon', url: '/images/livekit-safari-pinned-tab.svg', color: '#070707' },
     ],
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#070707',
+  themeColor: '#f7f8fb',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      <body suppressHydrationWarning>
         <ThemeProvider>
           <Toaster />
           {children}

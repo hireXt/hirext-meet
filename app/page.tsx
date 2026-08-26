@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { Suspense, useState } from 'react';
 import { encodePassphrase, generateRoomId, randomString } from '@/lib/client-utils';
-import { ThemeSwitcher } from '@/lib/ThemeSwitcher';
+import { LogoMark } from '@/lib/ailink/icons';
 import styles from '../styles/Home.module.css';
 
 function Tabs(props: React.PropsWithChildren<{}>) {
@@ -57,7 +57,7 @@ function DemoMeetingTab(props: { label: string }) {
     <div className={styles.tabContent}>
       <h2 className={styles.cardTitle}>Start a meeting</h2>
       <p className={styles.description}>
-        Try LiveKit Meet for free with our live demo project. Share the link and start
+        Try HireXt Meet for free with our live demo project. Share the link and start
         collaborating instantly.
       </p>
       <button className={styles.startButton} onClick={startMeeting}>
@@ -117,14 +117,14 @@ function CustomConnectionTab(props: { label: string }) {
     <form className={styles.tabContent} onSubmit={onSubmit}>
       <h2 className={styles.cardTitle}>Connect to your server</h2>
       <p className={styles.description}>
-        Connect LiveKit Meet with a custom server using LiveKit Cloud or LiveKit Server.
+        Connect HireXt Meet to your own real-time server.
       </p>
       <input
         id="serverUrl"
         name="serverUrl"
         type="url"
         className={styles.input}
-        placeholder="LiveKit Server URL: wss://*.livekit.cloud"
+        placeholder="Server URL: wss://your-server.example.com"
         required
       />
       <textarea
@@ -173,28 +173,32 @@ function CustomConnectionTab(props: { label: string }) {
 export default function Page() {
   return (
     <>
-      <div className={styles.themeSwitcher}>
-        <ThemeSwitcher />
-      </div>
       <main className={styles.main}>
         <div className="header">
-          <img
-            className={styles.headerLogo}
-            src="/images/livekit-meet-home.svg"
-            alt="LiveKit Meet"
-            width="360"
-            height="45"
-          />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              justifyContent: 'center',
+              margin: '0 auto',
+            }}
+          >
+            <LogoMark size={36} />
+            <span
+              style={{
+                fontSize: '1.75rem',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                color: '#12142b',
+              }}
+            >
+              HireXt Meet
+            </span>
+          </div>
           <h2>
-            Open source video conferencing app built on{' '}
-            <a href="https://github.com/livekit/components-js?ref=meet" rel="noopener">
-              LiveKit&nbsp;Components
-            </a>
-            ,{' '}
-            <a href="https://livekit.io/cloud?ref=meet" rel="noopener">
-              LiveKit&nbsp;Cloud
-            </a>{' '}
-            and Next.js.
+            HireXt Meet — AI-powered, secure real-time meetings. Share the link and start
+            collaborating instantly.
           </h2>
         </div>
         <Suspense fallback="Loading">
@@ -205,15 +209,7 @@ export default function Page() {
         </Suspense>
       </main>
       <footer>
-        Hosted on{' '}
-        <a href="https://livekit.io/cloud?ref=meet" rel="noopener">
-          LiveKit Cloud
-        </a>
-        . Source code on{' '}
-        <a href="https://github.com/livekit/meet?ref=meet" rel="noopener">
-          GitHub
-        </a>
-        .
+        HireXt Meet — secure, AI-powered video meetings built on LiveKit open source.
       </footer>
     </>
   );
