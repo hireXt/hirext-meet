@@ -248,10 +248,15 @@
   background: rgba(18, 20, 43, 0.055);
 }
 
-.ail-room-name {
+.ail-room-code {
   font-size: 13.5px;
-  font-weight: 600;
+  font-weight: 650;
+  letter-spacing: 0.02em;
   color: var(--ail-fg);
+  background: var(--ail-accent-soft);
+  border: 1px solid var(--ail-accent-border);
+  border-radius: 8px;
+  padding: 2px 8px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

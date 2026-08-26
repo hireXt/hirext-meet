@@ -282,24 +282,17 @@ function TopNav(props: NavProps) {
             aria-expanded={roomMenuOpen}
             aria-haspopup="menu"
           >
-            <span className="ail-room-name">{props.label}</span>
+            <span className="ail-room-code">{room.name || props.label}</span>
             <ChevronDownIcon size={14} className="ail-caret" />
           </button>
           {roomMenuOpen && (
             <div className="ail-menu-popover ail-menu-popover--left ail-room-card" role="menu">
-              <div className="ail-room-card-title">{props.label}</div>
-              <div className="ail-room-card-id">{room.name || '—'}</div>
-              {secure ? (
-                <div className="ail-room-card-row ail-room-card-row--secure">
-                  <ShieldCheckIcon size={15} />
-                  End-to-end encrypted
-                </div>
-              ) : (
-                <div className="ail-room-card-row">
-                  <ShieldCheckIcon size={15} />
-                  Encrypted connection
-                </div>
-              )}
+              <div className="ail-room-card-title">Meeting code</div>
+              <div className="ail-room-card-id">{room.name || props.label}</div>
+              <div className="ail-room-card-row">
+                <ShieldCheckIcon size={15} />
+                {secure ? 'End-to-end encrypted' : 'Encrypted connection'}
+              </div>
               <button type="button" className="ail-menu-item" onClick={copyInvite}>
                 <CopyIcon size={15} />
                 Copy invite link
