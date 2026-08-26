@@ -47,6 +47,7 @@ export async function GET(req: NextRequest) {
           secret: S3_KEY_SECRET,
           region: S3_REGION,
           bucket: S3_BUCKET,
+          forcePathStyle: true,
         }),
       },
     });
