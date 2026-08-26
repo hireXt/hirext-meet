@@ -1,6 +1,7 @@
 import { videoCodecs } from 'livekit-client';
 import { VideoConferenceClientImpl } from './VideoConferenceClientImpl';
 import { isVideoCodec } from '@/lib/types';
+import { ThemeSwitcher } from '@/lib/ThemeSwitcher';
 
 export default async function CustomRoomConnection(props: {
   searchParams: Promise<{
@@ -22,7 +23,10 @@ export default async function CustomRoomConnection(props: {
   }
 
   return (
-    <main data-lk-theme="default" style={{ height: '100%' }}>
+    <main style={{ height: '100%', position: 'relative' }}>
+      <div style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', zIndex: 10 }}>
+        <ThemeSwitcher />
+      </div>
       <VideoConferenceClientImpl
         liveKitUrl={liveKitUrl}
         token={token}

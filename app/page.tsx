@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { Suspense, useState } from 'react';
 import { encodePassphrase, generateRoomId, randomString } from '@/lib/client-utils';
+import { ThemeSwitcher } from '@/lib/ThemeSwitcher';
 import styles from '../styles/Home.module.css';
 
 function Tabs(props: React.PropsWithChildren<{}>) {
@@ -54,26 +55,35 @@ function DemoMeetingTab(props: { label: string }) {
   };
   return (
     <div className={styles.tabContent}>
-      <p style={{ margin: 0 }}>Try LiveKit Meet for free with our live demo project.</p>
-      <button style={{ marginTop: '1rem' }} className="lk-button" onClick={startMeeting}>
+      <h2 className={styles.cardTitle}>Start a meeting</h2>
+      <p className={styles.description}>
+        Try LiveKit Meet for free with our live demo project. Share the link and start
+        collaborating instantly.
+      </p>
+      <button className={styles.startButton} onClick={startMeeting}>
         Start Meeting
       </button>
+      <hr className={styles.divider} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+        <div className={styles.checkboxRow}>
           <input
             id="use-e2ee"
             type="checkbox"
+            className={styles.checkbox}
             checked={e2ee}
             onChange={(ev) => setE2ee(ev.target.checked)}
-          ></input>
+          />
           <label htmlFor="use-e2ee">Enable end-to-end encryption</label>
         </div>
         {e2ee && (
-          <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
-            <label htmlFor="passphrase">Passphrase</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label htmlFor="passphrase" className={styles.description}>
+              Passphrase
+            </label>
             <input
               id="passphrase"
               type="password"
+              className={styles.input}
               value={sharedPassphrase}
               onChange={(ev) => setSharedPassphrase(ev.target.value)}
             />
@@ -105,40 +115,46 @@ function CustomConnectionTab(props: { label: string }) {
   };
   return (
     <form className={styles.tabContent} onSubmit={onSubmit}>
-      <p style={{ marginTop: 0 }}>
+      <h2 className={styles.cardTitle}>Connect to your server</h2>
+      <p className={styles.description}>
         Connect LiveKit Meet with a custom server using LiveKit Cloud or LiveKit Server.
       </p>
       <input
         id="serverUrl"
         name="serverUrl"
         type="url"
+        className={styles.input}
         placeholder="LiveKit Server URL: wss://*.livekit.cloud"
         required
       />
       <textarea
         id="token"
         name="token"
+        className={styles.textarea}
         placeholder="Token"
         required
         rows={5}
-        style={{ padding: '1px 2px', fontSize: 'inherit', lineHeight: 'inherit' }}
       />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+        <div className={styles.checkboxRow}>
           <input
-            id="use-e2ee"
+            id="use-e2ee-custom"
             type="checkbox"
+            className={styles.checkbox}
             checked={e2ee}
             onChange={(ev) => setE2ee(ev.target.checked)}
-          ></input>
-          <label htmlFor="use-e2ee">Enable end-to-end encryption</label>
+          />
+          <label htmlFor="use-e2ee-custom">Enable end-to-end encryption</label>
         </div>
         {e2ee && (
-          <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
-            <label htmlFor="passphrase">Passphrase</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label htmlFor="passphrase-custom" className={styles.description}>
+              Passphrase
+            </label>
             <input
-              id="passphrase"
+              id="passphrase-custom"
               type="password"
+              className={styles.input}
               value={sharedPassphrase}
               onChange={(ev) => setSharedPassphrase(ev.target.value)}
             />
@@ -146,14 +162,8 @@ function CustomConnectionTab(props: { label: string }) {
         )}
       </div>
 
-      <hr
-        style={{ width: '100%', borderColor: 'rgba(255, 255, 255, 0.15)', marginBlock: '1rem' }}
-      />
-      <button
-        style={{ paddingInline: '1.25rem', width: '100%' }}
-        className="lk-button"
-        type="submit"
-      >
+      <hr className={styles.divider} />
+      <button className={styles.startButton} type="submit">
         Connect
       </button>
     </form>
@@ -163,9 +173,18 @@ function CustomConnectionTab(props: { label: string }) {
 export default function Page() {
   return (
     <>
-      <main className={styles.main} data-lk-theme="default">
+      <div className={styles.themeSwitcher}>
+        <ThemeSwitcher />
+      </div>
+      <main className={styles.main}>
         <div className="header">
-          <img src="/images/livekit-meet-home.svg" alt="LiveKit Meet" width="360" height="45" />
+          <img
+            className={styles.headerLogo}
+            src="/images/livekit-meet-home.svg"
+            alt="LiveKit Meet"
+            width="360"
+            height="45"
+          />
           <h2>
             Open source video conferencing app built on{' '}
             <a href="https://github.com/livekit/components-js?ref=meet" rel="noopener">
@@ -185,7 +204,7 @@ export default function Page() {
           </Tabs>
         </Suspense>
       </main>
-      <footer data-lk-theme="default">
+      <footer>
         Hosted on{' '}
         <a href="https://livekit.io/cloud?ref=meet" rel="noopener">
           LiveKit Cloud

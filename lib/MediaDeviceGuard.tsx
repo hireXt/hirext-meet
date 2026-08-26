@@ -63,9 +63,10 @@ const style: Record<string, React.CSSProperties> = {
     width: '100%',
     textAlign: 'center',
     background: 'var(--lk-bg2, #1c1c1c)',
-    border: '1px solid rgba(255,255,255,0.12)',
-    borderRadius: '16px',
+    border: '1px solid var(--lk-border-color, rgba(255,255,255,0.12))',
+    borderRadius: '20px',
     padding: '2rem',
+    boxShadow: 'var(--lk-box-shadow, 0 8px 32px rgba(0,0,0,0.3))',
   },
   icon: {
     width: '64px',
@@ -75,7 +76,7 @@ const style: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'rgba(255,255,255,0.08)',
+    background: 'var(--lk-bg3, rgba(255,255,255,0.08))',
     fontSize: '28px',
   },
   title: {
@@ -87,7 +88,7 @@ const style: Record<string, React.CSSProperties> = {
   body: {
     fontSize: '0.95rem',
     lineHeight: 1.5,
-    color: 'rgba(255,255,255,0.7)',
+    color: 'var(--lk-fg5, rgba(255,255,255,0.7))',
     margin: '0 0 1.25rem',
   },
   list: {
@@ -96,7 +97,7 @@ const style: Record<string, React.CSSProperties> = {
     paddingLeft: '1.25rem',
     fontSize: '0.9rem',
     lineHeight: 1.7,
-    color: 'rgba(255,255,255,0.7)',
+    color: 'var(--lk-fg5, rgba(255,255,255,0.7))',
   },
   row: {
     display: 'flex',
@@ -106,18 +107,18 @@ const style: Record<string, React.CSSProperties> = {
   },
   primaryBtn: {
     padding: '0.6rem 1.25rem',
-    borderRadius: '8px',
+    borderRadius: '10px',
     border: 'none',
-    background: '#0090ff',
-    color: '#fff',
+    background: 'var(--lk-accent-bg, #0090ff)',
+    color: 'var(--lk-accent-fg, #fff)',
     fontSize: '0.95rem',
     fontWeight: 600,
     cursor: 'pointer',
   },
   ghostBtn: {
     padding: '0.6rem 1.25rem',
-    borderRadius: '8px',
-    border: '1px solid rgba(255,255,255,0.25)',
+    borderRadius: '10px',
+    border: '1px solid var(--lk-border-color, rgba(255,255,255,0.25))',
     background: 'transparent',
     color: 'var(--lk-fg, #fff)',
     fontSize: '0.95rem',
@@ -148,7 +149,7 @@ export function MediaDeviceGuard(props: {
 
   if (availability.checking) {
     return (
-      <div style={style.overlay} data-lk-theme="default">
+      <div style={style.overlay}>
         <div style={style.card}>
           <div style={style.icon}>🎥</div>
           <h1 style={style.title}>Checking media devices…</h1>
@@ -167,7 +168,7 @@ export function MediaDeviceGuard(props: {
   }
 
   return (
-    <div style={style.overlay} data-lk-theme="default">
+    <div style={style.overlay}>
       <div style={style.card}>
         <div style={style.icon}>🎥</div>
         <h1 style={style.title}>

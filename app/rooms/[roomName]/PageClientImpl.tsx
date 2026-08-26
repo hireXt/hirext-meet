@@ -32,6 +32,7 @@ import { useRouter } from 'next/navigation';
 import { useSetupE2EE } from '@/lib/useSetupE2EE';
 import { useLowCPUOptimizer } from '@/lib/usePerfomanceOptimiser';
 import { MediaDeviceGuard } from '@/lib/MediaDeviceGuard';
+import { ThemeSwitcher } from '@/lib/ThemeSwitcher';
 
 const CONN_DETAILS_ENDPOINT =
   process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT ?? '/api/connection-details';
@@ -94,9 +95,12 @@ export function PageClientImpl(props: {
   );
 
   return (
-    <main data-lk-theme="default" style={{ height: '100%' }}>
+    <main style={{ height: '100%', position: 'relative' }}>
       {connectionDetails === undefined || preJoinChoices === undefined ? (
         <div style={{ display: 'grid', placeItems: 'center', height: '100%' }}>
+          <div style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', zIndex: 10 }}>
+            <ThemeSwitcher />
+          </div>
           {continueWithoutMedia ? (
             <form
               onSubmit={joinWithoutMedia}
@@ -104,9 +108,10 @@ export function PageClientImpl(props: {
                 width: '100%',
                 maxWidth: '380px',
                 background: 'var(--lk-bg2, #1c1c1c)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: '16px',
+                border: '1px solid var(--lk-border-color, rgba(255,255,255,0.12))',
+                borderRadius: '20px',
                 padding: '2rem',
+                boxShadow: 'var(--lk-box-shadow, 0 8px 32px rgba(0,0,0,0.3))',
               }}
             >
               <h1
@@ -123,7 +128,7 @@ export function PageClientImpl(props: {
               <p
                 style={{
                   fontSize: '0.9rem',
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'var(--lk-fg5, rgba(255,255,255,0.7))',
                   textAlign: 'center',
                   margin: '0 0 1.25rem',
                 }}
@@ -137,9 +142,9 @@ export function PageClientImpl(props: {
                 style={{
                   width: '100%',
                   padding: '0.7rem 0.9rem',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255,255,255,0.25)',
-                  background: 'var(--lk-bg, #111)',
+                  borderRadius: '10px',
+                  border: '1px solid var(--lk-border-color, rgba(255,255,255,0.25))',
+                  background: 'var(--lk-control-bg, #111)',
                   color: 'var(--lk-fg, #fff)',
                   fontSize: '1rem',
                   marginBottom: '1rem',
@@ -150,10 +155,10 @@ export function PageClientImpl(props: {
                 style={{
                   width: '100%',
                   padding: '0.7rem',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   border: 'none',
-                  background: '#0090ff',
-                  color: '#fff',
+                  background: 'var(--lk-accent-bg, #0090ff)',
+                  color: 'var(--lk-accent-fg, #fff)',
                   fontSize: '1rem',
                   fontWeight: 600,
                   cursor: 'pointer',
