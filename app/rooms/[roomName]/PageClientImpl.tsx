@@ -20,6 +20,8 @@ import {
   VideoCodec,
   VideoPresets,
   Room,
+  ConnectionError,
+  ConnectionErrorReason,
   DeviceUnsupportedError,
   RoomConnectOptions,
   RoomEvent,
@@ -298,6 +300,10 @@ function VideoConferenceComponent(props: {
   const router = useRouter();
   const handleOnLeave = React.useCallback(() => router.push('/'), [router]);
   const handleError = React.useCallback((error: Error) => {
+    if (error instanceof ConnectionError && error.reason === ConnectionErrorReason.Cancelled) {
+      console.warn('Connection cancelled (expected during leave/reload).', error.message);
+      return;
+    }
     console.error(error);
     alert(`Encountered an unexpected error, check the console logs for details: ${error.message}`);
   }, []);
