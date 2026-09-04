@@ -11,7 +11,6 @@ import {
   useLocalParticipant,
   useParticipants,
   useRoomContext,
-  useSpeakingParticipants,
   useTrackToggle,
   useTracks,
   VideoTrack,
@@ -52,6 +51,13 @@ export interface AILinkRoomProps {
   chatMessageFormatter?: MessageFormatter;
   SettingsComponent?: React.ComponentType<{ onClose?: () => void }>;
   label?: string;
+  /**
+   * When true, the interview renders the MuseTalk conversational video avatar
+   * (the AI interviewer's talking-head video participant) as the main stage.
+   * When false (or omitted), the interview is audio-only — no avatar video is
+   * rendered, matching the hxt-admin peak-hour GPU control toggle.
+   */
+  museTalkEnabled?: boolean;
 }
 
 function cx(...parts: Array<string | false | null | undefined>): string {
@@ -441,7 +447,12 @@ function ControlDockButton({
   );
 }
 
-export function AILinkRoom({ chatMessageFormatter, SettingsComponent, label }: AILinkRoomProps) {
+export function AILinkRoom({
+  chatMessageFormatter,
+  SettingsComponent,
+  label,
+  museTalkEnabled = false,
+}: AILinkRoomProps) {
   const room = useRoomContext();
   const rootRef = React.useRef<HTMLDivElement>(null);
   const [panel, setPanel] = React.useState<PanelId>(null);
@@ -496,7 +507,11 @@ export function AILinkRoom({ chatMessageFormatter, SettingsComponent, label }: A
       />
 
       <main className="ail-stage-wrap">
-        <VideoStage layout={layout} fullscreen={fullscreen} onToggleFullscreen={toggleFullscreen} />
+        <VideoStage
+          fullscreen={fullscreen}
+          onToggleFullscreen={toggleFullscreen}
+          museTalkEnabled={museTalkEnabled}
+        />
       </main>
 
       {recording.isRecording && (
@@ -637,13 +652,13 @@ function ParticipantRow({ participant }: { participant: Participant }) {
 }
 
 function VideoStage({
-  layout,
   fullscreen,
   onToggleFullscreen,
+  museTalkEnabled,
 }: {
-  layout: LayoutMode;
   fullscreen: boolean;
   onToggleFullscreen: () => void;
+  museTalkEnabled: boolean;
 }) {
   const tracks = useTracks(
     [
@@ -652,21 +667,19 @@ function VideoStage({
     ],
     { onlySubscribed: false },
   );
-  const speakers = useSpeakingParticipants();
-  const speakerIds = React.useMemo(() => new Set(speakers.map((s) => s.identity)), [speakers]);
-
-  const screenTracks = tracks.filter((t) => t.source === Track.Source.ScreenShare);
   const cameraTracks = tracks.filter((t) => t.source === Track.Source.Camera);
-  const ordered = [...cameraTracks, ...screenTracks];
+  const screenTracks = tracks.filter((t) => t.source === Track.Source.ScreenShare);
 
-  const spotlight = React.useMemo(() => {
-    if (screenTracks.length > 0) return screenTracks[0];
-    for (const speaker of speakers) {
-      const match = cameraTracks.find((t) => t.participant.identity === speaker.identity);
-      if (match) return match;
-    }
-    return cameraTracks.find((t) => t.participant.isLocal) ?? cameraTracks[0];
-  }, [screenTracks, speakers, cameraTracks]);
+  // The MuseTalk avatar is the AI interviewer participant. Identity/name is
+  // `monika-avatar`, published on behalf of the agent. When enabled we render
+  // its video as the whole stage; the AudioRenderer handles its audio.
+  const avatarTrack = cameraTracks.find((t) =>
+    ['monika-avatar', 'rosie', 'avatar'].some(
+      (k) =>
+        t.participant.identity.toLowerCase().includes(k) ||
+        t.participant.name?.toLowerCase().includes(k),
+    ),
+  );
 
   return (
     <div className="ail-stage">
@@ -681,28 +694,84 @@ function VideoStage({
       >
         {fullscreen ? <ShrinkIcon size={15} /> : <ExpandIcon size={15} />}
       </button>
-      {layout === 'grid' || !spotlight ? (
-        <div className="ail-grid">
-          {ordered.map((ref) => (
-            <Tile key={trackKey(ref)} trackRef={ref} speaking={speakerIds.has(ref.participant.identity)} />
-          ))}
-        </div>
+
+      {museTalkEnabled ? (
+        <MuseTalkStage
+          avatarTrack={avatarTrack}
+          candidateTracks={cameraTracks.filter((t) => t !== avatarTrack)}
+        />
       ) : (
-        <>
-          <div className="ail-focus">
-            <Tile key={trackKey(spotlight)} trackRef={spotlight} speaking={speakerIds.has(spotlight.participant.identity)} />
-          </div>
-          {ordered.length > 1 && (
-            <div className="ail-filmstrip">
-              {ordered
-                .filter((ref) => trackKey(ref) !== trackKey(spotlight))
-                .map((ref) => (
-                  <Tile key={trackKey(ref)} trackRef={ref} speaking={speakerIds.has(ref.participant.identity)} />
-                ))}
-            </div>
-          )}
-        </>
+        <AudioOnlyStage
+          ordered={screenTracks.length > 0 ? [...cameraTracks, ...screenTracks] : cameraTracks}
+        />
       )}
+    </div>
+  );
+}
+
+function MuseTalkStage({
+  avatarTrack,
+  candidateTracks,
+}: {
+  avatarTrack: TrackReferenceOrPlaceholder | undefined;
+  candidateTracks: TrackReferenceOrPlaceholder[];
+}) {
+  return (
+    <>
+      <div
+        className="ail-muse-stage"
+        data-has-avatar={!!avatarTrack}
+        data-camera-off={candidateTracks.filter((t) => t.participant.isLocal).length === 0 || undefined}
+      >
+        {avatarTrack ? (
+          <VideoTrack trackRef={avatarTrack as any} className="ail-muse-video" />
+        ) : (
+          <div className="ail-muse-connecting">
+            <span className="ail-spinner" />
+            <p>Connecting to your AI interviewer…</p>
+          </div>
+        )}
+      </div>
+      {candidateTracks.filter((t) => t.participant.isLocal).length > 0 && (
+        <div className="ail-candidate-pip">
+          {candidateTracks
+            .filter((t) => t.participant.isLocal)
+            .map((ref) => (
+              <Tile key={trackKey(ref)} trackRef={ref} speaking={false} />
+            ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function AudioOnlyStage({
+  ordered,
+}: {
+  ordered: TrackReferenceOrPlaceholder[];
+}) {
+  const local = ordered.find((t) => t.participant.isLocal);
+  const remote = ordered.filter((t) => !t.participant.isLocal);
+  const remoteHasVideo = remote.some(
+    (t) => isTrackReference(t) && t.publication && !t.publication.isMuted,
+  );
+
+  // Audio-only interview: no avatar video. Show a subtle "voice only" stage —
+  // the candidate's self view (if any) and, if a remote video is present (e.g.
+  // a proctor / observer), a small tile. The AI interviewer is heard over the
+  // RoomAudioRenderer, with no rendered video.
+  return (
+    <div className="ail-stage-grid">
+      {!remoteHasVideo && local && (
+        <div className="ail-self-tile">
+          <Tile trackRef={local} speaking={false} />
+        </div>
+      )}
+      {remote.map((ref) => (
+        <div className="ail-self-tile" key={trackKey(ref)}>
+          <Tile trackRef={ref} speaking={false} />
+        </div>
+      ))}
     </div>
   );
 }

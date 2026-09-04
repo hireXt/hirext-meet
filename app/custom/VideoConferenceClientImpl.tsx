@@ -23,6 +23,7 @@ export function VideoConferenceClientImpl(props: {
   token: string;
   codec: VideoCodec | undefined;
   singlePeerConnection: boolean | undefined;
+  museTalkEnabled?: boolean;
 }) {
   const keyProvider = new ExternalE2EEKeyProvider();
   const { worker, e2eePassphrase } = useSetupE2EE();
@@ -91,6 +92,7 @@ export function VideoConferenceClientImpl(props: {
           SettingsComponent={
             process.env.NEXT_PUBLIC_SHOW_SETTINGS_MENU === 'true' ? SettingsMenu : undefined
           }
+          museTalkEnabled={props.museTalkEnabled}
         />
         <DebugMode logLevel={LogLevel.debug} />
       </RoomContext.Provider>
