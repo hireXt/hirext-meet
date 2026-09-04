@@ -716,15 +716,34 @@ function MuseTalkStage({
   avatarTrack: TrackReferenceOrPlaceholder | undefined;
   candidateTracks: TrackReferenceOrPlaceholder[];
 }) {
+  // Only render the avatar's video element once the track is a REAL subscribed
+  // reference with an unmuted, usable video publication. A placeholder (given
+  // by useTracks withPlaceholder) or a not-yet-subscribed publication has no
+  // media — rendering <VideoTrack> then shows a black/empty frame.
+  const avatarReady =
+    !!avatarTrack &&
+    isTrackReference(avatarTrack) &&
+    !!avatarTrack.publication &&
+    !avatarTrack.publication.isMuted &&
+    !!avatarTrack.publication.track;
+
+  // Keep the PiP only to the candidate's own camera (skip the avatar, proctor,
+  // and any other observer so the interview view stays clean).
+  const localTracks = candidateTracks.filter((t) => t.participant.isLocal);
+
   return (
     <>
       <div
         className="ail-muse-stage"
-        data-has-avatar={!!avatarTrack}
-        data-camera-off={candidateTracks.filter((t) => t.participant.isLocal).length === 0 || undefined}
+        data-has-avatar={avatarReady}
+        data-camera-off={localTracks.length === 0 || undefined}
       >
-        {avatarTrack ? (
-          <VideoTrack trackRef={avatarTrack as any} className="ail-muse-video" />
+        {avatarReady ? (
+          <VideoTrack
+            trackRef={avatarTrack as any}
+            className="ail-muse-video"
+            style={{ objectFit: 'cover' }}
+          />
         ) : (
           <div className="ail-muse-connecting">
             <span className="ail-spinner" />
@@ -732,13 +751,11 @@ function MuseTalkStage({
           </div>
         )}
       </div>
-      {candidateTracks.filter((t) => t.participant.isLocal).length > 0 && (
+      {localTracks.length > 0 && (
         <div className="ail-candidate-pip">
-          {candidateTracks
-            .filter((t) => t.participant.isLocal)
-            .map((ref) => (
-              <Tile key={trackKey(ref)} trackRef={ref} speaking={false} />
-            ))}
+          {localTracks.map((ref) => (
+            <Tile key={trackKey(ref)} trackRef={ref} speaking={false} />
+          ))}
         </div>
       )}
     </>
