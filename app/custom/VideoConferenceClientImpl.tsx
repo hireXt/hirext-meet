@@ -16,6 +16,7 @@ import { DebugMode } from '@/lib/Debug';
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardShortcuts } from '@/lib/KeyboardShortcuts';
 import { SettingsMenu } from '@/lib/SettingsMenu';
+import { MeetingEndedScreen } from '@/lib/ailink/MeetingEndedScreen';
 import { AILinkRoom } from '@/lib/ailink/AILinkRoom';
 import { useSetupE2EE } from '@/lib/useSetupE2EE';
 import { useLowCPUOptimizer } from '@/lib/usePerfomanceOptimiser';
@@ -85,16 +86,29 @@ export function VideoConferenceClientImpl(props: {
 
   useLowCPUOptimizer(room);
 
-  // Leave → navigate home. Without this the interview page stays mounted after
-  // room.disconnect() with the avatar gone, showing "Connecting…" forever.
+  // After Leave (or a dropped call) show the meeting-ended screen instead of
+  // navigating straight home. The room is fully disconnected at this point, so
+  // every LiveKit component inside AILinkRoom settles; unmounting the whole
+  // conference avoids the "Connecting… forever" trap when a dead room was kept
+  // mounted.
   const router = useRouter();
+  const [ended, setEnded] = useState(false);
   useEffect(() => {
-    const onDisconnected = () => router.push('/');
+    const onDisconnected = () => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => undefined);
+      }
+      setEnded(true);
+    };
     room.on(RoomEvent.Disconnected, onDisconnected);
     return () => {
       room.off(RoomEvent.Disconnected, onDisconnected);
     };
-  }, [room, router]);
+  }, [room]);
+
+  if (ended) {
+    return <MeetingEndedScreen />;
+  }
 
   return (
     <div className="lk-room-container" style={{ height: '100%' }}>

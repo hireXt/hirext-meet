@@ -1143,6 +1143,112 @@
   filter: brightness(1.05);
 }
 
+/* ---------- meeting ended ---------- */
+
+.ail-ended {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(52rem 22rem at 12% -6%, rgba(124, 92, 252, 0.07), transparent 60%),
+    radial-gradient(48rem 20rem at 88% -8%, rgba(62, 99, 221, 0.06), transparent 60%);
+}
+
+.ail-ended-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: min(420px, 100%);
+  padding: 40px 32px 32px;
+  background: var(--ail-surface);
+  border: 1px solid var(--ail-border);
+  border-radius: 20px;
+  box-shadow: var(--ail-shadow-md);
+  text-align: center;
+  animation: ail-pop 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.ail-ended-mark {
+  display: inline-flex;
+}
+
+.ail-ended-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-top: -52px;
+  border-radius: 999px;
+  background: var(--ail-danger-soft);
+  border: 1px solid var(--ail-danger-border);
+  color: var(--ail-danger);
+}
+
+.ail-ended-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--ail-fg);
+}
+
+.ail-ended-msg {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ail-fg-2);
+  max-width: 300px;
+}
+
+.ail-ended-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 160px;
+  height: 42px;
+  padding: 0 20px;
+  margin-top: 6px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--ail-accent), var(--ail-violet));
+  color: #fff;
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: none;
+  box-shadow: var(--ail-shadow-sm);
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.ail-ended-cta:hover {
+  filter: brightness(1.06);
+}
+
+.ail-ended-cta:active {
+  transform: translateY(0.5px);
+}
+
+.ail-ended-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ail-fg-3);
+}
+
+@media (max-width: 640px) {
+  .ail-ended-card {
+    padding: 34px 22px 26px;
+    border-radius: 18px;
+  }
+
+  .ail-ended-title {
+    font-size: 20px;
+  }
+}
+
 /* ---------- scrollbars ---------- */
 
 .ail-root ::-webkit-scrollbar {
