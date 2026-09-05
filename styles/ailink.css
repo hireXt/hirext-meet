@@ -1202,12 +1202,232 @@
   }
 }
 
+/* ---------- mobile / small screens ---------- */
+
+/* Use the dynamic viewport so iOS Safari's collapsing URL bar doesn't
+   leave the dock cut off or a dead gap below it. */
+@supports (height: 100dvh) {
+  .ail-root {
+    height: 100dvh;
+  }
+}
+
+/* remove the 300ms double-tap-zoom delay on all controls */
+.ail-root button {
+  touch-action: manipulation;
+}
+
 @media (max-width: 640px) {
+  :root {
+    --ail-nav-h: 48px;
+    --ail-dock-h: 60px;
+  }
+
+  /* top nav: tighter, icon-first */
+  .ail-nav {
+    padding: 0 8px 0 12px;
+    gap: 6px;
+  }
+
+  .ail-nav-left,
+  .ail-nav-right {
+    gap: 2px;
+  }
+
+  .ail-secure {
+    display: none; /* nav is chrome; recording pill still shows when active */
+  }
+
+  .ail-room-trigger {
+    max-width: 38vw;
+    padding: 0 6px;
+  }
+
+  .ail-room-code {
+    font-size: 12px;
+    padding: 2px 6px;
+  }
+
+  .ail-icon-btn {
+    height: 36px;
+    min-width: 36px;
+  }
+
+  .ail-leave {
+    margin-left: 2px;
+    height: 36px;
+    padding: 0 10px;
+    font-size: 12.5px;
+  }
+
+  /* stage: reclaim edge space */
+  .ail-stage-wrap {
+    padding: 8px 8px 6px;
+  }
+
+  .ail-stage {
+    gap: 8px;
+  }
+
+  .ail-stage-top {
+    top: 8px;
+    left: 8px;
+    gap: 6px;
+  }
+
+  .ail-fullscreen-btn {
+    top: 8px;
+    right: 8px;
+  }
+
+  .ail-name-pill {
+    left: 8px;
+    bottom: 8px;
+    max-width: calc(100% - 60px);
+  }
+
+  .ail-mic-badge {
+    right: 8px;
+    bottom: 8px;
+  }
+
+  .ail-muse-connecting p {
+    font-size: 13.5px;
+    padding: 0 16px;
+    text-align: center;
+  }
+
+  /* self-view pip: small, doesn't cover the interviewer */
+  .ail-candidate-pip {
+    width: 96px;
+    right: 10px;
+    bottom: 10px;
+    border-width: 1.5px;
+    border-radius: 10px;
+  }
+
+  /* dock: comfortable touch targets */
+  .ail-dock {
+    gap: 2px;
+    padding: 0 6px calc(env(safe-area-inset-bottom, 0px) * 0.6);
+  }
+
+  .ail-dock-btn {
+    min-width: 44px;
+    height: 46px;
+    padding: 0 8px;
+  }
+
+  .ail-dock-btn-icon {
+    height: 22px;
+  }
+
+  .ail-dock-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* panels become full-width sheets between nav and dock */
+  .ail-panel {
+    top: var(--ail-nav-h);
+    right: 0;
+    left: 0;
+    bottom: var(--ail-dock-h);
+    width: auto;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    transform: translateY(10px);
+  }
+
+  .ail-panel--open {
+    transform: translateY(0);
+  }
+
+  .ail-panel-header {
+    padding: 10px 8px 10px 14px;
+  }
+
+  .ail-panel-body {
+    padding: 10px;
+  }
+
+  /* chat: 16px input prevents iOS Safari focus-zoom */
+  .ail-chat .lk-chat-form-input {
+    font-size: 16px;
+    padding: 9px 12px;
+  }
+
+  .ail-chat .lk-chat-messages {
+    padding: 10px 12px;
+  }
+
+  .ail-chat .lk-chat-entry-content {
+    font-size: 14px;
+  }
+
+  /* popovers stay on screen */
+  .ail-menu-popover {
+    max-width: calc(100vw - 24px);
+  }
+
   .ail-room-card {
-    width: min(300px, calc(100vw - 32px));
+    width: min(280px, calc(100vw - 24px));
   }
 
   .ail-rec-time {
     display: none;
+  }
+
+  /* floating CTAs clear the shorter dock */
+  .ail-start-audio,
+  .ail-rec-float {
+    bottom: calc(var(--ail-dock-h) + 12px);
+  }
+}
+
+@media (max-width: 400px) {
+  .ail-candidate-pip {
+    width: 84px;
+  }
+
+  .ail-dock-btn {
+    min-width: 40px;
+    padding: 0 6px;
+  }
+
+  .ail-room-trigger {
+    max-width: 34vw;
+  }
+
+  .ail-icon-btn {
+    min-width: 34px;
+  }
+}
+
+/* short landscape phones: nav becomes a transparent overlay so the video
+   gets the full height */
+@media (max-height: 460px) and (orientation: landscape) {
+  :root {
+    --ail-dock-h: 56px;
+  }
+
+  .ail-nav {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom: none;
+    pointer-events: none;
+  }
+
+  .ail-nav > * {
+    pointer-events: auto;
+  }
+
+  .ail-stage-wrap {
+    padding: 6px;
   }
 }
