@@ -1431,3 +1431,97 @@
     padding: 6px;
   }
 }
+
+/* ---------- mobile hardening (phones ≤ 640px) ---------- */
+
+/* scroll & tap hygiene: no rubber-banding behind fixed chrome, no grey tap
+   flash on buttons */
+.ail-root {
+  overscroll-behavior: contain;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 640px) {
+  /* nav: keep logo + room code + participants + Leave. The layout switch and
+     the overflow ("…") menu are desktop affordances and just crowd the bar;
+     fullscreen lives on the stage, copy-invite is rarely used on phones. */
+  .ail-v-divider,
+  .ail-nav-layout-menu,
+  .ail-menu {
+    display: none;
+  }
+
+  .ail-brand svg,
+  .ail-brand :first-child {
+    flex: none;
+  }
+
+  .ail-room-trigger {
+    max-width: 44vw;
+  }
+
+  .ail-leave {
+    height: 38px;
+    padding: 0 14px;
+  }
+
+  /* dock: respect the home-indicator / gesture bar with the full inset */
+  .ail-dock {
+    padding: 0 4px env(safe-area-inset-bottom, 0px);
+  }
+
+  .ail-panel {
+    bottom: calc(var(--ail-dock-h) + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* never let iOS zoom when focusing settings inputs (16px rule) */
+  .ail-panel-body input,
+  .ail-panel-body select,
+  .ail-panel-body textarea {
+    font-size: 16px;
+  }
+
+  /* chat form stays tappable with the keyboard open */
+  .ail-chat .lk-chat-form {
+    padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
+  }
+
+  /* the muse stage must never collapse to sliver height on small screens */
+  .ail-muse-stage {
+    min-height: 260px;
+  }
+
+  /* pip stays inside the rounded stage */
+  .ail-candidate-pip {
+    right: 8px;
+    bottom: 8px;
+  }
+
+  /* start-audio CTA clear of dock + safe area */
+  .ail-start-audio {
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: calc(100vw - 32px);
+    white-space: nowrap;
+  }
+}
+
+/* very small phones: squeeze the last pixels out of the nav */
+@media (max-width: 360px) {
+  .ail-room-trigger {
+    max-width: 40vw;
+    padding: 0 4px;
+  }
+
+  .ail-room-code {
+    font-size: 11px;
+  }
+
+  .ail-count-badge {
+    display: none;
+  }
+
+  .ail-leave {
+    padding: 0 10px;
+  }
+}

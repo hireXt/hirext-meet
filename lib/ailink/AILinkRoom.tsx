@@ -321,41 +321,43 @@ function TopNav(props: NavProps) {
           </div>
         )}
 
-        <Menu
-          open={layoutMenuOpen}
-          onToggle={() => setLayoutMenuOpen((v) => !v)}
-          align="right"
-          trigger={<LayoutGridIcon size={18} />}
-        >
-          <button
-            type="button"
-            className="ail-menu-item"
-            role="menuitemradio"
-            aria-checked={props.layout === 'grid'}
-            onClick={() => {
-              props.onLayout('grid');
-              setLayoutMenuOpen(false);
-            }}
+        <div className="ail-nav-layout-menu">
+          <Menu
+            open={layoutMenuOpen}
+            onToggle={() => setLayoutMenuOpen((v) => !v)}
+            align="right"
+            trigger={<LayoutGridIcon size={18} />}
           >
-            <LayoutGridIcon size={16} />
-            Grid
-            {props.layout === 'grid' && <CheckIcon size={14} className="ail-check" />}
-          </button>
-          <button
-            type="button"
-            className="ail-menu-item"
-            role="menuitemradio"
-            aria-checked={props.layout === 'spotlight'}
-            onClick={() => {
-              props.onLayout('spotlight');
-              setLayoutMenuOpen(false);
-            }}
-          >
-            <SpotlightIcon size={16} />
-            Spotlight
-            {props.layout === 'spotlight' && <CheckIcon size={14} className="ail-check" />}
-          </button>
-        </Menu>
+            <button
+              type="button"
+              className="ail-menu-item"
+              role="menuitemradio"
+              aria-checked={props.layout === 'grid'}
+              onClick={() => {
+                props.onLayout('grid');
+                setLayoutMenuOpen(false);
+              }}
+            >
+              <LayoutGridIcon size={16} />
+              Grid
+              {props.layout === 'grid' && <CheckIcon size={14} className="ail-check" />}
+            </button>
+            <button
+              type="button"
+              className="ail-menu-item"
+              role="menuitemradio"
+              aria-checked={props.layout === 'spotlight'}
+              onClick={() => {
+                props.onLayout('spotlight');
+                setLayoutMenuOpen(false);
+              }}
+            >
+              <SpotlightIcon size={16} />
+              Spotlight
+              {props.layout === 'spotlight' && <CheckIcon size={14} className="ail-check" />}
+            </button>
+          </Menu>
+        </div>
 
         <button
           type="button"
@@ -488,7 +490,9 @@ export function AILinkRoom({
   }, []);
 
   const handleLeave = React.useCallback(() => {
-    room.disconnect();
+    if (room.state !== ConnectionState.Disconnected) {
+      room.disconnect().catch((error) => console.warn('disconnect failed', error));
+    }
   }, [room]);
 
   return (
@@ -727,6 +731,11 @@ function MuseTalkStage({
     !avatarTrack.publication.isMuted &&
     !!avatarTrack.publication.track;
 
+  // After Leave (or a dropped call) the avatar track disappears — show an
+  // "ended" state instead of a spinner that can never resolve.
+  const connState = useConnectionState();
+  const ended = connState === ConnectionState.Disconnected;
+
   // Keep the PiP only to the candidate's own camera (skip the avatar, proctor,
   // and any other observer so the interview view stays clean).
   const localTracks = candidateTracks.filter((t) => t.participant.isLocal);
@@ -744,10 +753,18 @@ function MuseTalkStage({
             className="ail-muse-video"
             style={{ objectFit: 'cover' }}
           />
+        ) : ended ? (
+          <div className="ail-muse-connecting">
+            <p>You have left the interview.</p>
+          </div>
         ) : (
           <div className="ail-muse-connecting">
             <span className="ail-spinner" />
-            <p>Connecting to your AI interviewer…</p>
+            <p>
+              {connState === ConnectionState.Reconnecting
+                ? 'Reconnecting…'
+                : 'Connecting to your AI interviewer…'}
+            </p>
           </div>
         )}
       </div>

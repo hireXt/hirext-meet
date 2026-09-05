@@ -6,10 +6,12 @@ import {
   LogLevel,
   Room,
   RoomConnectOptions,
+  RoomEvent,
   RoomOptions,
   VideoPresets,
   type VideoCodec,
 } from 'livekit-client';
+import { useRouter } from 'next/navigation';
 import { DebugMode } from '@/lib/Debug';
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardShortcuts } from '@/lib/KeyboardShortcuts';
@@ -82,6 +84,17 @@ export function VideoConferenceClientImpl(props: {
   }, [room, props.liveKitUrl, props.token, connectOptions, e2eeSetupComplete]);
 
   useLowCPUOptimizer(room);
+
+  // Leave → navigate home. Without this the interview page stays mounted after
+  // room.disconnect() with the avatar gone, showing "Connecting…" forever.
+  const router = useRouter();
+  useEffect(() => {
+    const onDisconnected = () => router.push('/');
+    room.on(RoomEvent.Disconnected, onDisconnected);
+    return () => {
+      room.off(RoomEvent.Disconnected, onDisconnected);
+    };
+  }, [room, router]);
 
   return (
     <div className="lk-room-container" style={{ height: '100%' }}>
