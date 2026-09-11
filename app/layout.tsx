@@ -24,14 +24,22 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
   },
   icons: {
-    icon: {
-      rel: 'icon',
-      url: '/favicon.ico',
-    },
+    icon: [
+      {
+        rel: 'icon',
+        type: 'image/svg+xml',
+        url: '/favicon.svg',
+      },
+      {
+        rel: 'icon',
+        type: 'image/x-icon',
+        url: '/favicon.ico',
+      },
+    ],
     apple: [
       {
         rel: 'apple-touch-icon',
-        url: '/images/livekit-apple-touch.png',
+        url: '/apple-touch-icon.png',
         sizes: '180x180',
       },
     ],
