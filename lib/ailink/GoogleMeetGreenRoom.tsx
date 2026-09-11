@@ -27,6 +27,83 @@ export interface GoogleMeetGreenRoomProps {
   onContinueWithoutMedia?: () => void;
 }
 
+/** Isolated audio visualizer: directly animates DOM bar heights to avoid re-rendering parent components */
+function AudioWaveIndicator({
+  audioTrack,
+  audioEnabled,
+}: {
+  audioTrack?: LocalAudioTrack;
+  audioEnabled: boolean;
+}) {
+  const bar1 = React.useRef<HTMLDivElement>(null);
+  const bar2 = React.useRef<HTMLDivElement>(null);
+  const bar3 = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!audioTrack || !audioEnabled) return;
+
+    let audioCtx: AudioContext | null = null;
+    let analyser: AnalyserNode | null = null;
+    let animId: number;
+
+    try {
+      const mediaStreamTrack = audioTrack.mediaStreamTrack;
+      if (mediaStreamTrack) {
+        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const source = audioCtx.createMediaStreamSource(new MediaStream([mediaStreamTrack]));
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64;
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const checkVolume = () => {
+          if (!analyser) return;
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i]!;
+          }
+          const avg = sum / dataArray.length;
+          const level = Math.min(100, Math.round(avg * 1.8));
+
+          if (bar1.current) bar1.current.style.height = `${Math.max(4, level * 0.22)}px`;
+          if (bar2.current) bar2.current.style.height = `${Math.max(6, level * 0.32)}px`;
+          if (bar3.current) bar3.current.style.height = `${Math.max(4, level * 0.2)}px`;
+
+          animId = requestAnimationFrame(checkVolume);
+        };
+        animId = requestAnimationFrame(checkVolume);
+      }
+    } catch (e) {
+      console.warn('Volume meter error', e);
+    }
+
+    const b1 = bar1.current;
+    const b2 = bar2.current;
+    const b3 = bar3.current;
+
+    return () => {
+      cancelAnimationFrame(animId);
+      if (audioCtx && audioCtx.state !== 'closed') {
+        audioCtx.close().catch(() => undefined);
+      }
+      if (b1) b1.style.height = '4px';
+      if (b2) b2.style.height = '6px';
+      if (b3) b3.style.height = '4px';
+    };
+  }, [audioTrack, audioEnabled]);
+
+  if (!audioEnabled) return null;
+
+  return (
+    <div className="gm-audio-indicator" title="Microphone activity">
+      <div ref={bar1} className="gm-audio-wave-bar" style={{ height: '4px' }} />
+      <div ref={bar2} className="gm-audio-wave-bar" style={{ height: '6px' }} />
+      <div ref={bar3} className="gm-audio-wave-bar" style={{ height: '4px' }} />
+    </div>
+  );
+}
+
 export function GoogleMeetGreenRoom({
   roomName,
   defaultUsername = '',
@@ -54,7 +131,6 @@ export function GoogleMeetGreenRoom({
   const [audioDevices, setAudioDevices] = React.useState<MediaDeviceInfo[]>([]);
   const [speakerDevices, setSpeakerDevices] = React.useState<MediaDeviceInfo[]>([]);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
-  const [audioLevel, setAudioLevel] = React.useState(0);
   const [testSoundPlaying, setTestSoundPlaying] = React.useState(false);
 
   const videoEl = React.useRef<HTMLVideoElement | null>(null);
@@ -93,9 +169,8 @@ export function GoogleMeetGreenRoom({
     };
   }, [audioEnabled, videoEnabled, selectedAudioId, selectedVideoId]);
 
-  const tracks = usePreviewTracks(previewOptions, (error) => {
-    console.warn('Track preview error', error);
-  });
+  // Calling usePreviewTracks with NO second argument to guarantee stable hook dependencies
+  const tracks = usePreviewTracks(previewOptions);
 
   // Once tracks are first acquired and browser permission is granted, refresh device labels once
   const initialRefreshDone = React.useRef(false);
@@ -120,7 +195,7 @@ export function GoogleMeetGreenRoom({
   const setVideoRef = React.useCallback(
     (el: HTMLVideoElement | null) => {
       videoEl.current = el;
-      if (el && videoTrack && videoEnabled) {
+      if (el && videoTrack) {
         try {
           videoTrack.unmute();
           videoTrack.attach(el);
@@ -129,13 +204,13 @@ export function GoogleMeetGreenRoom({
         }
       }
     },
-    [videoTrack, videoEnabled],
+    [videoTrack],
   );
 
   // Ensure track is attached if videoTrack updates while element is mounted
   React.useEffect(() => {
     const el = videoEl.current;
-    if (el && videoTrack && videoEnabled) {
+    if (el && videoTrack) {
       try {
         videoTrack.unmute();
         videoTrack.attach(el);
@@ -144,13 +219,13 @@ export function GoogleMeetGreenRoom({
       }
     }
     return () => {
-      if (el && videoTrack) {
+      if (videoTrack) {
         try {
-          videoTrack.detach(el);
+          videoTrack.detach();
         } catch {}
       }
     };
-  }, [videoTrack, videoEnabled]);
+  }, [videoTrack]);
 
   // Background blur processor toggle
   React.useEffect(() => {
@@ -177,52 +252,6 @@ export function GoogleMeetGreenRoom({
       cancelled = true;
     };
   }, [videoTrack, blurEnabled]);
-
-  // Real-time audio level visualizer using Web Audio API
-  React.useEffect(() => {
-    if (!audioTrack || !audioEnabled) {
-      setAudioLevel(0);
-      return;
-    }
-
-    let audioCtx: AudioContext | null = null;
-    let analyser: AnalyserNode | null = null;
-    let animId: number;
-
-    try {
-      const mediaStreamTrack = audioTrack.mediaStreamTrack;
-      if (mediaStreamTrack) {
-        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const source = audioCtx.createMediaStreamSource(new MediaStream([mediaStreamTrack]));
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 64;
-        source.connect(analyser);
-
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        const checkVolume = () => {
-          if (!analyser) return;
-          analyser.getByteFrequencyData(dataArray);
-          let sum = 0;
-          for (let i = 0; i < dataArray.length; i++) {
-            sum += dataArray[i]!;
-          }
-          const avg = sum / dataArray.length;
-          setAudioLevel(Math.min(100, Math.round(avg * 1.8)));
-          animId = requestAnimationFrame(checkVolume);
-        };
-        animId = requestAnimationFrame(checkVolume);
-      }
-    } catch (e) {
-      console.warn('Volume meter error', e);
-    }
-
-    return () => {
-      cancelAnimationFrame(animId);
-      if (audioCtx && audioCtx.state !== 'closed') {
-        audioCtx.close().catch(() => undefined);
-      }
-    };
-  }, [audioTrack, audioEnabled]);
 
   // Close settings popup when clicking outside
   React.useEffect(() => {
@@ -326,7 +355,7 @@ export function GoogleMeetGreenRoom({
         {/* LEFT: Spacious 16:9 Video Preview */}
         <div className="gm-preview-col">
           <div className="gm-preview-card">
-            {videoEnabled ? (
+            {videoEnabled && videoTrack ? (
               <video
                 ref={setVideoRef}
                 className="gm-preview-video"
@@ -339,27 +368,14 @@ export function GoogleMeetGreenRoom({
                 <div className="gm-preview-avatar">
                   {username.trim() ? username.trim()[0]!.toUpperCase() : 'HX'}
                 </div>
-                <span className="gm-preview-off-text">Camera is off</span>
+                <span className="gm-preview-off-text">
+                  {videoEnabled ? 'Starting camera…' : 'Camera is off'}
+                </span>
               </div>
             )}
 
             {/* Audio wave indicator (top-left of video preview) */}
-            {audioEnabled && (
-              <div className="gm-audio-indicator" title="Microphone activity">
-                <div
-                  className="gm-audio-wave-bar"
-                  style={{ height: `${Math.max(4, audioLevel * 0.22)}px` }}
-                />
-                <div
-                  className="gm-audio-wave-bar"
-                  style={{ height: `${Math.max(6, audioLevel * 0.32)}px` }}
-                />
-                <div
-                  className="gm-audio-wave-bar"
-                  style={{ height: `${Math.max(4, audioLevel * 0.2)}px` }}
-                />
-              </div>
-            )}
+            <AudioWaveIndicator audioTrack={audioTrack} audioEnabled={audioEnabled} />
 
             {/* Floating circular control bar at bottom of video preview */}
             <div className="gm-preview-dock">

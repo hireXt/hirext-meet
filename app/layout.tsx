@@ -28,18 +28,18 @@ export const metadata: Metadata = {
       {
         rel: 'icon',
         type: 'image/svg+xml',
-        url: '/favicon.svg',
+        url: '/favicon.svg?v=meet-3',
       },
       {
         rel: 'icon',
         type: 'image/x-icon',
-        url: '/favicon.ico',
+        url: '/favicon.ico?v=meet-3',
       },
     ],
     apple: [
       {
         rel: 'apple-touch-icon',
-        url: '/apple-touch-icon.png',
+        url: '/apple-touch-icon.png?v=meet-3',
         sizes: '180x180',
       },
     ],
