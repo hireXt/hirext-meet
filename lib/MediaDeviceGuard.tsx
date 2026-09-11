@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { CameraIcon } from '@/lib/ailink/icons';
 
 export type MediaAvailability = {
   checking: boolean;
@@ -151,7 +152,7 @@ export function MediaDeviceGuard(props: {
     return (
       <div style={style.overlay}>
         <div style={style.card}>
-          <div style={style.icon}>🎥</div>
+          <div style={style.icon}><CameraIcon size={28} /></div>
           <h1 style={style.title}>Checking media devices…</h1>
           <p style={style.body}>Looking for your camera and microphone.</p>
         </div>
@@ -170,7 +171,7 @@ export function MediaDeviceGuard(props: {
   return (
     <div style={style.overlay}>
       <div style={style.card}>
-        <div style={style.icon}>🎥</div>
+        <div style={style.icon}><CameraIcon size={28} /></div>
         <h1 style={style.title}>
           {missingCamera && missingMicrophone
             ? 'No camera or microphone found'

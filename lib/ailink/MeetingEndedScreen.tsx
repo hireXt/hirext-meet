@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { LogoMark, PhoneOffIcon } from './icons';
+import { CheckIcon, LogoMark, PhoneOffIcon, StarIcon } from './icons';
 
 /**
  * Full-screen "Meeting ended" state shown after Leave (or a dropped call).
@@ -66,14 +66,15 @@ export function MeetingEndedScreen({
                   title={`Rate ${star} out of 5`}
                   aria-label={`Rate ${star} out of 5`}
                 >
-                  ★
+                  <StarIcon size={18} />
                 </button>
               ))}
             </div>
           </div>
         ) : (
-          <p style={{ fontSize: '13px', color: '#34a853', marginTop: 16 }}>
-            ✓ Thank you for your feedback!
+          <p style={{ fontSize: '13px', color: '#34a853', marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <CheckIcon size={16} />
+            <span>Thank you for your feedback!</span>
           </p>
         )}
 

@@ -49,6 +49,7 @@ import {
   UsersIcon,
   VolumeIcon,
 } from './icons';
+import { playSpeakerTestSound } from '@/lib/audioTest';
 
 type PanelId = 'chat' | 'participants' | 'settings' | 'info' | null;
 type LayoutMode = 'grid' | 'spotlight';
@@ -455,9 +456,16 @@ function GoogleMeetDock({
       const currentAudio = room.getActiveDevice('audioinput');
       const currentVideo = room.getActiveDevice('videoinput');
       const currentSpeaker = room.getActiveDevice('audiooutput');
+      const savedSpeaker = typeof window !== 'undefined' ? localStorage.getItem('hx_meet_speaker_id') : undefined;
+
       if (currentAudio) setActiveAudioId(currentAudio);
       if (currentVideo) setActiveVideoId(currentVideo);
-      if (currentSpeaker) setActiveSpeakerId(currentSpeaker);
+      if (savedSpeaker && devices.some((d) => d.kind === 'audiooutput' && d.deviceId === savedSpeaker)) {
+        setActiveSpeakerId(savedSpeaker);
+        room.switchActiveDevice('audiooutput', savedSpeaker).catch(() => undefined);
+      } else if (currentSpeaker) {
+        setActiveSpeakerId(currentSpeaker);
+      }
     } catch (e) {
       console.warn('In-call device enumeration error', e);
     }
@@ -489,6 +497,9 @@ function GoogleMeetDock({
     try {
       await room.switchActiveDevice('audiooutput', deviceId);
       setActiveSpeakerId(deviceId);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('hx_meet_speaker_id', deviceId);
+      }
       toast.success(`Speaker: ${label}`);
     } catch (err) {
       toast.error('Could not switch speaker');
@@ -510,27 +521,10 @@ function GoogleMeetDock({
   };
 
   const playTestSound = () => {
-    try {
-      setTestSoundPlaying(true);
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
-      gain.gain.setValueAtTime(0.2, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.35);
-      setTimeout(() => {
-        setTestSoundPlaying(false);
-        ctx.close().catch(() => undefined);
-      }, 400);
-    } catch {
-      setTestSoundPlaying(false);
-    }
+    setTestSoundPlaying(true);
+    playSpeakerTestSound(activeSpeakerId).finally(() => {
+      setTimeout(() => setTestSoundPlaying(false), 450);
+    });
   };
 
   React.useEffect(() => {

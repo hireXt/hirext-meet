@@ -177,7 +177,7 @@ export function ConferenceShell(props: ConferenceShellProps) {  const keyProvide
               await room.localParticipant.setCameraEnabled(true);
             } catch (camErr) {
               console.warn('Camera could not be enabled on join (device may be disconnected or in use):', camErr);
-              toast('Camera not detected. Joined with audio only.', { icon: '📷' });
+              toast('Camera not detected. Joined with audio only.');
             }
           }
           if (cancelled) return;
@@ -186,7 +186,18 @@ export function ConferenceShell(props: ConferenceShellProps) {  const keyProvide
               await room.localParticipant.setMicrophoneEnabled(true);
             } catch (micErr) {
               console.warn('Microphone could not be enabled on join (device may be disconnected or in use):', micErr);
-              toast('Microphone not detected. Joined in listen-only mode.', { icon: '🎤' });
+              toast('Microphone not detected. Joined in listen-only mode.');
+            }
+          }
+          if (cancelled) return;
+          const speakerToUse =
+            (props.userChoices as unknown as { speakerDeviceId?: string }).speakerDeviceId ||
+            (typeof window !== 'undefined' ? localStorage.getItem('hx_meet_speaker_id') : undefined);
+          if (speakerToUse && speakerToUse !== 'default') {
+            try {
+              await room.switchActiveDevice('audiooutput', speakerToUse);
+            } catch (spkErr) {
+              console.warn('Could not set initial speaker output device:', spkErr);
             }
           }
         }

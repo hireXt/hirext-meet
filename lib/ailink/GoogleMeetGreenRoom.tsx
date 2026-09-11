@@ -19,6 +19,7 @@ import {
   SparklesIcon,
   VolumeIcon,
 } from './icons';
+import { playSpeakerTestSound } from '@/lib/audioTest';
 
 export interface GoogleMeetGreenRoomProps {
   roomName: string;
@@ -126,7 +127,12 @@ export function GoogleMeetGreenRoom({
   const [audioEnabled, setAudioEnabled] = React.useState(defaultAudioEnabled);
   const [selectedVideoId, setSelectedVideoId] = React.useState<string | undefined>(undefined);
   const [selectedAudioId, setSelectedAudioId] = React.useState<string | undefined>(undefined);
-  const [selectedSpeakerId, setSelectedSpeakerId] = React.useState<string | undefined>(undefined);
+  const [selectedSpeakerId, setSelectedSpeakerId] = React.useState<string | undefined>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('hx_meet_speaker_id') || undefined;
+    }
+    return undefined;
+  });
   const [blurEnabled, setBlurEnabled] = React.useState(false);
 
   const [videoDevices, setVideoDevices] = React.useState<MediaDeviceInfo[]>([]);
@@ -221,13 +227,13 @@ export function GoogleMeetGreenRoom({
       if (videoEnabledRef.current && audioEnabledRef.current) {
         // Most commonly, the webcam is missing/unplugged. Fall back to audio-only.
         setVideoEnabled(false);
-        toast('Camera not detected. You can join with microphone only.', { icon: '📷' });
+        toast('Camera not detected. You can join with microphone only.');
       } else if (videoEnabledRef.current) {
         setVideoEnabled(false);
-        toast('Camera not detected. Video preview disabled.', { icon: '📷' });
+        toast('Camera not detected. Video preview disabled.');
       } else if (audioEnabledRef.current) {
         setAudioEnabled(false);
-        toast('Microphone not detected. You can join in listen-only mode.', { icon: '🎤' });
+        toast('Microphone not detected. You can join in listen-only mode.');
       }
     } else if (isNotAllowed) {
       setVideoEnabled(false);
@@ -236,10 +242,10 @@ export function GoogleMeetGreenRoom({
     } else if (isNotReadable) {
       if (videoEnabledRef.current) {
         setVideoEnabled(false);
-        toast('Camera is currently in use by another application.', { icon: '⚠️' });
+        toast.error('Camera is currently in use by another application.');
       } else if (audioEnabledRef.current) {
         setAudioEnabled(false);
-        toast('Microphone is currently in use by another application.', { icon: '⚠️' });
+        toast.error('Microphone is currently in use by another application.');
       }
     } else {
       console.warn('Media preview error gracefully handled:', err);
@@ -365,7 +371,8 @@ export function GoogleMeetGreenRoom({
       audioEnabled,
       videoDeviceId: selectedVideoId || '',
       audioDeviceId: selectedAudioId || '',
-    });
+      speakerDeviceId: selectedSpeakerId || '',
+    } as unknown as LocalUserChoices);
   };
 
   const handlePresentJoin = () => {
@@ -383,7 +390,8 @@ export function GoogleMeetGreenRoom({
       audioEnabled,
       videoDeviceId: selectedVideoId || '',
       audioDeviceId: selectedAudioId || '',
-    });
+      speakerDeviceId: selectedSpeakerId || '',
+    } as unknown as LocalUserChoices);
   };
 
   const copyRoomLink = () => {
@@ -394,27 +402,10 @@ export function GoogleMeetGreenRoom({
   };
 
   const playTestSound = () => {
-    try {
-      setTestSoundPlaying(true);
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
-      gain.gain.setValueAtTime(0.2, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.35);
-      setTimeout(() => {
-        setTestSoundPlaying(false);
-        ctx.close().catch(() => undefined);
-      }, 400);
-    } catch {
-      setTestSoundPlaying(false);
-    }
+    setTestSoundPlaying(true);
+    playSpeakerTestSound(selectedSpeakerId).finally(() => {
+      setTimeout(() => setTestSoundPlaying(false), 450);
+    });
   };
 
   // Human readable active device labels
@@ -539,6 +530,9 @@ export function GoogleMeetGreenRoom({
                               className={`gm-device-item ${isSelected ? 'gm-device-item--selected' : ''}`}
                               onClick={() => {
                                 setSelectedSpeakerId(d.deviceId);
+                                if (typeof window !== 'undefined') {
+                                  localStorage.setItem('hx_meet_speaker_id', d.deviceId);
+                                }
                                 setMicMenuOpen(false);
                                 toast.success(`Speaker: ${d.label || `Speaker ${i + 1}`}`);
                               }}
@@ -706,7 +700,12 @@ export function GoogleMeetGreenRoom({
                           <select
                             className="gm-settings-select"
                             value={selectedSpeakerId || (speakerDevices[0]?.deviceId ?? '')}
-                            onChange={(e) => setSelectedSpeakerId(e.target.value)}
+                            onChange={(e) => {
+                              setSelectedSpeakerId(e.target.value);
+                              if (typeof window !== 'undefined') {
+                                localStorage.setItem('hx_meet_speaker_id', e.target.value);
+                              }
+                            }}
                             style={{ flex: 1 }}
                           >
                             {speakerDevices.map((d, i) => (
