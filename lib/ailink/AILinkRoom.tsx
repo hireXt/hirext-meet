@@ -1232,7 +1232,7 @@ export function AILinkRoom({
                   </span>
                 </div>
                 <p style={{ fontSize: '0.78rem', color: '#9aa0a6', margin: 0, lineHeight: 1.4 }}>
-                  Removes keyboard, fan, and background noise using your browser's built-in audio processing.
+                  Removes keyboard, fan, and background noise using your browser&apos;s built-in audio processing.
                 </p>
               </div>
               <button
