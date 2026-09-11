@@ -22,6 +22,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { useRecording } from './useRecording';
 import {
+  BrandLogo,
   CameraIcon,
   CameraOffIcon,
   ChatIcon,
@@ -299,8 +300,7 @@ function TopNav(props: TopNavProps) {
     <header className="ail-nav">
       <div className="ail-nav-left">
         <Link className="ail-brand" href="/" title="HireXt Meet home">
-          <LogoMark size={28} />
-          <span className="ail-brand-name">HireXt Meet</span>
+          <BrandLogo theme="dark" size={32} />
         </Link>
         <span className="ail-v-divider" aria-hidden="true" />
         <div className="ail-room" ref={roomMenuRef}>

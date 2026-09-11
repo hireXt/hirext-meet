@@ -19,6 +19,7 @@ import {
   UsersIcon,
   VideoPlusIcon,
 } from '@/lib/ailink/icons';
+import { BrandLogo } from '@/lib/ailink/BrandLogo';
 import styles from '../styles/Home.module.css';
 
 const CAROUSEL_SLIDES = [
@@ -177,11 +178,8 @@ function HomeLandingContent() {
     <div className={styles.container}>
       {/* Top Navbar */}
       <header className={styles.navbar}>
-        <Link href="/" className={styles.navBrand}>
-          <GoogleMeetLogo size={36} />
-          <span className={styles.brandText}>
-            HireXt <span className={styles.brandHighlight}>Meet</span>
-          </span>
+        <Link href="/" className={styles.navBrand} title="HireXt Meet Home">
+          <BrandLogo theme="light" size={36} />
         </Link>
         <div className={styles.navRight}>
           {currentTime && <div className={styles.liveClock}>{currentTime}</div>}

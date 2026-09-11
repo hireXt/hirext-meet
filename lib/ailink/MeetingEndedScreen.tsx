@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { CheckIcon, LogoMark, PhoneOffIcon, StarIcon } from './icons';
+import { CheckIcon, GoogleMeetLogo, PhoneOffIcon, StarIcon } from './icons';
 
 /**
  * Full-screen "Meeting ended" state shown after Leave (or a dropped call).
@@ -30,7 +30,7 @@ export function MeetingEndedScreen({
     <div className="ail-ended" role="status">
       <div className="ail-ended-card">
         <div className="ail-ended-mark" aria-hidden="true">
-          <LogoMark size={48} />
+          <GoogleMeetLogo size={48} />
         </div>
         <h1 className="ail-ended-title">{title}</h1>
         <p className="ail-ended-msg">{message}</p>

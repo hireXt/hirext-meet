@@ -7,7 +7,7 @@ import { LocalUserChoices } from '@livekit/components-react';
 import { ConferenceShell, fetchConnectionDetailsWithRetry } from '@/lib/ailink/ConferenceShell';
 import { ConnectionDetails } from '@/lib/types';
 import { GoogleMeetGreenRoom } from '@/lib/ailink/GoogleMeetGreenRoom';
-import { GoogleMeetLogo } from '@/lib/ailink/icons';
+import { BrandLogo } from '@/lib/ailink/BrandLogo';
 
 const CONN_DETAILS_ENDPOINT =
   process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT ?? '/api/connection-details';
@@ -130,11 +130,8 @@ export function PageClientImpl(props: {
   return (
     <div className="ail-prejoin-page">
       <header className="ail-prejoin-nav">
-        <Link href="/" className="ail-brand" title="HireXt Meet Home">
-          <GoogleMeetLogo size={36} />
-          <span className="ail-brand-name">
-            HireXt <span style={{ color: '#1a73e8', fontWeight: 600 }}>Meet</span>
-          </span>
+        <Link href="/" title="HireXt Meet Home" style={{ textDecoration: 'none' }}>
+          <BrandLogo theme="light" size={36} />
         </Link>
         <div className="ail-prejoin-nav-right">
           {currentTime && <span className="ail-prejoin-clock">{currentTime}</span>}

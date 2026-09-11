@@ -417,3 +417,6 @@ export function StarIcon(props: IconProps) {
 
 /** Clarified alias for the HireXt-original mark — prefer this in new code. */
 export const HireXtLogoMark = LogoMark;
+
+export { BrandLogo } from './BrandLogo';
+
