@@ -20,6 +20,7 @@ import {
   VolumeIcon,
 } from './icons';
 import { playSpeakerTestSound } from '@/lib/audioTest';
+import { AudioVideoTestModal } from './AudioVideoTestModal';
 
 export interface GoogleMeetGreenRoomProps {
   roomName: string;
@@ -142,6 +143,13 @@ export function GoogleMeetGreenRoom({
   const [micMenuOpen, setMicMenuOpen] = React.useState(false);
   const [cameraMenuOpen, setCameraMenuOpen] = React.useState(false);
   const [testSoundPlaying, setTestSoundPlaying] = React.useState(false);
+  const [noiseCancellationEnabled, setNoiseCancellationEnabled] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hx_meet_krisp_enabled');
+      if (saved !== null) return saved === 'true';
+    }
+    return true;
+  });
 
   const videoEl = React.useRef<HTMLVideoElement | null>(null);
   const settingsRef = React.useRef<HTMLDivElement>(null);
@@ -338,12 +346,9 @@ export function GoogleMeetGreenRoom({
 
   // Close popups when clicking outside
   React.useEffect(() => {
-    if (!settingsOpen && !micMenuOpen && !cameraMenuOpen) return;
+    if (!micMenuOpen && !cameraMenuOpen) return;
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (settingsOpen && settingsRef.current && !settingsRef.current.contains(target)) {
-        setSettingsOpen(false);
-      }
       if (micMenuOpen && micMenuRef.current && !micMenuRef.current.contains(target)) {
         setMicMenuOpen(false);
       }
@@ -353,7 +358,7 @@ export function GoogleMeetGreenRoom({
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [settingsOpen, micMenuOpen, cameraMenuOpen]);
+  }, [micMenuOpen, cameraMenuOpen]);
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -558,6 +563,21 @@ export function GoogleMeetGreenRoom({
                       <VolumeIcon size={15} />
                       <span>{testSoundPlaying ? 'Playing test tone…' : 'Test speakers'}</span>
                     </button>
+
+                    <div className="gm-device-divider" />
+
+                    <button
+                      type="button"
+                      className="gm-device-test-btn"
+                      onClick={() => {
+                        setMicMenuOpen(false);
+                        setSettingsOpen(true);
+                      }}
+                      title="Audio settings, mic test & noise cancellation"
+                    >
+                      <HeadphonesIcon size={15} />
+                      <span>Noise cancellation &amp; mic test</span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -643,91 +663,17 @@ export function GoogleMeetGreenRoom({
                 <SparklesIcon size={20} />
               </button>
 
-              {/* Device Settings Toggle Button */}
+              {/* Audio & Video Settings Button */}
               <div className="gm-settings-wrapper" ref={settingsRef}>
                 <button
                   type="button"
                   className={`gm-dock-btn ${settingsOpen ? 'gm-dock-btn--active' : ''}`}
-                  onClick={() => setSettingsOpen((prev) => !prev)}
-                  title="Audio and video settings"
+                  onClick={() => setSettingsOpen(true)}
+                  title="Audio and video settings & noise cancellation test"
                   aria-label="Audio and video settings"
                 >
                   <SettingsIcon size={20} />
                 </button>
-
-                {settingsOpen && (
-                  <div className="gm-settings-dropdown" role="dialog" aria-label="Device settings">
-                    <div className="gm-settings-header">
-                      <span>Audio &amp; Video Devices</span>
-                    </div>
-
-                    <div className="gm-settings-group">
-                      <label className="gm-settings-label">Camera</label>
-                      <select
-                        className="gm-settings-select"
-                        value={selectedVideoId || (videoDevices[0]?.deviceId ?? '')}
-                        onChange={(e) => setSelectedVideoId(e.target.value)}
-                        disabled={!videoEnabled}
-                      >
-                        {videoDevices.map((d, i) => (
-                          <option key={d.deviceId || i} value={d.deviceId}>
-                            {d.label || `Camera ${i + 1}`}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="gm-settings-group">
-                      <label className="gm-settings-label">Microphone</label>
-                      <select
-                        className="gm-settings-select"
-                        value={selectedAudioId || (audioDevices[0]?.deviceId ?? '')}
-                        onChange={(e) => setSelectedAudioId(e.target.value)}
-                        disabled={!audioEnabled}
-                      >
-                        {audioDevices.map((d, i) => (
-                          <option key={d.deviceId || i} value={d.deviceId}>
-                            {d.label || `Microphone ${i + 1}`}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {speakerDevices.length > 0 && (
-                      <div className="gm-settings-group">
-                        <label className="gm-settings-label">Speakers</label>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <select
-                            className="gm-settings-select"
-                            value={selectedSpeakerId || (speakerDevices[0]?.deviceId ?? '')}
-                            onChange={(e) => {
-                              setSelectedSpeakerId(e.target.value);
-                              if (typeof window !== 'undefined') {
-                                localStorage.setItem('hx_meet_speaker_id', e.target.value);
-                              }
-                            }}
-                            style={{ flex: 1 }}
-                          >
-                            {speakerDevices.map((d, i) => (
-                              <option key={d.deviceId || i} value={d.deviceId}>
-                                {d.label || `Speaker ${i + 1}`}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            className="gm-test-speaker-btn"
-                            onClick={playTestSound}
-                            disabled={testSoundPlaying}
-                            title="Test speakers"
-                          >
-                            <VolumeIcon size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -737,7 +683,7 @@ export function GoogleMeetGreenRoom({
             <button
               type="button"
               className="gm-check-media-btn"
-              onClick={() => setSettingsOpen((v) => !v)}
+              onClick={() => setSettingsOpen(true)}
             >
               <HeadphonesIcon size={16} />
               <span>Check your audio and video</span>
@@ -746,6 +692,12 @@ export function GoogleMeetGreenRoom({
               <span>{activeVideoName}</span>
               <span className="gm-device-bullet">•</span>
               <span>{activeAudioName}</span>
+              {noiseCancellationEnabled && (
+                <>
+                  <span className="gm-device-bullet">•</span>
+                  <span style={{ color: '#81c995', fontWeight: 500 }}>AI Noise Filter ON</span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -820,6 +772,45 @@ export function GoogleMeetGreenRoom({
           </div>
         </div>
       </div>
+
+      {/* Audio & Video Settings + Discord-Style Mic Loopback Test Modal */}
+      <AudioVideoTestModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        audioTrack={audioTrack}
+        videoTrack={videoTrack}
+        audioEnabled={audioEnabled}
+        videoEnabled={videoEnabled}
+        audioDevices={audioDevices}
+        videoDevices={videoDevices}
+        speakerDevices={speakerDevices}
+        selectedAudioId={selectedAudioId}
+        selectedVideoId={selectedVideoId}
+        selectedSpeakerId={selectedSpeakerId}
+        onSelectAudioId={setSelectedAudioId}
+        onSelectVideoId={setSelectedVideoId}
+        onSelectSpeakerId={(id) => {
+          setSelectedSpeakerId(id);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('hx_meet_speaker_id', id);
+          }
+        }}
+        blurEnabled={blurEnabled}
+        onToggleBlur={() => {
+          if (!videoEnabled) {
+            toast('Turn on camera to use visual effects');
+            return;
+          }
+          setBlurEnabled((v) => !v);
+        }}
+        noiseCancellationEnabled={noiseCancellationEnabled}
+        onToggleNoiseCancellation={(enabled) => {
+          setNoiseCancellationEnabled(enabled);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('hx_meet_krisp_enabled', String(enabled));
+          }
+        }}
+      />
     </div>
   );
 }
