@@ -1631,3 +1631,196 @@
     padding: 0 10px;
   }
 }
+
+/* ---------- mandatory pre-join device gate (/custom) ---------- */
+
+.ail-gate {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  background-color: var(--ail-bg);
+  background-image:
+    radial-gradient(52rem 22rem at 12% -6%, rgba(124, 92, 252, 0.055), transparent 60%),
+    radial-gradient(48rem 20rem at 88% -8%, rgba(62, 99, 221, 0.05), transparent 60%);
+  font-family: var(--ail-font);
+  color: var(--ail-fg);
+}
+
+.ail-gate-card {
+  width: min(560px, 100%);
+  background: var(--ail-surface);
+  border: 1px solid var(--ail-border);
+  border-radius: var(--ail-radius-lg);
+  box-shadow: var(--ail-shadow-md);
+  padding: 28px 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  text-align: center;
+}
+
+.ail-gate-card--wide {
+  width: min(680px, 100%);
+}
+
+.ail-gate-card--error {
+  border-color: var(--ail-danger-border);
+}
+
+.ail-gate-card .ail-spinner {
+  width: 22px;
+  height: 22px;
+  margin: 4px auto;
+}
+
+.ail-gate-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.ail-gate-sub {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ail-fg-2);
+}
+
+.ail-gate-sub strong {
+  color: var(--ail-fg);
+}
+
+.ail-gate-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.ail-gate-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--ail-accent-soft);
+  border: 1px solid var(--ail-accent-border);
+  color: var(--ail-accent);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.ail-gate-list {
+  margin: 0;
+  padding-left: 20px;
+  text-align: left;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--ail-fg-2);
+}
+
+.ail-gate-primary {
+  margin-top: 4px;
+  padding: 11px 20px;
+  border-radius: 12px;
+  border: none;
+  background: var(--ail-accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.ail-gate-primary:hover {
+  background: var(--ail-accent-hover);
+}
+
+.ail-gate-note {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--ail-fg-3);
+}
+
+.ail-gate-toast-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: var(--ail-danger-soft);
+  border: 1px solid var(--ail-danger-border);
+  color: var(--ail-danger);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.ail-gate-pickers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ail-gate-picker-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ail-fg-2);
+  text-align: left;
+}
+
+/* PreJoin internals inherit the ailink voice inside the gate card */
+.ail-gate-card .lk-prejoin {
+  gap: 12px;
+  text-align: left;
+}
+
+.ail-gate-card .lk-prejoin .lk-button.lk-join-button,
+.ail-gate-card .lk-prejoin button[type='submit'] {
+  width: 100%;
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: none;
+  background: var(--ail-accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.ail-gate-card .lk-prejoin button[type='submit']:hover {
+  background: var(--ail-accent-hover);
+}
+
+.ail-gate-card .lk-prejoin input {
+  font-size: 16px;
+}
+
+@media (max-width: 640px) {
+  .ail-gate {
+    padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .ail-gate-card {
+    padding: 22px 18px 20px;
+  }
+
+  .ail-gate-title {
+    font-size: 18px;
+  }
+}

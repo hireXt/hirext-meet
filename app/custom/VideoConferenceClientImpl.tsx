@@ -14,10 +14,12 @@ import {
 import { useRouter } from 'next/navigation';
 import { DebugMode } from '@/lib/Debug';
 import { useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import { KeyboardShortcuts } from '@/lib/KeyboardShortcuts';
 import { SettingsMenu } from '@/lib/SettingsMenu';
 import { MeetingEndedScreen } from '@/lib/ailink/MeetingEndedScreen';
 import { AILinkRoom } from '@/lib/ailink/AILinkRoom';
+import { CustomMediaGate, type MediaGateResult } from '@/lib/ailink/CustomMediaGate';
 import { useSetupE2EE } from '@/lib/useSetupE2EE';
 import { useLowCPUOptimizer } from '@/lib/usePerfomanceOptimiser';
 
@@ -33,6 +35,12 @@ export function VideoConferenceClientImpl(props: {
   const e2eeEnabled = !!(e2eePassphrase && worker);
 
   const [e2eeSetupComplete, setE2eeSetupComplete] = useState(false);
+
+  // Gate: nothing connects until the user passes the mandatory device check.
+  // `gate` holds the user's name + device ids + tracks acquired in the click.
+  const [gate, setGate] = useState<MediaGateResult | null>(null);
+  const [gateError, setGateError] = useState<Error | null>(null);
+  const [connectError, setConnectError] = useState<Error | null>(null);
 
   const roomOptions = useMemo((): RoomOptions => {
     return {
@@ -74,15 +82,39 @@ export function VideoConferenceClientImpl(props: {
   }, [e2eeEnabled, e2eePassphrase, keyProvider, room, setE2eeSetupComplete]);
 
   useEffect(() => {
-    if (e2eeSetupComplete) {
-      room.connect(props.liveKitUrl, props.token, connectOptions).catch((error) => {
-        console.error(error);
-      });
-      room.localParticipant.enableCameraAndMicrophone().catch((error) => {
-        console.error(error);
-      });
+    // Wait for the mandatory device gate AND e2ee setup before connecting.
+    if (!gate || !e2eeSetupComplete) {
+      return;
     }
-  }, [room, props.liveKitUrl, props.token, connectOptions, e2eeSetupComplete]);
+    let cancelled = false;
+    (async () => {
+      try {
+        await room.connect(props.liveKitUrl, props.token, connectOptions);
+        if (cancelled) return;
+        // Publish the gate-acquired tracks immediately — these were created
+        // inside the user's "Check devices & join" click, so they carry real
+        // permission grants (unlike a mount-time enableCameraAndMicrophone).
+        for (const track of gate.previewTracks) {
+          if (cancelled) break;
+          await room.localParticipant.publishTrack(track);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        const err = error instanceof Error ? error : new Error(String(error));
+        console.error(err);
+        setConnectError(err);
+        // Release the gate tracks: nothing was published, don't leak devices.
+        gate.previewTracks.forEach((t) => t.stop());
+        toast.error(
+          'Could not join the meeting. Check your connection and try again.',
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gate, e2eeSetupComplete, room, props.liveKitUrl, props.token]);
 
   useLowCPUOptimizer(room);
 
@@ -108,6 +140,27 @@ export function VideoConferenceClientImpl(props: {
 
   if (ended) {
     return <MeetingEndedScreen />;
+  }
+
+  // Mandatory gate screen: user must pass camera+mic check before connecting.
+  if (!gate) {
+    return (
+      <main style={{ height: '100%', position: 'relative' }}>
+        <CustomMediaGate
+          onReady={(result) => {
+            setGateError(null);
+            setConnectError(null);
+            setGate(result);
+          }}
+          onError={(error) => setGateError(error)}
+        />
+        {(gateError || connectError) && (
+          <p className="ail-gate-toast-hint" role="alert">
+            {(connectError ?? gateError)?.message}
+          </p>
+        )}
+      </main>
+    );
   }
 
   return (
