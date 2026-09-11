@@ -45,9 +45,9 @@ export function GoogleMeetGreenRoom({
 
   const [videoEnabled, setVideoEnabled] = React.useState(defaultVideoEnabled);
   const [audioEnabled, setAudioEnabled] = React.useState(defaultAudioEnabled);
-  const [videoDeviceId, setVideoDeviceId] = React.useState('');
-  const [audioDeviceId, setAudioDeviceId] = React.useState('');
-  const [speakerDeviceId, setSpeakerDeviceId] = React.useState('');
+  const [selectedVideoId, setSelectedVideoId] = React.useState<string | undefined>(undefined);
+  const [selectedAudioId, setSelectedAudioId] = React.useState<string | undefined>(undefined);
+  const [selectedSpeakerId, setSelectedSpeakerId] = React.useState<string | undefined>(undefined);
   const [blurEnabled, setBlurEnabled] = React.useState(false);
 
   const [videoDevices, setVideoDevices] = React.useState<MediaDeviceInfo[]>([]);
@@ -57,29 +57,21 @@ export function GoogleMeetGreenRoom({
   const [audioLevel, setAudioLevel] = React.useState(0);
   const [testSoundPlaying, setTestSoundPlaying] = React.useState(false);
 
-  const videoEl = React.useRef<HTMLVideoElement>(null);
+  const videoEl = React.useRef<HTMLVideoElement | null>(null);
   const settingsRef = React.useRef<HTMLDivElement>(null);
 
-  // Enumerate devices helper
+  // Device enumeration: pure reader, ZERO mutations to deviceId state to prevent re-trigger loops
   const refreshDevices = React.useCallback(async () => {
-    if (!navigator.mediaDevices?.enumerateDevices) return;
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return;
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const v = devices.filter((d) => d.kind === 'videoinput');
-      const a = devices.filter((d) => d.kind === 'audioinput');
-      const s = devices.filter((d) => d.kind === 'audiooutput');
-
-      setVideoDevices(v);
-      setAudioDevices(a);
-      setSpeakerDevices(s);
-
-      if (v[0] && !videoDeviceId) setVideoDeviceId(v[0].deviceId);
-      if (a[0] && !audioDeviceId) setAudioDeviceId(a[0].deviceId);
-      if (s[0] && !speakerDeviceId) setSpeakerDeviceId(s[0].deviceId);
+      setVideoDevices(devices.filter((d) => d.kind === 'videoinput'));
+      setAudioDevices(devices.filter((d) => d.kind === 'audioinput'));
+      setSpeakerDevices(devices.filter((d) => d.kind === 'audiooutput'));
     } catch (err) {
       console.warn('Device enumeration error', err);
     }
-  }, [videoDeviceId, audioDeviceId, speakerDeviceId]);
+  }, []);
 
   React.useEffect(() => {
     refreshDevices();
@@ -91,16 +83,28 @@ export function GoogleMeetGreenRoom({
     }
   }, [refreshDevices]);
 
-  // Preview tracks hook from LiveKit
-  const tracks = usePreviewTracks(
-    {
-      audio: audioEnabled ? { deviceId: audioDeviceId || undefined } : false,
-      video: videoEnabled ? { deviceId: videoDeviceId || undefined } : false,
-    },
-    (error) => {
-      console.warn('Track preview error', error);
-    },
-  );
+  // Stable preview options for usePreviewTracks:
+  // ONLY pass deviceId when the user has explicitly selected one from the dropdown!
+  // Otherwise pass boolean true so getUserMedia() is called ONCE without loop resets.
+  const previewOptions = React.useMemo(() => {
+    return {
+      audio: audioEnabled ? (selectedAudioId ? { deviceId: selectedAudioId } : true) : false,
+      video: videoEnabled ? (selectedVideoId ? { deviceId: selectedVideoId } : true) : false,
+    };
+  }, [audioEnabled, videoEnabled, selectedAudioId, selectedVideoId]);
+
+  const tracks = usePreviewTracks(previewOptions, (error) => {
+    console.warn('Track preview error', error);
+  });
+
+  // Once tracks are first acquired and browser permission is granted, refresh device labels once
+  const initialRefreshDone = React.useRef(false);
+  React.useEffect(() => {
+    if (tracks && tracks.length > 0 && !initialRefreshDone.current) {
+      initialRefreshDone.current = true;
+      refreshDevices();
+    }
+  }, [tracks, refreshDevices]);
 
   const videoTrack = React.useMemo(
     () => tracks?.find((t) => t.kind === Track.Kind.Video) as LocalVideoTrack | undefined,
@@ -112,23 +116,38 @@ export function GoogleMeetGreenRoom({
     [tracks],
   );
 
-  // Once tracks are acquired, device labels become available; refresh device names
-  React.useEffect(() => {
-    if (tracks && tracks.length > 0) {
-      refreshDevices();
-    }
-  }, [tracks, refreshDevices]);
+  // Callback ref: Attaches video track the moment <video> DOM element mounts
+  const setVideoRef = React.useCallback(
+    (el: HTMLVideoElement | null) => {
+      videoEl.current = el;
+      if (el && videoTrack && videoEnabled) {
+        try {
+          videoTrack.unmute();
+          videoTrack.attach(el);
+        } catch (e) {
+          console.warn('Video attach error', e);
+        }
+      }
+    },
+    [videoTrack, videoEnabled],
+  );
 
-  // Attach video track to video element (keeps element mounted to avoid detachment on toggle)
+  // Ensure track is attached if videoTrack updates while element is mounted
   React.useEffect(() => {
     const el = videoEl.current;
     if (el && videoTrack && videoEnabled) {
-      videoTrack.unmute();
-      videoTrack.attach(el);
+      try {
+        videoTrack.unmute();
+        videoTrack.attach(el);
+      } catch (e) {
+        console.warn('Video attach error', e);
+      }
     }
     return () => {
       if (el && videoTrack) {
-        videoTrack.detach(el);
+        try {
+          videoTrack.detach(el);
+        } catch {}
       }
     };
   }, [videoTrack, videoEnabled]);
@@ -231,8 +250,8 @@ export function GoogleMeetGreenRoom({
       username: cleanName,
       videoEnabled,
       audioEnabled,
-      videoDeviceId,
-      audioDeviceId,
+      videoDeviceId: selectedVideoId || '',
+      audioDeviceId: selectedAudioId || '',
     });
   };
 
@@ -249,8 +268,8 @@ export function GoogleMeetGreenRoom({
       username: cleanName,
       videoEnabled: false,
       audioEnabled,
-      videoDeviceId,
-      audioDeviceId,
+      videoDeviceId: selectedVideoId || '',
+      audioDeviceId: selectedAudioId || '',
     });
   };
 
@@ -285,10 +304,20 @@ export function GoogleMeetGreenRoom({
     }
   };
 
-  const activeVideoName =
-    videoDevices.find((d) => d.deviceId === videoDeviceId)?.label || 'Camera active';
-  const activeAudioName =
-    audioDevices.find((d) => d.deviceId === audioDeviceId)?.label || 'Microphone active';
+  // Human readable active device labels
+  const activeVideoName = React.useMemo(() => {
+    if (!videoEnabled) return 'Camera is off';
+    if (videoTrack?.mediaStreamTrack?.label) return videoTrack.mediaStreamTrack.label;
+    const match = videoDevices.find((d) => d.deviceId === selectedVideoId);
+    return match?.label || videoDevices[0]?.label || 'Default Camera';
+  }, [videoEnabled, videoTrack, videoDevices, selectedVideoId]);
+
+  const activeAudioName = React.useMemo(() => {
+    if (!audioEnabled) return 'Microphone muted';
+    if (audioTrack?.mediaStreamTrack?.label) return audioTrack.mediaStreamTrack.label;
+    const match = audioDevices.find((d) => d.deviceId === selectedAudioId);
+    return match?.label || audioDevices[0]?.label || 'Default Microphone';
+  }, [audioEnabled, audioTrack, audioDevices, selectedAudioId]);
 
   return (
     <div className="gm-greenroom-container">
@@ -297,17 +326,15 @@ export function GoogleMeetGreenRoom({
         {/* LEFT: Spacious 16:9 Video Preview */}
         <div className="gm-preview-col">
           <div className="gm-preview-card">
-            {/* Video element is always mounted to avoid detachment bugs */}
-            <video
-              ref={videoEl}
-              className="gm-preview-video"
-              autoPlay
-              playsInline
-              muted
-              style={{ display: videoEnabled ? 'block' : 'none' }}
-            />
-
-            {!videoEnabled && (
+            {videoEnabled ? (
+              <video
+                ref={setVideoRef}
+                className="gm-preview-video"
+                autoPlay
+                playsInline
+                muted
+              />
+            ) : (
               <div className="gm-preview-camera-off">
                 <div className="gm-preview-avatar">
                   {username.trim() ? username.trim()[0]!.toUpperCase() : 'HX'}
@@ -398,13 +425,13 @@ export function GoogleMeetGreenRoom({
                       <label className="gm-settings-label">Camera</label>
                       <select
                         className="gm-settings-select"
-                        value={videoDeviceId}
-                        onChange={(e) => setVideoDeviceId(e.target.value)}
+                        value={selectedVideoId || (videoDevices[0]?.deviceId ?? '')}
+                        onChange={(e) => setSelectedVideoId(e.target.value)}
                         disabled={!videoEnabled}
                       >
-                        {videoDevices.map((d) => (
-                          <option key={d.deviceId} value={d.deviceId}>
-                            {d.label || `Camera (${d.deviceId.slice(0, 5)})`}
+                        {videoDevices.map((d, i) => (
+                          <option key={d.deviceId || i} value={d.deviceId}>
+                            {d.label || `Camera ${i + 1}`}
                           </option>
                         ))}
                       </select>
@@ -414,13 +441,13 @@ export function GoogleMeetGreenRoom({
                       <label className="gm-settings-label">Microphone</label>
                       <select
                         className="gm-settings-select"
-                        value={audioDeviceId}
-                        onChange={(e) => setAudioDeviceId(e.target.value)}
+                        value={selectedAudioId || (audioDevices[0]?.deviceId ?? '')}
+                        onChange={(e) => setSelectedAudioId(e.target.value)}
                         disabled={!audioEnabled}
                       >
-                        {audioDevices.map((d) => (
-                          <option key={d.deviceId} value={d.deviceId}>
-                            {d.label || `Microphone (${d.deviceId.slice(0, 5)})`}
+                        {audioDevices.map((d, i) => (
+                          <option key={d.deviceId || i} value={d.deviceId}>
+                            {d.label || `Microphone ${i + 1}`}
                           </option>
                         ))}
                       </select>
@@ -432,13 +459,13 @@ export function GoogleMeetGreenRoom({
                         <div style={{ display: 'flex', gap: 6 }}>
                           <select
                             className="gm-settings-select"
-                            value={speakerDeviceId}
-                            onChange={(e) => setSpeakerDeviceId(e.target.value)}
+                            value={selectedSpeakerId || (speakerDevices[0]?.deviceId ?? '')}
+                            onChange={(e) => setSelectedSpeakerId(e.target.value)}
                             style={{ flex: 1 }}
                           >
-                            {speakerDevices.map((d) => (
-                              <option key={d.deviceId} value={d.deviceId}>
-                                {d.label || `Speaker (${d.deviceId.slice(0, 5)})`}
+                            {speakerDevices.map((d, i) => (
+                              <option key={d.deviceId || i} value={d.deviceId}>
+                                {d.label || `Speaker ${i + 1}`}
                               </option>
                             ))}
                           </select>
@@ -471,9 +498,9 @@ export function GoogleMeetGreenRoom({
               <span>Check your audio and video</span>
             </button>
             <div className="gm-preview-device-status">
-              <span>{videoEnabled ? activeVideoName : 'Camera off'}</span>
+              <span>{activeVideoName}</span>
               <span className="gm-device-bullet">•</span>
-              <span>{audioEnabled ? activeAudioName : 'Microphone muted'}</span>
+              <span>{activeAudioName}</span>
             </div>
           </div>
         </div>

@@ -308,73 +308,39 @@ export function ChevronRightIcon(props: IconProps) {
 const LOGO_ID = 'ail-logo-gradient';
 
 /**
- * HireXt-original brand mark (NOT the LiveKit mark).
- * Gradient rounded-square with a white node-link glyph (three nodes + links).
- * NOTE (rename history): this was historically exported only as `LogoMark`;
- * `HireXtLogoMark` is the clarified alias below — prefer it in new code.
- * LiveKit attribution lives separately as a "Powered by LiveKit" footer line
- * (see AILinkRoom + landing footer), never inside this glyph.
- */
-export function LogoMark({ size = 28 }: { size?: number }) {
-  const id = React.useId().replace(/[:]/g, '');
-  const gradientId = `${LOGO_ID}-${id}`;
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <defs>
-        <linearGradient id={gradientId} x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#1a73e8" />
-          <stop offset="0.55" stopColor="#4285f4" />
-          <stop offset="1" stopColor="#6366f1" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="8.5" fill={`url(#${gradientId})`} />
-      <g stroke="#fff" strokeWidth="1.6" strokeLinecap="round">
-        <path d="M16 9.5 10.5 21" opacity="0.95" />
-        <path d="M16 9.5 21.5 21" opacity="0.95" />
-        <path d="M10.5 21h11" opacity="0.95" />
-      </g>
-      <g fill="#fff">
-        <circle cx="16" cy="9.5" r="2.4" />
-        <circle cx="10.5" cy="21" r="2.4" />
-        <circle cx="21.5" cy="21" r="2.4" />
-      </g>
-      <circle cx="16" cy="17.2" r="1.5" fill="#fff" opacity="0.85" />
-    </svg>
-  );
-}
-
-/**
  * Google Meet authentic multi-color camera mark.
- * Vibrant Google palette: Red (#ea4335), Blue (#1a73e8), Green (#34a853), Yellow (#fbbc04).
+ * Vibrant Google palette: Red (#ea4335), Blue (#2684fc), Green (#00ac47), Yellow (#ffba00).
+ * Fully transparent background, scales gracefully to any size on light or dark canvas.
  */
 export function GoogleMeetLogo({ size = 32 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden="true">
-      <rect width="48" height="48" rx="12" fill="#ffffff" />
-      {/* Google Meet 4-color Camera */}
       <path
-        d="M28 17v-3.5c0-1.38-1.12-2.5-2.5-2.5h-15c-1.38 0-2.5 1.12-2.5 2.5v19c0 1.38 1.12 2.5 2.5 2.5h15c1.38 0 2.5-1.12 2.5-2.5V29"
-        fill="#34a853"
+        d="M29 17.5v-4.2c0-1.55-1.25-2.8-2.8-2.8H8.8C7.25 10.5 6 11.75 6 13.3v21.4C6 36.25 7.25 37.5 8.8 37.5h17.4c1.55 0 2.8-1.25 2.8-2.8V30.5"
+        fill="#00ac47"
       />
       <path
-        d="M28 29l10 6.67c1.33.89 2-.22 2-1.78V14.11c0-1.56-.67-2.67-2-1.78L28 19v10z"
-        fill="#1a73e8"
+        d="M29 30.5l11.2 7.47c1.49 1 3.8-.07 3.8-1.87V11.9c0-1.8-2.31-2.87-3.8-1.87L29 17.5v13z"
+        fill="#00832d"
       />
       <path
-        d="M28 17l10-6.67c.56-.37 1.21-.48 1.81-.35L28 22.94V17z"
+        d="M29 17.5l11.2-7.47c.63-.42 1.36-.54 2.03-.39L29 24.16V17.5z"
         fill="#ea4335"
       />
       <path
-        d="M8 13.5c0-1.38 1.12-2.5 2.5-2.5h8L8 23v-9.5z"
-        fill="#fbbc04"
+        d="M6 13.3c0-1.55 1.25-2.8 2.8-2.8h9L6 23.9v-10.6z"
+        fill="#ffba00"
       />
       <path
-        d="M8 26v6.5c0 1.38 1.12 2.5 2.5 2.5h15c1.38 0 2.5-1.12 2.5-2.5V26H8z"
-        fill="#1a73e8"
+        d="M6 26.9v7.8c0 1.55 1.25 2.8 2.8 2.8h17.4c1.55 0 2.8-1.25 2.8-2.8V26.9H6z"
+        fill="#2684fc"
       />
     </svg>
   );
 }
+
+/** Unified alias: LogoMark renders the consistent GoogleMeetLogo */
+export const LogoMark = GoogleMeetLogo;
 
 export function HandIcon(props: IconProps) {
   return (

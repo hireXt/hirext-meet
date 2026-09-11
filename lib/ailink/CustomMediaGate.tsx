@@ -7,7 +7,7 @@ import {
 } from '@livekit/components-react';
 import { createLocalTracks } from 'livekit-client';
 import toast from 'react-hot-toast';
-import { CameraIcon, MicIcon, ShieldCheckIcon } from './icons';
+import { CameraIcon, GoogleMeetLogo, MicIcon, ShieldCheckIcon } from './icons';
 import { GoogleMeetGreenRoom } from './GoogleMeetGreenRoom';
 
 export interface MediaGateResult extends LocalUserChoices {
@@ -132,9 +132,9 @@ export function CustomMediaGate(props: {
     <div className="ail-prejoin-page">
       <header className="ail-prejoin-nav">
         <div className="ail-brand" title="HireXt Meet">
-          <span className="ail-brand-mark">HX</span>
+          <GoogleMeetLogo size={36} />
           <span className="ail-brand-name">
-            HireXt <span style={{ color: '#1a73e8', fontWeight: 600 }}>Interview</span>
+            HireXt <span style={{ color: '#1a73e8', fontWeight: 600 }}>Meet</span>
           </span>
         </div>
         <div className="ail-prejoin-nav-right">
