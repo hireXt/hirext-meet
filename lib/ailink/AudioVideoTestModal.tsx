@@ -4,6 +4,7 @@ import * as React from 'react';
 import { LocalAudioTrack, LocalVideoTrack } from 'livekit-client';
 import toast from 'react-hot-toast';
 import { playSpeakerTestSound } from '../audioTest';
+import { VoiceNoiseFilterEngine } from '../audioNoiseFilter';
 import {
   CameraIcon,
   CameraOffIcon,
@@ -72,6 +73,7 @@ export function AudioVideoTestModal({
   const audioElRef = React.useRef<HTMLAudioElement | null>(null);
   const animFrameRef = React.useRef<number | null>(null);
   const krispProcessorRef = React.useRef<any>(null);
+  const noiseEngineRef = React.useRef<VoiceNoiseFilterEngine | null>(null);
   const videoPreviewRef = React.useRef<HTMLVideoElement | null>(null);
 
   // Attach video track to modal thumbnail if in video tab
@@ -114,6 +116,10 @@ export function AudioVideoTestModal({
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = null;
+    }
+    if (noiseEngineRef.current) {
+      noiseEngineRef.current.dispose();
+      noiseEngineRef.current = null;
     }
     if (audioElRef.current) {
       audioElRef.current.pause();
@@ -164,23 +170,22 @@ export function AudioVideoTestModal({
       }
       audioCtxRef.current = ctx;
 
+      // Ensure audioTrack has audioContext set
+      if (typeof (audioTrack as unknown as { setAudioContext?: (c: AudioContext) => void }).setAudioContext === 'function') {
+        try {
+          (audioTrack as unknown as { setAudioContext: (c: AudioContext) => void }).setAudioContext(ctx);
+        } catch {}
+      }
+
       const stream = new MediaStream([audioTrack.mediaStreamTrack]);
-      const source = ctx.createMediaStreamSource(stream);
 
-      // Volume level analyzer
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.3;
-      source.connect(analyser);
+      // Connect real-time VoiceNoiseFilterEngine (highpass, lowpass, dynamic voice gate)
+      const engine = new VoiceNoiseFilterEngine(ctx, stream, noiseCancellationEnabled);
+      noiseEngineRef.current = engine;
 
-      // Gain node for loopback
-      const gain = ctx.createGain();
-      gain.gain.value = 1.0;
-      source.connect(gain);
-
-      // Route to destination
+      // Route filtered/raw output to audio destination
       const dest = ctx.createMediaStreamDestination();
-      gain.connect(dest);
+      engine.connect(dest);
 
       const audio = new Audio();
       audio.srcObject = dest.stream;
@@ -205,7 +210,8 @@ export function AudioVideoTestModal({
       await audio.play();
       setIsTestingMic(true);
 
-      // Real-time volume meter update loop
+      // Real-time volume meter update loop from engine analyser
+      const analyser = engine.getAnalyser();
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       const updateMeter = () => {
         analyser.getByteFrequencyData(dataArray);
@@ -225,23 +231,33 @@ export function AudioVideoTestModal({
       toast.error('Could not start microphone loopback test');
       stopMicTest();
     }
-  }, [audioTrack, audioEnabled, selectedSpeakerId, speakerDevices, stopMicTest]);
+  }, [audioTrack, audioEnabled, selectedSpeakerId, speakerDevices, noiseCancellationEnabled, stopMicTest]);
 
   // Handle Noise Cancellation toggle
   const handleToggleNoiseCancellation = async (nextState: boolean) => {
     setKrispPending(true);
     try {
+      // 1. Immediately toggle real-time Web Audio DSP noise filter & voice gate
+      if (noiseEngineRef.current) {
+        noiseEngineRef.current.setEnabled(nextState);
+      }
+
+      // 2. Krisp processor if supported
       if (krispSupported && krispProcessorRef.current && audioTrack) {
-        const currentProcessor = audioTrack.getProcessor();
-        if (!currentProcessor && nextState) {
-          await audioTrack.setProcessor(krispProcessorRef.current);
-          await krispProcessorRef.current.setEnabled(true);
-        } else if (currentProcessor) {
-          await krispProcessorRef.current.setEnabled(nextState);
+        try {
+          const currentProcessor = audioTrack.getProcessor();
+          if (!currentProcessor && nextState) {
+            await audioTrack.setProcessor(krispProcessorRef.current);
+            await krispProcessorRef.current.setEnabled(true);
+          } else if (currentProcessor) {
+            await krispProcessorRef.current.setEnabled(nextState);
+          }
+        } catch (krispErr) {
+          console.warn('Krisp processor warning:', krispErr);
         }
       }
 
-      // Also apply browser-level WebRTC noiseSuppression constraints
+      // 3. Apply browser-level WebRTC noiseSuppression constraints
       if (audioTrack?.mediaStreamTrack) {
         await audioTrack.mediaStreamTrack
           .applyConstraints({
@@ -253,7 +269,7 @@ export function AudioVideoTestModal({
 
       onToggleNoiseCancellation(nextState);
       toast.success(
-        nextState ? 'AI Noise Cancellation: ENABLED' : 'AI Noise Cancellation: DISABLED (Raw audio)',
+        nextState ? 'Noise Cancellation: ENABLED (Background noise cut)' : 'Noise Cancellation: DISABLED (Raw audio with room noise)',
         { duration: 2500 },
       );
     } catch (e) {
