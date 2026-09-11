@@ -213,7 +213,7 @@ function HomeLandingContent() {
           {/* Left Column: Actions */}
           <div className={styles.leftCol}>
             <h1 className={styles.headline}>
-              Premium video meetings.
+              Premium video meetings.{' '}
               <br />
               Now free for everyone.
             </h1>
@@ -269,27 +269,29 @@ function HomeLandingContent() {
                 )}
               </div>
 
-              {/* Enter a Code / Link Group */}
-              <form onSubmit={handleJoin} className={styles.joinInputGroup}>
-                <KeyboardIcon size={20} className={styles.inputIcon} />
-                <input
-                  type="text"
-                  placeholder="Enter a code or link"
-                  className={styles.joinInput}
-                  value={meetingInput}
-                  onChange={(e) => setMeetingInput(e.target.value)}
-                  aria-label="Enter meeting code or link"
-                />
-              </form>
+              {/* Enter a Code / Link + Join Button Row */}
+              <div className={styles.joinRow}>
+                <form onSubmit={handleJoin} className={styles.joinInputGroup}>
+                  <KeyboardIcon size={20} className={styles.inputIcon} />
+                  <input
+                    type="text"
+                    placeholder="Enter a code or link"
+                    className={styles.joinInput}
+                    value={meetingInput}
+                    onChange={(e) => setMeetingInput(e.target.value)}
+                    aria-label="Enter meeting code or link"
+                  />
+                </form>
 
-              <button
-                type="button"
-                className={`${styles.joinBtn} ${canJoin ? styles.joinBtnActive : styles.joinBtnDisabled}`}
-                disabled={!canJoin}
-                onClick={() => handleJoin()}
-              >
-                Join
-              </button>
+                <button
+                  type="button"
+                  className={`${styles.joinBtn} ${canJoin ? styles.joinBtnActive : styles.joinBtnDisabled}`}
+                  disabled={!canJoin}
+                  onClick={() => handleJoin()}
+                >
+                  Join
+                </button>
+              </div>
             </div>
 
             {/* E2EE and Security options */}

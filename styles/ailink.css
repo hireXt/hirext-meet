@@ -1248,10 +1248,24 @@
   .ail-ended-card {
     padding: 34px 22px 26px;
     border-radius: 18px;
+    width: 100%;
+    max-width: 360px;
   }
 
   .ail-ended-title {
     font-size: 20px;
+  }
+
+  .ail-ended-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .ail-ended-btn-primary,
+  .ail-ended-btn-secondary {
+    width: 100%;
+    text-align: center;
   }
 }
 
@@ -3119,3 +3133,31 @@
     font-size: 1.85rem;
   }
 }
+
+@media (max-width: 768px) {
+  .ail-prejoin-nav {
+    padding: 0 16px;
+    height: 56px;
+  }
+
+  .ail-prejoin-clock {
+    display: none !important;
+  }
+
+  .ail-prejoin-code-pill span:last-child {
+    display: none !important;
+  }
+
+  .gm-action-buttons-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .gm-join-btn,
+  .gm-present-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+
