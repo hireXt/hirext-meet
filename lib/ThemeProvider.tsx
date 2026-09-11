@@ -10,21 +10,61 @@ type ThemeContextValue = {
   toggleTheme: () => void;
 };
 
+const DEFAULT_THEME: Theme = 'light';
+const STORAGE_KEY = 'hirext-meet-theme';
+
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'light',
+  theme: DEFAULT_THEME,
   setTheme: () => {},
   toggleTheme: () => {},
 });
 
+/**
+ * Theme provider for the meeting app (D.6 fix — was a hard-coded light no-op).
+ * Persists the choice in localStorage; falls back to the system preference;
+ * applies `data-lk-theme` on <html> which globals.css keys off.
+ */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme] = useState<Theme>('light');
+  const [theme, setThemeState] = React.useState<Theme>(DEFAULT_THEME);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-lk-theme', 'light');
+    let initial: Theme = DEFAULT_THEME;
+    try {
+      const stored = window.localStorage.getItem(STORAGE_KEY);
+      if (stored === 'dark' || stored === 'light') {
+        initial = stored;
+      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        initial = 'dark';
+      }
+    } catch {
+      /* storage unavailable — keep default */
+    }
+    setThemeState(initial);
+    document.documentElement.setAttribute('data-lk-theme', initial);
   }, []);
 
-  const setTheme = useCallback(() => {}, []);
-  const toggleTheme = useCallback(() => {}, []);
+  const setTheme = useCallback((next: Theme) => {
+    setThemeState(next);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      /* storage unavailable */
+    }
+    document.documentElement.setAttribute('data-lk-theme', next);
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setThemeState((current) => {
+      const next: Theme = current === 'light' ? 'dark' : 'light';
+      try {
+        window.localStorage.setItem(STORAGE_KEY, next);
+      } catch {
+        /* storage unavailable */
+      }
+      document.documentElement.setAttribute('data-lk-theme', next);
+      return next;
+    });
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
@@ -36,3 +76,4 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 export function useTheme() {
   return useContext(ThemeContext);
 }
+

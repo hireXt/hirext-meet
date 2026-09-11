@@ -14,9 +14,11 @@
 
 ## A. Architecture & Logic Issues
 
-### A.1 — Two near-duplicate conference implementations
+### A.1 — Two near-duplicate conference implementations — FIXED
 
-`app/rooms/[roomName]/PageClientImpl.tsx` and `app/custom/VideoConferenceClientImpl.tsx` implement the same meeting shell with divergences:
+Was: `PageClientImpl` and `VideoConferenceClientImpl` each owned E2EE/connect/error/disconnect logic with divergences (pre-join only on standard, ended-screen only on custom, `alert()` vs silent errors).
+
+Now: single `lib/ailink/ConferenceShell.tsx` owns E2EE setup, Room lifecycle, connect+publish, toast errors, and ended-screen with leave-vs-drop-vs-error distinction. Standard page keeps its `PreJoin`+`MediaDeviceGuard` pre-join (now with mint loading/failed states + retry) and hands off to the shell; custom page keeps its mandatory `CustomMediaGate` and hands off to the same shell with `preAcquiredTracks`. `AILinkRoom` gained `onLeaveRequest` so the shell can mark user-initiated leave before disconnect.
 
 | Concern | Standard (`[roomName]`) | Custom (`/custom/`) |
 |---|---|---|
@@ -30,19 +32,21 @@ Every fix must be applied twice. The continue-without-media flow (broken-camera 
 
 **Fix:** extract one `<ConferenceShell>` both pages render. Pre-join decision (with/without media) lives in the shell; custom passes `defaultChoices` so both paths behave identically.
 
-### A.2 — E2EE worker created eagerly for *any* hashed URL
+> DONE — `lib/ailink/ConferenceShell.tsx` is that shell (pre-join UIs stay per-path by design: optional on standard, mandatory gate on custom).
 
-`useSetupE2EE()` spins a SHA-256 WebWorker on mount whenever the URL has *any* non-empty `#` fragment — `decodePassphrase` is just `decodeURIComponent`, so `#hello` counts as a "passphrase" and triggers worker creation + `setKey()`. The worker is **never terminated** (leak per tab). `setKey()` on a non-E2EE room is a no-op at best, throws on garbage input at worst. The `DeviceUnsupportedError` branch fires a hard-blocking native `alert()`.
+### A.2 — E2EE worker created eagerly for *any* hashed URL — FIXED
 
-**Fix:** (1) create worker + `setKey` only when token metadata asserts E2EE; (2) terminate worker in `useEffect` cleanup; (3) replace `alert()` with in-UI toasts (`react-hot-toast` is already a dep — use it).
+Was: worker spun up on mount for any non-empty `#` fragment; never terminated; `DeviceUnsupportedError` → native `alert()`.
 
-### A.3 — Token mint is stateless, 5-min TTL, no auth/rate controls
+Now: `useSetupE2EE(passphrase?)` takes an explicit passphrase from the caller (page/shell reads `location.hash` itself), creates the worker lazily only for non-empty passphrases, terminates on unmount, returns `e2eeError`. `ConferenceShell` surfaces worker/setup failures via toast; `DeviceUnsupportedError` maps to a friendly toast message. No `alert()` remains on either path.
 
-`app/api/connection-details/route.ts` accepts `roomName` + `participantName` as plain query params from **any caller**, mints `AccessToken` with `ttl='5m'`, `canPublish/canPublishData/canSubscribe: true`, and stores a random 4-char postfix in a 2h cookie — not bound to a real identity. No rate limiting, no auth, no join gating, no participant limits. `region` rewrites hostname for `livekit.cloud` only (silently ignored self-hosted).
+### A.3 — Token mint was stateless, no auth/rate controls — PARTIALLY FIXED
 
-**Impact:** anyone reaching the endpoint mints tokens for any room; >5 min load-to-join = stale token with **no client re-mint** on 401/403; every role (even watch-only) gets `canPublish: true`.
+Was: open mint, 5-min TTL, random-postfix identity, no rate limit/logging.
 
-**Fix:** gate behind HireXt session; bind identity to authenticated `userId`/profile; per-room/per-user rate limits; client re-mint path with "rejoining…" UX; `canPublish:false` for watch-only roles.
+Now: per-IP sliding-window rate limiting (20 req/min, `Retry-After` on 429) + structured request logging (no secrets) in `app/api/connection-details/route.ts`; response shape unchanged. Client re-mint: `fetchConnectionDetailsWithRetry` (3 attempts, exponential backoff) in `ConferenceShell`.
+
+Still open: full session-auth gate + identity bound to real `userId`. Requires main-app session verification inside the meet Next app (separate services) — tracked as follow-up, not done here.
 
 ### A.4 — `PreJoin` + `MediaDeviceGuard` composition is fragile
 
@@ -56,33 +60,33 @@ Every fix must be applied twice. The continue-without-media flow (broken-camera 
 
 **Fix:** bless capability at mint time (token metadata) or via capability endpoint; gate the button on real capability; friendly error with fallback.
 
-### A.6 — `Room` memoized with empty deps; `hq`/`codec` ignored after mount
+### A.6 — `Room` memoized with empty deps — FIXED
 
-`const room = React.useMemo(() => new Room(roomOptions), [])` — options re-compute on `hq`/`codec` change but the live `Room` is created once. Post-join setting changes silently do nothing.
+Was: `new Room(roomOptions)` with `[]` deps silently ignored post-join `hq`/`codec` changes.
 
-**Fix:** either document+surface `hq`/`codec` as pre-join-only, or reconnect/re-publish on change.
+Now: `ConferenceShell` memos the room on `[roomOptions]` with options keyed on `hq/codec/singlePC` — an option change recreates the room instead of being ignored. Both callers still treat `hq`/`codec` as pre-join-only; this is the safety net.
 
-### A.7 — Mismatched post-disconnect behavior; drop vs. leave identical
+### A.7 — Mismatched post-disconnect behavior — FIXED
 
-Standard: `handleOnLeave → router.push('/')` — network drop and intentional leave both dump you home context-free. Custom (better): `RoomEvent.Disconnected` → `ended=true` → `MeetingEndedScreen`.
+Was: standard pushed `/` on any disconnect (drop indistinguishable from leave); custom showed an ended screen.
 
-**Fix:** standard room adopts the ended-screen pattern; differentiate "Leave" (friendly ended + optional summary) from "unexpected disconnect" (diagnosis + rejoin).
+Now: `ConferenceShell` owns disconnect on both paths — user-initiated leave (via `onLeaveRequest` from the Leave button) → friendly `MeetingEndedScreen`; network drop → "Connection lost" ended screen + rejoin toast; join/setup failure → "Could not join" ended screen with the actual error. Unmount fully disconnects and stops gate tracks.
 
 "unexpected disconnect" (diagnosis + rejoin).
 
 ## B. UI / UX Issues
 
-### B.1 — Hard-blocking `alert()` dialogs
+### B.1 — Hard-blocking `alert()` dialogs — FIXED
 
-E2EE `DeviceUnsupportedError`, connection error, encryption error → native `alert(...)`. Unstyleable, focus-trapping, main-thread blocking.
+Was: E2EE/connection/encryption errors → native `alert()` (standard) or silent `console.error` (custom).
 
-**Fix:** in-app toasts/banners with recovery actions (retry / rejoin / continue-without-media) via existing `react-hot-toast`.
+Now: zero `alert()` calls remain. All error surfaces are toasts (`react-hot-toast`) plus ended-screen states with the actual message: E2EE setup/device failures, media-device errors, encryption errors, connect failures, drops.
 
-### B.2 — No loading/error state while minting token
+### B.2 — No loading/error state while minting token — FIXED (standard path)
 
-Home **Start Meeting**/**Connect** push a route immediately; mint happens only after room-page load via `/api/connection-details` fetch. On mint failure `connectionDetails` stays `undefined` and pre-join stalls silently; `handlePreJoinError` is `console.error` only.
+Was: route push then silent mint; failure left pre-join stalled with `console.error` only.
 
-**Fix:** loading skeleton on room page for the mint fetch; explicit error + retry ("Couldn't start the meeting — try again").
+Now: standard page shows a "Starting your meeting…" loading card while `fetchConnectionDetailsWithRetry` runs (3 attempts, backoff) and a "Couldn't start the meeting" error card with the actual message + "Try again" on failure; `PreJoin.onError` also toasts. (Custom path takes its token from the interview server URL, so no mint state applies there.)
 
 ### B.3 — Pre-join copy is generic, not interview-first
 
@@ -96,11 +100,9 @@ Nav shows `room.name || label` ("Meeting code") + "Secure" chip. No session titl
 
 **Fix:** pass interview metadata (token metadata or parallel fetch); render header chip e.g. "Software Engineer Interview · Acme · 30 min". Grounds recording + post-meeting summary.
 
-### B.5 — "Copy invite link" copies full URL incl. hash
+### B.5 — "Copy invite link" copies full URL incl. hash — FIXED
 
-`copyInvite` writes `window.location.href` — E2EE rooms include the passphrase hash (`#<passphrase>`).
-
-**Fix:** warn the link may contain an encrypted-room passphrase; offer "copy room code only" alongside "copy invite link".
+Now: the toast warns when the copied link includes the E2EE passphrase, and E2EE rooms get a second "Copy link without passphrase" option that strips the hash (plain room link, participant enters the passphrase separately).
 
 ### B.6 — Layout switcher hidden on mobile, no alternative
 
@@ -126,42 +128,31 @@ Autoplay gate ("Click to enable audio") may reappear on reconnect/tab-switch in 
 
 **Fix:** test reconnect/tab-switch on Safari/iOS; show overlay only when audio genuinely cannot start.
 
-### B.10 — No actionable reconnect UX
+### B.10 — No actionable reconnect UX — PARTIALLY FIXED
 
-Chip cycles Good/Connecting…/Weak/Reconnecting…/Disconnected with no action. Gap between "weak" warning and "dropped".
+Was: chip-only states, no action. Gap between "weak" warning and "dropped".
 
-**Fix:** reconnect banner on Connecting/Reconnecting ("Reconnecting automatically…"); "Connection lost" screen on Disconnected with rejoin button (reuse cookie or re-mint).
-
-on Disconnected with rejoin button (reuse cookie or re-mint).
+Now: `MeetingEndedScreen` takes an optional `rejoinHref`/`onRejoin`; the shell passes `onRejoin` for dropped/error ends — one click remounts the shell for a fresh connect without going home. "Meeting ended" (user-left) still routes home by default.
 
 ## C. Design & Branding Inconsistency
 
-### C.1 — Two competing design systems
+### C.1 — Two competing design systems — FIXED
 
-- **Home** (`app/page.tsx` + `Home.module.css` + `globals.css`): dark glassmorphic, translucent dark cards, accent on dark, blur flakes.
-- **In-room** (`ailink.css`): light minimal indigo/violet, `--ail-bg:#f7f8fb`, white surfaces, different type scale/spacing.
+Home now uses the light `ailink` language: light tokens (`#f7f8fb` page, white cards, indigo accent `#5b5bd6`), matching type voice — verified in the branding pass (landing HTTP 200, no dark-glass remnant styles).
 
-Users travel dark-glass → bright-white with no transition. Accent matches (`#5b5bd6`) but voice differs (landing tone vs. product-tool tone).
+### C.2 — LiveKit `LogoMark` co-branding concern — RESOLVED (verified HireXt-original)
 
-**Fix:** pick one language — light `ailink.css` is the better base — and carry its tokens (surface, type scale, radius, shadow) to the home page.
+Was: suspected LiveKit mark fused with "HireXt Meet".
 
-### C.2 — LiveKit `LogoMark` co-branded as the product mark
+Now (verified): `LogoMark` in `lib/ailink/icons.tsx` is HireXt-original — gradient rounded-square (`#5B5BD6 → #6D5AE8 → #8B5CF6`) with a white 3-node link glyph, NOT the LiveKit mark. Documented in-code with a clarifying comment. A separate "Powered by LiveKit" footer line was added so attribution is distinct from the brand, never fused.
 
-Home header, `AILinkRoom` brand link, `MeetingEndedScreen` all render LiveKit's `LogoMark` next to "HireXt Meet" as one combined logo. Third-party OSS mark + your brand reads "LiveKit demo" and is a trademark/brand risk.
+### C.3 — Stock Unsplash virtual backgrounds, no fallbacks — PARTIALLY FIXED
 
-**Fix:** HireXt-owned meeting mark; optional separate "Powered by LiveKit" line (footer/About), never fused with the logo.
+Now: labels are neutral ("Background 1/2") and two branded gradient scenes (Indigo/Slate, rendered to canvas data URLs) ship alongside; image scenes are probe-loaded before applying, with toast + blur fallback on failure. Files are still local Unsplash photos in `/public/background-images` (HireXt is not yet shipping original artwork) — replace assets in a later branding pass.
 
-### C.3 — Stock Unsplash virtual backgrounds, no fallbacks
+### C.4 — "Demo project" language — FIXED
 
-`CameraSettings` offers only "Desk" (samantha-gades) and "Nature" (ali-kazal). Generic stock; no `onError` fallback on load failure.
-
-**Fix:** blur-only default + neutral/branded scenes; blur fallback on failure.
-
-### C.4 — "Demo project" language
-
-"Try HireXt Meet for free with our live demo project" undercuts trust for a production interview surface.
-
-**Fix:** "Start a test meeting" / "Try a sample meeting".
+Landing copy no longer calls it a "demo project"; reframed as test/sample meeting. Landing restyled toward the light `ailink` token voice; dead `.themeSwitcher` CSS removed.
 
 ### C.5 — `LogoMark` provenance unconfirmed
 
@@ -191,19 +182,17 @@ Labels hide at narrow widths + safe-area insets across three nearby breakpoints 
 
 Nav → transparent overlay, `--ail-dock-h` 56px — good — but verify `ail-stage-wrap`/`ail-stage` flex math still gives video enough height and dock never overlaps content.
 
-### D.5 — Continue-without-media form uses inline hardcoded palette
+### D.5 — Continue-without-media form uses inline hardcoded palette — FIXED
 
-Inlines `background: var(--lk-bg2,#fff)`, `color: var(--lk-fg,#12142b)` etc. Renders atop `ail-root` light shell; diverges on theme change.
+Was: inline `--lk-*` styles on the standard-page fallback form.
 
-**Fix:** move onto the same `ail-*` tokens as the rest of the room.
+Now: the form uses `ail-gate-card`/`ail-gate-title`/`ail-gate-sub`/`ail-gate-input`/`ail-gate-primary` classes (`.ail-join-without-media` modifier) — fully on `ail-*` tokens like the rest of the room.
 
-### D.6 — `ThemeProvider` is a no-op; `.themeSwitcher` CSS un-wired
+### D.6 — `ThemeProvider` is a no-op — FIXED
 
-Hard-codes light (`data-lk-theme='light'`), ignores `prefers-color-scheme`, never persists; `setTheme`/`toggleTheme` no-ops; `useTheme()` unused. `Home.module.css` ships orphan `.themeSwitcher`.
+Was: hard-coded light, no-op setters, unused `useTheme()`.
 
-**Fix:** make the provider real (preference → persist → document attr + LiveKit theme) or delete it + switcher CSS.
-
-or delete it + switcher CSS.
+Now: real provider — initial theme from `localStorage('hirext-meet-theme')` → system `prefers-color-scheme` → light default; `setTheme`/`toggleTheme` work and persist; `data-lk-theme` on `<html>` drives `globals.css` (dark token block added). Orphan `.themeSwitcher` CSS already removed in the branding pass. No switcher UI shipped yet (the app is light-first by design) — the plumbing is ready when one is added.
 
 ## E. Production-readiness Gaps
 
@@ -213,17 +202,15 @@ Home, room, custom pages publicly reachable; participation anonymous. Interviews
 
 **Fix:** tie identity in at the mint endpoint (§A.3).
 
-### E.2 — Error telemetry is Debug-only
+### E.2 — Error telemetry is Debug-only — PARTIALLY FIXED
 
-`DebugMode` (Shift+D tracks/permissions panel) + Datadog init in `useDebugMode` — Datadog only when both public token + site set, else console. No structured reporting for connection/E2EE/recording/connect failures with user/room context.
+Was: Debug panel + console-only errors.
 
-**Fix:** error boundary around room + reporting hook on `handleError`/`handleEncryptionError`/`Disconnected` (room, identity, state, error). Keep Debug panel strictly dev-only (`NODE_ENV` gate).
+Now: `lib/MeetingErrorBoundary.tsx` wraps the room UI in `ConferenceShell` — a render crash shows an error screen instead of a blank tab, logs structured details (message, stack, componentStack) and fires `onError`. Shell-level failures (connect/E2EE/encryption/media) already funnel through `reportError`. Full external reporter (Sentry/Datadog with room context) still open.
 
-### E.3 — Unhandled connection-details fetch failure (§B.2)
+### E.3 — Unhandled connection-details fetch failure — FIXED
 
-Mint failure → `connectionDetails` stays `undefined` → pre-join blocked forever.
-
-**Fix:** explicit error state + retry.
+Standard path mints with `fetchConnectionDetailsWithRetry` (3 attempts, backoff) and shows explicit "Starting your meeting…" / "Couldn't start the meeting" + Try-again states.
 
 ### E.4 — Large, partly-public env surface
 
@@ -243,23 +230,21 @@ Now: `/custom` renders a mandatory `CustomMediaGate` (`lib/ailink/CustomMediaGat
 
 **Fix:** E2EE opt-in via dedicated copy-from-UI shared secret (not URL), or — if keeping hash passphrases — document limits and don't imply strong security. Keep signed-JWT `museTalkEnabled` decode clearly separated from passphrase handling.
 
-### E.7 — Room IDs from `Math.random`
+### E.7 — Room IDs from `Math.random` — FIXED
 
-`randomString` is non-CSPRNG; 8 lowercase-alnum chars. OK over a trusted channel; shaky if the ID is the *only* access control.
-
-**Fix:** `crypto.getRandomValues` or server-generated IDs.
+`randomString` now uses `window.crypto.getRandomValues` (CSPRNG); the mint route generates its postfix with a server-side `serverRandomString` on `globalThis.crypto`.
 
 ### E.8 — Recording timer edge cases
 
 Interval clears on `isRecording=false`; verify no leak when unmounting mid-recording with `pendingRef` in flight.
 
-### E.9 — `isMeetStaging()` hardcoded, possibly unused
+### E.9 — `isMeetStaging()` hardcoded, possibly unused — FIXED
 
-Hardcodes `meet.staging.livekit.io`; not consumed in reviewed code. Verify purpose; ensure no staging assumption leaks to production.
+Removed (dead code; hardcoded `meet.staging.livekit.io`).
 
-### E.10 — No i18n / RTL / a11y readiness
+### E.10 — No i18n / RTL / a11y readiness — PARTIALLY FIXED
 
-English-only (`lang="en"` set — good). Missing `aria-live` for connection state, recording, join/leave — screen-reader users get no feedback. Contrast risks: home secondary `--lk-fg5:#6f7390` on translucent dark; in-room small text `--ail-fg-3:#878ca7` on white — both need AA verification.
+Now: `aria-live` added in the key spots — connecting overlay (shell), "You are in the meeting / N participants" + "This meeting is now being recorded" announcements (new visually-hidden `.ail-sr-only` live region in `AILinkRoom`), plus `role="alert"`-style error screens. Contrast + RTL/i18n verification on-device still open.
 
 ## F. File-Level Findings
 
@@ -275,13 +260,13 @@ English-only (`lang="en"` set — good). Missing `aria-live` for connection stat
 | `lib/ailink/useRecording.ts` | `available` is just `!!endpoint` (§A.5); generic toasts |
 | `lib/ailink/icons.tsx` | Confirm `LogoMark` provenance (§C.2, §C.5) |
 | `lib/SettingsMenu.tsx` | Tabs `align-content: space-between` on single-row flex is a no-op; indicator basic but functional |
-| `lib/CameraSettings.tsx` / `lib/MicrophoneSettings.tsx` | Inline styles + `lk-button` mix; no image `onError`; Krisp `low` on low-power (good) |
-| `lib/ThemeProvider.tsx` | No-op (§D.6) |
-| `lib/client-utils.ts` | `isMeetStaging` hardcoded/unused (§E.9); non-CSPRNG IDs (§E.7) |
+| `lib/CameraSettings.tsx` / `lib/MicrophoneSettings.tsx` | Inline styles + `lk-button` mix; bg images now validated pre-load with blur+toast fallback (§C.3 fixed); Krisp `low` on low-power (good) |
+| `lib/ThemeProvider.tsx` | Real provider now (§D.6 FIXED) |
+| `lib/client-utils.ts` | CSPRNG IDs (§E.7 FIXED); `isMeetStaging` removed (§E.9 FIXED) |
 | `lib/getLiveKitURL.ts` | Region rewrite `livekit.cloud`-only — fine for demo, no-op self-hosted |
 | `lib/Debug.tsx` | Dev panel + Datadog init — not prod reporting (§E.2) |
 | `lib/useSetupE2EE.ts` | Eager worker, no cleanup, any-hash-passphrase (§A.2) |
-| `lib/usePerfomanceOptimiser.ts` | Solid hook; **typo**: rename → `usePerformanceOptimizer.ts` |
+| `lib/usePerformanceOptimizer.ts` | Solid hook; renamed from `usePerfomanceOptimiser.ts` (typo fixed) |
 | `lib/MediaDeviceGuard.tsx` | Good availability check; inline styles w/ fallbacks |
 | `lib/KeyboardShortcuts.tsx` | Global Cmd/Ctrl+Shift+A mic, +Shift+V camera — good; test macOS conflicts (Ctrl+Shift+V = paste-format in some apps) |
 | `styles/Home.module.css` | Dark glass; orphan `.themeSwitcher` |
@@ -315,11 +300,11 @@ English-only (`lang="en"` set — good). Missing `aria-live` for connection stat
 13. Mobile layout toggle (§B.6).
 14. Post-meeting summary (duration / recording / notes / feedback) (§B.8).
 15. Home ↔ in-room design unification (§C.1).
-16. Branded/neutral backgrounds + load fallbacks (§C.3).
-17. CSPRNG or server-generated room IDs (§E.7).
+16. ~~Branded/neutral backgrounds + load fallbacks (§C.3).~~ DONE (partial — original artwork still pending).
+17. ~~CSPRNG or server-generated room IDs (§E.7).~~ DONE.
 18. Home wide-screen layout pass (§D.1).
 19. Backend-backed recording capability (§A.5).
-20. Rename `usePerfomanceOptimiser.ts` → `usePerformanceOptimizer.ts`.
+20. ~~Rename `usePerfomanceOptimiser.ts` → `usePerformanceOptimizer.ts`.~~ DONE.
 21. On-device contrast + dock-wrap verification (§D.3, §E.10).
 
 ## H. Proposed Implementation Sequence (next step)

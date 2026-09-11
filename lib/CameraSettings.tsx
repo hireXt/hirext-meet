@@ -8,12 +8,35 @@ import {
 } from '@livekit/components-react';
 import { BackgroundBlur, VirtualBackground } from '@livekit/track-processors';
 import { isLocalTrack, LocalTrackPublication, Track } from 'livekit-client';
+import toast from 'react-hot-toast';
 
-// Background image paths (served from /public)
-const BACKGROUND_IMAGES = [
-  { name: 'Desk', path: '/background-images/samantha-gades-BlIhVfXbi9s-unsplash.jpg' },
-  { name: 'Nature', path: '/background-images/ali-kazal-tbw_KQE3Cbg-unsplash.jpg' },
+// Background options are neutral/branded scenes (C.3 fix) — no stock-photo
+// names; blur fallback on load failure.
+
+// Branded gradient scenes rendered to canvas data URLs (always available).
+const BACKGROUND_GRADIENTS = [
+  { name: 'Indigo', stops: ['#5b5bd6', '#6d5ae8', '#8b5cf6'] },
+  { name: 'Slate', stops: ['#4c5170', '#12142b'] },
 ];
+
+// Local image scenes (served from /public) — validated before use.
+const BACKGROUND_IMAGES = [
+  { name: 'Background 1', path: '/background-images/samantha-gades-BlIhVfXbi9s-unsplash.jpg' },
+  { name: 'Background 2', path: '/background-images/ali-kazal-tbw_KQE3Cbg-unsplash.jpg' },
+];
+
+function gradientToDataUrl(stops: string[]): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1280;
+  canvas.height = 720;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return '';
+  const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  stops.forEach((color, i) => gradient.addColorStop(i / (stops.length - 1), color));
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.9);
+}
 
 // Background options
 type BackgroundType = 'none' | 'blur' | 'image';
@@ -134,10 +157,53 @@ export function CameraSettings() {
             </span>
           </button>
 
+          {BACKGROUND_GRADIENTS.map((image) => (
+            <button
+              key={image.name}
+              onClick={() => selectBackground('image', gradientToDataUrl(image.stops))}
+              className="lk-button"
+              aria-pressed={
+                backgroundType === 'image' && virtualBackgroundImagePath === gradientToDataUrl(image.stops)
+              }
+              style={{
+                backgroundImage: `linear-gradient(135deg, ${image.stops.join(', ')})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                width: '80px',
+                height: '60px',
+                border:
+                  backgroundType === 'image' && virtualBackgroundImagePath === gradientToDataUrl(image.stops)
+                    ? '2px solid #5b5bd6'
+                    : '1px solid #d1d1d1',
+              }}
+            >
+              <span
+                style={{
+                  backgroundColor: 'rgba(0,0,0,0.6)',
+                  padding: '2px 5px',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                }}
+              >
+                {image.name}
+              </span>
+            </button>
+          ))}
+
           {BACKGROUND_IMAGES.map((image) => (
             <button
               key={image.path}
-              onClick={() => selectBackground('image', image.path)}
+              onClick={() => {
+                // C.3 fix: validate the image actually loads before applying;
+                // fall back to blur with a toast if it fails.
+                const probe = new Image();
+                probe.onload = () => selectBackground('image', image.path);
+                probe.onerror = () => {
+                  toast.error('Background image unavailable — using blur instead.');
+                  selectBackground('blur');
+                };
+                probe.src = image.path;
+              }}
               className="lk-button"
               aria-pressed={
                 backgroundType === 'image' && virtualBackgroundImagePath === image.path

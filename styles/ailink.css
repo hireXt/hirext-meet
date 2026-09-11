@@ -841,6 +841,17 @@
   color: var(--ail-fg-3);
 }
 
+.ail-powered {
+  flex: none;
+  text-align: center;
+  padding: 6px 16px 8px;
+  font-size: 11.5px;
+  letter-spacing: 0.01em;
+  color: var(--ail-fg-3);
+  background: rgba(255, 255, 255, 0.88);
+  border-top: 1px solid var(--ail-border);
+}
+
 /* ---------- leave button ---------- */
 
 .ail-leave {
@@ -1741,6 +1752,21 @@
   background: var(--ail-accent-hover);
 }
 
+/* "Join without camera/mic" fallback form (D.5 fix: ail tokens, no --lk-*). */
+.ail-join-without-media {
+  width: min(380px, 100%);
+}
+
+.ail-gate-input {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--ail-border-strong, rgba(18, 20, 43, 0.16));
+  background: var(--ail-surface, #fff);
+  color: var(--ail-fg, #12142b);
+  font-size: 15px;
+}
+
 .ail-gate-note {
   margin: 0;
   display: flex;
@@ -1811,6 +1837,26 @@
   font-size: 16px;
 }
 
+/* connecting overlay inside the conference shell */
+.ail-connecting {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: color-mix(in srgb, var(--ail-bg) 82%, transparent);
+  color: var(--ail-fg-2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ail-connecting p {
+  margin: 0;
+}
+
 @media (max-width: 640px) {
   .ail-gate {
     padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0px));
@@ -1823,4 +1869,50 @@
   .ail-gate-title {
     font-size: 18px;
   }
+}
+
+
+/* react-hot-toast themed to the ailink light system (B.1: toasts over alert). */
+.ail-toast-viewport {
+  z-index: 12000;
+}
+
+.ail-toast {
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--ail-fg, #12142b);
+  border: 1px solid var(--ail-border, rgba(18, 20, 43, 0.12));
+  box-shadow: 0 12px 32px -12px rgba(18, 20, 43, 0.2);
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 10px 14px;
+  max-width: calc(100vw - 32px);
+}
+
+/* Visually-hidden but screen-reader-accessible live region (E.10 fix). */
+.ail-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* "Go to Home" secondary link when a Rejoin CTA is shown (B.10 fix). */
+.ail-ended-secondary {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ail-fg-3);
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 10px;
+}
+
+.ail-ended-secondary:hover {
+  color: var(--ail-fg-2);
+  text-decoration: underline;
 }

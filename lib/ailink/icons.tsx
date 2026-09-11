@@ -224,8 +224,26 @@ export function CheckIcon(props: IconProps) {
   );
 }
 
+export function WarningIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 4.5 21 20H3L12 4.5Z" />
+      <path d="M12 10v4.5" />
+      <path d="M12 17.4h.01" />
+    </Svg>
+  );
+}
+
 const LOGO_ID = 'ail-logo-gradient';
 
+/**
+ * HireXt-original brand mark (NOT the LiveKit mark).
+ * Gradient rounded-square with a white node-link glyph (three nodes + links).
+ * NOTE (rename history): this was historically exported only as `LogoMark`;
+ * `HireXtLogoMark` is the clarified alias below — prefer it in new code.
+ * LiveKit attribution lives separately as a "Powered by LiveKit" footer line
+ * (see AILinkRoom + landing footer), never inside this glyph.
+ */
 export function LogoMark({ size = 28 }: { size?: number }) {
   const id = React.useId().replace(/[:]/g, '');
   const gradientId = `${LOGO_ID}-${id}`;
@@ -253,3 +271,6 @@ export function LogoMark({ size = 28 }: { size?: number }) {
     </svg>
   );
 }
+
+/** Clarified alias for the HireXt-original mark — prefer this in new code. */
+export const HireXtLogoMark = LogoMark;

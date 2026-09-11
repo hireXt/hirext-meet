@@ -52,6 +52,12 @@ export interface AILinkRoomProps {
   SettingsComponent?: React.ComponentType<{ onClose?: () => void }>;
   label?: string;
   /**
+   * Optional leave override. When provided, the Leave button calls this
+   * instead of disconnecting directly — lets a parent (e.g. ConferenceShell)
+   * mark the leave as user-initiated before disconnecting.
+   */
+  onLeaveRequest?: () => void;
+  /**
    * When true, the interview renders the MuseTalk conversational video avatar
    * (the AI interviewer's talking-head video participant) as the main stage.
    * When false (or omitted), the interview is audio-only — no avatar video is
@@ -264,7 +270,25 @@ function TopNav(props: NavProps) {
   const copyInvite = () => {
     navigator.clipboard
       .writeText(window.location.href)
-      .then(() => toast.success('Invite link copied'))
+      .then(() =>
+        toast.success(
+          window.location.hash
+            ? 'Invite link copied — it includes the encryption passphrase'
+            : 'Invite link copied',
+        ),
+      )
+      .catch(() => toast.error('Could not copy link'));
+    setMoreMenuOpen(false);
+    setRoomMenuOpen(false);
+  };
+
+  // B.5 fix: passphrase-free sharing option (plain room link, no #hash).
+  const copyRoomLink = () => {
+    const url = new URL(window.location.href);
+    url.hash = '';
+    navigator.clipboard
+      .writeText(url.toString())
+      .then(() => toast.success('Room link copied (no passphrase)'))
       .catch(() => toast.error('Could not copy link'));
     setMoreMenuOpen(false);
     setRoomMenuOpen(false);
@@ -303,6 +327,12 @@ function TopNav(props: NavProps) {
                 <CopyIcon size={15} />
                 Copy invite link
               </button>
+              {window.location.hash && (
+                <button type="button" className="ail-menu-item" onClick={copyRoomLink}>
+                  <CopyIcon size={15} />
+                  Copy link without passphrase
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -454,6 +484,7 @@ export function AILinkRoom({
   SettingsComponent,
   label,
   museTalkEnabled = false,
+  onLeaveRequest,
 }: AILinkRoomProps) {
   const room = useRoomContext();
   const rootRef = React.useRef<HTMLDivElement>(null);
@@ -462,10 +493,23 @@ export function AILinkRoom({
   const [fullscreen, setFullscreen] = React.useState(false);
   const recording = useRecording();
   const participantsCount = useParticipants().length;
+  const [announcement, setAnnouncement] = React.useState('');
 
   const mic = useTrackToggle({ source: Track.Source.Microphone });
   const camera = useTrackToggle({ source: Track.Source.Camera });
   const screenShare = useTrackToggle({ source: Track.Source.ScreenShare });
+
+  // Screen-reader announcements for room state changes (E.10 fix).
+  React.useEffect(() => {
+    if (participantsCount > 0) {
+      setAnnouncement(`You are in the meeting. ${participantsCount} participant${participantsCount === 1 ? '' : 's'} connected.`);
+    }
+  }, [participantsCount]);
+
+  React.useEffect(() => {
+    if (!recording.isRecording) return;
+    setAnnouncement('This meeting is now being recorded.');
+  }, [recording.isRecording]);
 
   React.useEffect(() => {
     const onChange = () => setFullscreen(!!document.fullscreenElement);
@@ -490,10 +534,14 @@ export function AILinkRoom({
   }, []);
 
   const handleLeave = React.useCallback(() => {
+    if (onLeaveRequest) {
+      onLeaveRequest();
+      return;
+    }
     if (room.state !== ConnectionState.Disconnected) {
       room.disconnect().catch((error) => console.warn('disconnect failed', error));
     }
-  }, [room]);
+  }, [room, onLeaveRequest]);
 
   return (
     <div className="ail-root" ref={rootRef}>
@@ -620,6 +668,11 @@ export function AILinkRoom({
 
       <RoomAudioRenderer />
       <StartAudio label="Click to enable audio" className="ail-start-audio" />
+      {/* Screen-reader live region for join/recording announcements (E.10 fix). */}
+      <div role="status" aria-live="polite" className="ail-sr-only">
+        {announcement}
+      </div>
+      <div className="ail-powered">Powered by LiveKit</div>
     </div>
   );
 }

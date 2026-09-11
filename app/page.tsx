@@ -57,8 +57,8 @@ function DemoMeetingTab(props: { label: string }) {
     <div className={styles.tabContent}>
       <h2 className={styles.cardTitle}>Start a meeting</h2>
       <p className={styles.description}>
-        Try HireXt Meet for free with our live demo project. Share the link and start
-        collaborating instantly.
+        Try HireXt Meet for free. Share the link and start collaborating
+        instantly.
       </p>
       <button className={styles.startButton} onClick={startMeeting}>
         Start Meeting
@@ -209,7 +209,8 @@ export default function Page() {
         </Suspense>
       </main>
       <footer>
-        HireXt Meet — secure, AI-powered video meetings built on LiveKit open source.
+        <div>HireXt Meet — secure, AI-powered video meetings.</div>
+        <div style={{ marginTop: '4px', fontSize: '12.5px' }}>Powered by LiveKit</div>
       </footer>
     </>
   );

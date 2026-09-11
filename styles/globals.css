@@ -113,3 +113,27 @@ h2 a {
 h2 a {
   text-decoration: none;
 }
+
+/* Dark theme tokens for data-lk-theme='dark' (D.6 fix: the provider can now
+   actually switch themes; keep the dark palette aligned with the in-room
+   light-first design — darker surfaces, same accent). */
+html[data-lk-theme='dark'] {
+  --lk-bg: #12142b;
+  --lk-bg2: #1b1e2e;
+  --lk-bg3: #232636;
+  --lk-bg4: #2c303f;
+  --lk-bg5: #353a4b;
+  --lk-fg: #f2f3f8;
+  --lk-fg2: #c9ccdd;
+  --lk-fg3: #a3a8c2;
+  --lk-fg4: #8b90ab;
+  --lk-fg5: #7a7f99;
+  --lk-border-color: rgba(255, 255, 255, 0.12);
+  --lk-accent-bg: #5b5bd6;
+  --lk-accent-fg: #ffffff;
+  color-scheme: dark;
+}
+
+html[data-lk-theme='dark'] body {
+  background-color: #12142b;
+}

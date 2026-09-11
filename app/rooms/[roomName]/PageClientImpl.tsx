@@ -1,46 +1,20 @@
 'use client';
 
 import React from 'react';
-import { decodePassphrase } from '@/lib/client-utils';
-import { DebugMode } from '@/lib/Debug';
-import { KeyboardShortcuts } from '@/lib/KeyboardShortcuts';
-import { SettingsMenu } from '@/lib/SettingsMenu';
-import { AILinkRoom } from '@/lib/ailink/AILinkRoom';
+import toast from 'react-hot-toast';
+import { LocalUserChoices, PreJoin } from '@livekit/components-react';
+import { ConferenceShell, fetchConnectionDetailsWithRetry } from '@/lib/ailink/ConferenceShell';
 import { ConnectionDetails } from '@/lib/types';
-import {
-  formatChatMessageLinks,
-  LocalUserChoices,
-  PreJoin,
-  RoomContext,
-} from '@livekit/components-react';
-import {
-  ExternalE2EEKeyProvider,
-  RoomOptions,
-  VideoCodec,
-  VideoPresets,
-  Room,
-  ConnectionError,
-  ConnectionErrorReason,
-  DeviceUnsupportedError,
-  RoomConnectOptions,
-  RoomEvent,
-  TrackPublishDefaults,
-  VideoCaptureOptions,
-} from 'livekit-client';
-import { useRouter } from 'next/navigation';
-import { useSetupE2EE } from '@/lib/useSetupE2EE';
-import { useLowCPUOptimizer } from '@/lib/usePerfomanceOptimiser';
 import { MediaDeviceGuard } from '@/lib/MediaDeviceGuard';
 
 const CONN_DETAILS_ENDPOINT =
   process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT ?? '/api/connection-details';
-const SHOW_SETTINGS_MENU = process.env.NEXT_PUBLIC_SHOW_SETTINGS_MENU == 'true';
 
 export function PageClientImpl(props: {
   roomName: string;
   region?: string;
   hq: boolean;
-  codec: VideoCodec;
+  codec: import('livekit-client').VideoCodec;
   singlePeerConnection: boolean;
 }) {
   const [preJoinChoices, setPreJoinChoices] = React.useState<LocalUserChoices | undefined>(
@@ -57,20 +31,36 @@ export function PageClientImpl(props: {
   const [connectionDetails, setConnectionDetails] = React.useState<ConnectionDetails | undefined>(
     undefined,
   );
+  const [mintState, setMintState] = React.useState<'idle' | 'minting' | 'failed'>('idle');
+  const [mintError, setMintError] = React.useState<Error | null>(null);
 
-  const handlePreJoinSubmit = React.useCallback(async (values: LocalUserChoices) => {
-    setPreJoinChoices(values);
-    const url = new URL(CONN_DETAILS_ENDPOINT, window.location.origin);
-    url.searchParams.append('roomName', props.roomName);
-    url.searchParams.append('participantName', values.username);
-    if (props.region) {
-      url.searchParams.append('region', props.region);
-    }
-    const connectionDetailsResp = await fetch(url.toString());
-    const connectionDetailsData = await connectionDetailsResp.json();
-    setConnectionDetails(connectionDetailsData);
+  const handlePreJoinSubmit = React.useCallback(
+    async (values: LocalUserChoices) => {
+      setMintState('minting');
+      setMintError(null);
+      try {
+        const data = await fetchConnectionDetailsWithRetry(CONN_DETAILS_ENDPOINT, {
+          roomName: props.roomName,
+          participantName: values.username,
+          region: props.region,
+        });
+        setPreJoinChoices(values);
+        setConnectionDetails(data);
+        setMintState('idle');
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        console.error(err);
+        setMintError(err);
+        setMintState('failed');
+        toast.error("Couldn't start the meeting. Check your connection and try again.");
+      }
+    },
+    [props.roomName, props.region],
+  );
+  const handlePreJoinError = React.useCallback((e: Error) => {
+    console.error(e);
+    toast.error(e.message);
   }, []);
-  const handlePreJoinError = React.useCallback((e: any) => console.error(e), []);
 
   const handleContinueWithoutMedia = React.useCallback(() => {
     setContinueWithoutMedia(true);
@@ -92,245 +82,76 @@ export function PageClientImpl(props: {
     [handlePreJoinSubmit],
   );
 
+  const retryMint = React.useCallback(() => {
+    setMintState('idle');
+    setMintError(null);
+  }, []);
+
+  // Joined: hand off to the shared shell (same component custom uses).
+  if (connectionDetails && preJoinChoices) {
+    return (
+      <main style={{ height: '100%', position: 'relative' }}>
+        <ConferenceShell
+          serverUrl={connectionDetails.serverUrl}
+          token={connectionDetails.participantToken}
+          userChoices={preJoinChoices}
+          hq={props.hq}
+          codec={props.codec}
+          singlePeerConnection={props.singlePeerConnection}
+          label="HireXt Meet"
+        />
+      </main>
+    );
+  }
+
   return (
     <main style={{ height: '100%', position: 'relative' }}>
-      {connectionDetails === undefined || preJoinChoices === undefined ? (
-        <div style={{ display: 'grid', placeItems: 'center', height: '100%' }}>
-          {continueWithoutMedia ? (
-            <form
-              onSubmit={joinWithoutMedia}
-              style={{
-                width: '100%',
-                maxWidth: '380px',
-                background: 'var(--lk-bg2, #ffffff)',
-                border: '1px solid var(--lk-border-color, rgba(18,20,43,0.12))',
-                borderRadius: '16px',
-                padding: '2rem',
-                boxShadow: 'var(--lk-box-shadow, 0 12px 32px -12px rgba(18,20,43,0.16))',
-              }}
-            >
-              <h1
-                style={{
-                  fontSize: '1.25rem',
-                  fontWeight: 600,
-                  margin: '0 0 0.5rem',
-                  color: 'var(--lk-fg, #12142b)',
-                  textAlign: 'center',
-                }}
-              >
-                Join without camera/mic
-              </h1>
-              <p
-                style={{
-                  fontSize: '0.9rem',
-                  color: 'var(--lk-fg5, #6f7390)',
-                  textAlign: 'center',
-                  margin: '0 0 1.25rem',
-                }}
-              >
-                You can watch, share your screen, and chat. Add a camera and mic anytime.
-              </p>
-              <input
-                name="username"
-                required
-                placeholder="Your name"
-                style={{
-                  width: '100%',
-                  padding: '0.7rem 0.9rem',
-                  borderRadius: '10px',
-                  border: '1px solid var(--lk-border-color, rgba(18,20,43,0.2))',
-                  background: 'var(--lk-bg2, #fff)',
-                  color: 'var(--lk-fg, #12142b)',
-                  fontSize: '1rem',
-                  marginBottom: '1rem',
-                }}
-              />
-              <button
-                type="submit"
-                style={{
-                  width: '100%',
-                  padding: '0.7rem',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: 'var(--lk-accent-bg, #5b5bd6)',
-                  color: '#fff',
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Join meeting
+      <div style={{ display: 'grid', placeItems: 'center', height: '100%' }}>
+        {mintState === 'minting' ? (
+          <div className="ail-gate" role="status" aria-live="polite">
+            <div className="ail-gate-card">
+              <span className="ail-spinner" aria-hidden="true" />
+              <h1 className="ail-gate-title">Starting your meeting…</h1>
+              <p className="ail-gate-sub">Reserving your seat in the room.</p>
+            </div>
+          </div>
+        ) : mintState === 'failed' ? (
+          <div className="ail-gate" role="alert">
+            <div className="ail-gate-card ail-gate-card--error">
+              <h1 className="ail-gate-title">Couldn&apos;t start the meeting</h1>
+              <p className="ail-gate-sub">{mintError?.message ?? 'Mint failed.'}</p>
+              <button type="button" className="ail-gate-primary" onClick={retryMint}>
+                Try again
               </button>
-            </form>
-          ) : (
-            <MediaDeviceGuard onContinueWithoutMedia={handleContinueWithoutMedia}>
-              <PreJoin
-                defaults={preJoinDefaults}
-                onSubmit={handlePreJoinSubmit}
-                onError={handlePreJoinError}
-              />
-            </MediaDeviceGuard>
-          )}
-        </div>
-      ) : (
-        <VideoConferenceComponent
-          connectionDetails={connectionDetails}
-          userChoices={preJoinChoices}
-          options={{
-            codec: props.codec,
-            hq: props.hq,
-            singlePeerConnection: props.singlePeerConnection,
-          }}
-        />
-      )}
+            </div>
+          </div>
+        ) : continueWithoutMedia ? (
+          <form onSubmit={joinWithoutMedia} className="ail-gate-card ail-join-without-media">
+            <h1 className="ail-gate-title">Join without camera/mic</h1>
+            <p className="ail-gate-sub">
+              You can watch, share your screen, and chat. Add a camera and mic anytime.
+            </p>
+            <input
+              name="username"
+              required
+              placeholder="Your name"
+              aria-label="Your name"
+              className="ail-gate-input"
+            />
+            <button type="submit" className="ail-gate-primary">
+              Join meeting
+            </button>
+          </form>
+        ) : (
+          <MediaDeviceGuard onContinueWithoutMedia={handleContinueWithoutMedia}>
+            <PreJoin
+              defaults={preJoinDefaults}
+              onSubmit={handlePreJoinSubmit}
+              onError={handlePreJoinError}
+            />
+          </MediaDeviceGuard>
+        )}
+      </div>
     </main>
-  );
-}
-
-function VideoConferenceComponent(props: {
-  userChoices: LocalUserChoices;
-  connectionDetails: ConnectionDetails;
-  options: {
-    hq: boolean;
-    codec: VideoCodec;
-    singlePeerConnection: boolean;
-  };
-}) {
-  const keyProvider = new ExternalE2EEKeyProvider();
-  const { worker, e2eePassphrase } = useSetupE2EE();
-  const e2eeEnabled = !!(e2eePassphrase && worker);
-
-  const [e2eeSetupComplete, setE2eeSetupComplete] = React.useState(false);
-
-  const roomOptions = React.useMemo((): RoomOptions => {
-    let videoCodec: VideoCodec | undefined = props.options.codec ? props.options.codec : 'vp9';
-    if (e2eeEnabled && (videoCodec === 'av1' || videoCodec === 'vp9')) {
-      videoCodec = undefined;
-    }
-    const videoCaptureDefaults: VideoCaptureOptions = {
-      deviceId: props.userChoices.videoDeviceId ?? undefined,
-      resolution: props.options.hq ? VideoPresets.h2160 : VideoPresets.h720,
-    };
-    const publishDefaults: TrackPublishDefaults = {
-      dtx: false,
-      videoSimulcastLayers: props.options.hq
-        ? [VideoPresets.h1080, VideoPresets.h720]
-        : [VideoPresets.h540, VideoPresets.h216],
-      red: !e2eeEnabled,
-      videoCodec,
-    };
-    return {
-      videoCaptureDefaults: videoCaptureDefaults,
-      publishDefaults: publishDefaults,
-      audioCaptureDefaults: {
-        deviceId: props.userChoices.audioDeviceId ?? undefined,
-      },
-      adaptiveStream: true,
-      dynacast: true,
-      e2ee: keyProvider && worker && e2eeEnabled ? { keyProvider, worker } : undefined,
-      singlePeerConnection: props.options.singlePeerConnection,
-    };
-  }, [props.userChoices, props.options.hq, props.options.codec]);
-
-  const room = React.useMemo(() => new Room(roomOptions), []);
-
-  React.useEffect(() => {
-    if (e2eeEnabled) {
-      keyProvider
-        .setKey(decodePassphrase(e2eePassphrase))
-        .then(() => {
-          room.setE2EEEnabled(true).catch((e) => {
-            if (e instanceof DeviceUnsupportedError) {
-              alert(
-                `You're trying to join an encrypted meeting, but your browser does not support it. Please update it to the latest version and try again.`,
-              );
-              console.error(e);
-            } else {
-              throw e;
-            }
-          });
-        })
-        .then(() => setE2eeSetupComplete(true));
-    } else {
-      setE2eeSetupComplete(true);
-    }
-  }, [e2eeEnabled, room, e2eePassphrase]);
-
-  const connectOptions = React.useMemo((): RoomConnectOptions => {
-    return {
-      autoSubscribe: true,
-    };
-  }, []);
-
-  React.useEffect(() => {
-    room.on(RoomEvent.Disconnected, handleOnLeave);
-    room.on(RoomEvent.EncryptionError, handleEncryptionError);
-    room.on(RoomEvent.MediaDevicesError, handleError);
-
-    if (e2eeSetupComplete) {
-      room
-        .connect(
-          props.connectionDetails.serverUrl,
-          props.connectionDetails.participantToken,
-          connectOptions,
-        )
-        .catch((error) => {
-          handleError(error);
-        });
-      if (props.userChoices.videoEnabled) {
-        room.localParticipant.setCameraEnabled(true).catch((error) => {
-          handleError(error);
-        });
-      }
-      if (props.userChoices.audioEnabled) {
-        room.localParticipant.setMicrophoneEnabled(true).catch((error) => {
-          handleError(error);
-        });
-      }
-    }
-    return () => {
-      room.off(RoomEvent.Disconnected, handleOnLeave);
-      room.off(RoomEvent.EncryptionError, handleEncryptionError);
-      room.off(RoomEvent.MediaDevicesError, handleError);
-    };
-  }, [e2eeSetupComplete, room, props.connectionDetails, props.userChoices]);
-
-  const lowPowerMode = useLowCPUOptimizer(room);
-
-  const router = useRouter();
-  const handleOnLeave = React.useCallback(() => router.push('/'), [router]);
-  const handleError = React.useCallback((error: Error) => {
-    if (error instanceof ConnectionError && error.reason === ConnectionErrorReason.Cancelled) {
-      console.warn('Connection cancelled (expected during leave/reload).', error.message);
-      return;
-    }
-    console.error(error);
-    alert(`Encountered an unexpected error, check the console logs for details: ${error.message}`);
-  }, []);
-  const handleEncryptionError = React.useCallback((error: Error) => {
-    console.error(error);
-    alert(
-      `Encountered an unexpected encryption error, check the console logs for details: ${error.message}`,
-    );
-  }, []);
-
-  React.useEffect(() => {
-    if (lowPowerMode) {
-      console.warn('Low power mode enabled');
-    }
-  }, [lowPowerMode]);
-
-  return (
-    <div className="lk-room-container" style={{ height: '100%' }}>
-      <RoomContext.Provider value={room}>
-        <KeyboardShortcuts />
-        <AILinkRoom
-          chatMessageFormatter={formatChatMessageLinks}
-          SettingsComponent={SHOW_SETTINGS_MENU ? SettingsMenu : undefined}
-          label={`HireXt Meet`}
-        />
-        <DebugMode />
-      </RoomContext.Provider>
-    </div>
   );
 }

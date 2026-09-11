@@ -5,7 +5,6 @@ import '@livekit/components-styles/prefabs';
 import type { Metadata, Viewport } from 'next';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from '@/lib/ThemeProvider';
-
 export const metadata: Metadata = {
   title: {
     default: 'HireXt Meet | Secure AI-powered video meetings',
@@ -43,7 +42,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body suppressHydrationWarning>
         <ThemeProvider>
-          <Toaster />
+          <Toaster
+            containerClassName="ail-toast-viewport"
+            toastOptions={{
+              className: 'ail-toast',
+              duration: 5000,
+            }}
+          />
           {children}
         </ThemeProvider>
       </body>
