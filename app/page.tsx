@@ -9,6 +9,7 @@ import {
   CameraIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  GoogleMeetLogo,
   HelpCircleIcon,
   KeyboardIcon,
   LinkIcon,
@@ -176,7 +177,7 @@ function HomeLandingContent() {
       {/* Top Navbar */}
       <header className={styles.navbar}>
         <Link href="/" className={styles.navBrand}>
-          <LogoMark size={34} />
+          <GoogleMeetLogo size={36} />
           <span className={styles.brandText}>
             HireXt <span className={styles.brandHighlight}>Meet</span>
           </span>

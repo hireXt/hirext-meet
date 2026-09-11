@@ -343,5 +343,92 @@ export function LogoMark({ size = 28 }: { size?: number }) {
   );
 }
 
+/**
+ * Google Meet authentic multi-color camera mark.
+ * Vibrant Google palette: Red (#ea4335), Blue (#1a73e8), Green (#34a853), Yellow (#fbbc04).
+ */
+export function GoogleMeetLogo({ size = 32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#ffffff" />
+      {/* Google Meet 4-color Camera */}
+      <path
+        d="M28 17v-3.5c0-1.38-1.12-2.5-2.5-2.5h-15c-1.38 0-2.5 1.12-2.5 2.5v19c0 1.38 1.12 2.5 2.5 2.5h15c1.38 0 2.5-1.12 2.5-2.5V29"
+        fill="#34a853"
+      />
+      <path
+        d="M28 29l10 6.67c1.33.89 2-.22 2-1.78V14.11c0-1.56-.67-2.67-2-1.78L28 19v10z"
+        fill="#1a73e8"
+      />
+      <path
+        d="M28 17l10-6.67c.56-.37 1.21-.48 1.81-.35L28 22.94V17z"
+        fill="#ea4335"
+      />
+      <path
+        d="M8 13.5c0-1.38 1.12-2.5 2.5-2.5h8L8 23v-9.5z"
+        fill="#fbbc04"
+      />
+      <path
+        d="M8 26v6.5c0 1.38 1.12 2.5 2.5 2.5h15c1.38 0 2.5-1.12 2.5-2.5V26H8z"
+        fill="#1a73e8"
+      />
+    </svg>
+  );
+}
+
+export function HandIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M18 11V6a2 2 0 0 0-4 0v5" />
+      <path d="M14 10V4a2 2 0 0 0-4 0v7" />
+      <path d="M10 10.5V6a2 2 0 0 0-4 0v8" />
+      <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.9-2.26L3.5 17.14a1.5 1.5 0 0 1 .22-2.22 1.5 1.5 0 0 1 2.08.22L8 17" />
+    </Svg>
+  );
+}
+
+export function SparklesIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="m12 3 1.91 5.09L19 10l-5.09 1.91L12 17l-1.91-5.09L5 10l5.09-1.91L12 3Z" />
+      <path d="M19 16l.96 2.04L22 19l-2.04.96L19 22l-.96-2.04L16 19l2.04-.96L19 16Z" />
+    </Svg>
+  );
+}
+
+export function HeadphonesIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3" />
+    </Svg>
+  );
+}
+
+export function SlidersIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <line x1="4" y1="21" x2="4" y2="14" />
+      <line x1="4" y1="10" x2="4" y2="3" />
+      <line x1="12" y1="21" x2="12" y2="12" />
+      <line x1="12" y1="8" x2="12" y2="3" />
+      <line x1="20" y1="21" x2="20" y2="16" />
+      <line x1="20" y1="12" x2="20" y2="3" />
+      <line x1="1" y1="14" x2="7" y2="14" />
+      <line x1="9" y1="8" x2="15" y2="8" />
+      <line x1="17" y1="16" x2="23" y2="16" />
+    </Svg>
+  );
+}
+
+export function VolumeIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+    </Svg>
+  );
+}
+
 /** Clarified alias for the HireXt-original mark — prefer this in new code. */
 export const HireXtLogoMark = LogoMark;

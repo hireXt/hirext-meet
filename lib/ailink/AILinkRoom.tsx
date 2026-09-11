@@ -30,6 +30,8 @@ import {
   CloseIcon,
   CopyIcon,
   ExpandIcon,
+  GoogleMeetLogo,
+  HandIcon,
   InfoIcon,
   LayoutGridIcon,
   LogoMark,
@@ -419,6 +421,7 @@ function GoogleMeetDock({
 }) {
   const [clockTime, setClockTime] = React.useState('');
   const [moreOpen, setMoreOpen] = React.useState(false);
+  const [handRaised, setHandRaised] = React.useState(false);
   const moreRef = React.useRef<HTMLDivElement>(null);
   useClickOutside(moreRef, moreOpen, () => setMoreOpen(false));
 
@@ -479,6 +482,20 @@ function GoogleMeetDock({
           aria-label={camera.enabled ? 'Turn off camera' : 'Turn on camera'}
         >
           {camera.enabled ? <CameraIcon size={20} /> : <CameraOffIcon size={20} />}
+        </button>
+
+        {/* Raise hand toggle */}
+        <button
+          type="button"
+          className={cx('ail-circle-btn', handRaised && 'ail-circle-btn--active')}
+          onClick={() => {
+            setHandRaised((v) => !v);
+            toast(handRaised ? 'Lowered hand' : 'You raised your hand');
+          }}
+          title={handRaised ? 'Lower hand' : 'Raise hand'}
+          aria-label={handRaised ? 'Lower hand' : 'Raise hand'}
+        >
+          <HandIcon size={20} />
         </button>
 
         {/* Screen share toggle */}

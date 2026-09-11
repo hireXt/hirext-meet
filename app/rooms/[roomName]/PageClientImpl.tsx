@@ -7,6 +7,7 @@ import { LocalUserChoices } from '@livekit/components-react';
 import { ConferenceShell, fetchConnectionDetailsWithRetry } from '@/lib/ailink/ConferenceShell';
 import { ConnectionDetails } from '@/lib/types';
 import { GoogleMeetGreenRoom } from '@/lib/ailink/GoogleMeetGreenRoom';
+import { GoogleMeetLogo } from '@/lib/ailink/icons';
 
 const CONN_DETAILS_ENDPOINT =
   process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT ?? '/api/connection-details';
@@ -34,6 +35,19 @@ export function PageClientImpl(props: {
   );
   const [mintState, setMintState] = React.useState<'idle' | 'minting' | 'failed'>('idle');
   const [mintError, setMintError] = React.useState<Error | null>(null);
+  const [currentTime, setCurrentTime] = React.useState('');
+
+  React.useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      const dateStr = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+      setCurrentTime(`${timeStr} • ${dateStr}`);
+    };
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handlePreJoinSubmit = React.useCallback(
     async (values: LocalUserChoices) => {
@@ -112,19 +126,21 @@ export function PageClientImpl(props: {
       .catch(() => toast.error('Failed to copy link'));
   };
 
+
   return (
     <div className="ail-prejoin-page">
       <header className="ail-prejoin-nav">
         <Link href="/" className="ail-brand" title="HireXt Meet Home">
-          <span className="ail-brand-mark">HX</span>
+          <GoogleMeetLogo size={36} />
           <span className="ail-brand-name">
             HireXt <span style={{ color: '#1a73e8', fontWeight: 600 }}>Meet</span>
           </span>
         </Link>
         <div className="ail-prejoin-nav-right">
+          {currentTime && <span className="ail-prejoin-clock">{currentTime}</span>}
           <div className="ail-prejoin-code-pill" onClick={copyLink} title="Click to copy meeting link">
             <span>{props.roomName}</span>
-            <span style={{ fontSize: '11px', color: '#1a73e8', fontWeight: 600 }}>Copy link</span>
+            <span style={{ fontSize: '11.5px', color: '#1a73e8', fontWeight: 600 }}>Copy link</span>
           </div>
           <div className="ail-avatar" style={{ width: 34, height: 34, fontSize: '12px' }}>
             HX

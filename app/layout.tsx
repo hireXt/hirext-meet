@@ -1,7 +1,7 @@
-import '../styles/globals.css';
-import '../styles/ailink.css';
 import '@livekit/components-styles';
 import '@livekit/components-styles/prefabs';
+import '../styles/globals.css';
+import '../styles/ailink.css';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';

@@ -7,13 +7,15 @@ import toast from 'react-hot-toast';
 import {
   CameraIcon,
   CameraOffIcon,
-  CheckIcon,
-  ChevronDownIcon,
   CopyIcon,
+  HeadphonesIcon,
   MicIcon,
   MicOffIcon,
+  ScreenShareIcon,
   SettingsIcon,
   ShieldCheckIcon,
+  SparklesIcon,
+  VolumeIcon,
 } from './icons';
 
 export interface GoogleMeetGreenRoomProps {
@@ -33,34 +35,61 @@ export function GoogleMeetGreenRoom({
   onSubmit,
   onContinueWithoutMedia,
 }: GoogleMeetGreenRoomProps) {
-  const [username, setUsername] = React.useState(defaultUsername);
+  const [username, setUsername] = React.useState(() => {
+    if (defaultUsername) return defaultUsername;
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('hx_meet_username') || '';
+    }
+    return '';
+  });
+
   const [videoEnabled, setVideoEnabled] = React.useState(defaultVideoEnabled);
   const [audioEnabled, setAudioEnabled] = React.useState(defaultAudioEnabled);
   const [videoDeviceId, setVideoDeviceId] = React.useState('');
   const [audioDeviceId, setAudioDeviceId] = React.useState('');
+  const [speakerDeviceId, setSpeakerDeviceId] = React.useState('');
+  const [blurEnabled, setBlurEnabled] = React.useState(false);
 
   const [videoDevices, setVideoDevices] = React.useState<MediaDeviceInfo[]>([]);
   const [audioDevices, setAudioDevices] = React.useState<MediaDeviceInfo[]>([]);
+  const [speakerDevices, setSpeakerDevices] = React.useState<MediaDeviceInfo[]>([]);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [audioLevel, setAudioLevel] = React.useState(0);
+  const [testSoundPlaying, setTestSoundPlaying] = React.useState(false);
 
   const videoEl = React.useRef<HTMLVideoElement>(null);
   const settingsRef = React.useRef<HTMLDivElement>(null);
 
-  // Enumerate devices for selector dropdown
-  React.useEffect(() => {
+  // Enumerate devices helper
+  const refreshDevices = React.useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) return;
-    navigator.mediaDevices.enumerateDevices().then((devices) => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
       const v = devices.filter((d) => d.kind === 'videoinput');
       const a = devices.filter((d) => d.kind === 'audioinput');
+      const s = devices.filter((d) => d.kind === 'audiooutput');
+
       setVideoDevices(v);
       setAudioDevices(a);
+      setSpeakerDevices(s);
+
       if (v[0] && !videoDeviceId) setVideoDeviceId(v[0].deviceId);
       if (a[0] && !audioDeviceId) setAudioDeviceId(a[0].deviceId);
-    }).catch((err) => {
-      console.warn('enumerateDevices error', err);
-    });
-  }, [videoDeviceId, audioDeviceId]);
+      if (s[0] && !speakerDeviceId) setSpeakerDeviceId(s[0].deviceId);
+    } catch (err) {
+      console.warn('Device enumeration error', err);
+    }
+  }, [videoDeviceId, audioDeviceId, speakerDeviceId]);
+
+  React.useEffect(() => {
+    refreshDevices();
+    if (navigator.mediaDevices?.addEventListener) {
+      navigator.mediaDevices.addEventListener('devicechange', refreshDevices);
+      return () => {
+        navigator.mediaDevices.removeEventListener('devicechange', refreshDevices);
+      };
+    }
+  }, [refreshDevices]);
 
   // Preview tracks hook from LiveKit
   const tracks = usePreviewTracks(
@@ -83,18 +112,54 @@ export function GoogleMeetGreenRoom({
     [tracks],
   );
 
-  // Attach video track to video element
+  // Once tracks are acquired, device labels become available; refresh device names
   React.useEffect(() => {
-    if (videoEl.current && videoTrack) {
+    if (tracks && tracks.length > 0) {
+      refreshDevices();
+    }
+  }, [tracks, refreshDevices]);
+
+  // Attach video track to video element (keeps element mounted to avoid detachment on toggle)
+  React.useEffect(() => {
+    const el = videoEl.current;
+    if (el && videoTrack && videoEnabled) {
       videoTrack.unmute();
-      videoTrack.attach(videoEl.current);
+      videoTrack.attach(el);
     }
     return () => {
-      videoTrack?.detach();
+      if (el && videoTrack) {
+        videoTrack.detach(el);
+      }
     };
-  }, [videoTrack]);
+  }, [videoTrack, videoEnabled]);
 
-  // Simple mic volume visualizer using Web Audio API
+  // Background blur processor toggle
+  React.useEffect(() => {
+    if (!videoTrack) return;
+    let cancelled = false;
+
+    async function applyBlur() {
+      try {
+        if (blurEnabled && videoTrack) {
+          const { BackgroundBlur } = await import('@livekit/track-processors');
+          if (!cancelled && videoTrack.getProcessor()?.name !== 'background-blur') {
+            await videoTrack.setProcessor(BackgroundBlur());
+          }
+        } else if (!blurEnabled && videoTrack) {
+          await videoTrack.stopProcessor();
+        }
+      } catch (err) {
+        console.warn('Could not toggle blur processor', err);
+      }
+    }
+
+    applyBlur();
+    return () => {
+      cancelled = true;
+    };
+  }, [videoTrack, blurEnabled]);
+
+  // Real-time audio level visualizer using Web Audio API
   React.useEffect(() => {
     if (!audioTrack || !audioEnabled) {
       setAudioLevel(0);
@@ -123,7 +188,7 @@ export function GoogleMeetGreenRoom({
             sum += dataArray[i]!;
           }
           const avg = sum / dataArray.length;
-          setAudioLevel(Math.min(100, Math.round(avg * 1.6)));
+          setAudioLevel(Math.min(100, Math.round(avg * 1.8)));
           animId = requestAnimationFrame(checkVolume);
         };
         animId = requestAnimationFrame(checkVolume);
@@ -152,16 +217,37 @@ export function GoogleMeetGreenRoom({
     return () => document.removeEventListener('mousedown', handler);
   }, [settingsOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const cleanName = username.trim();
     if (!cleanName) {
       toast.error('Please enter your name to join');
       return;
     }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('hx_meet_username', cleanName);
+    }
     onSubmit({
       username: cleanName,
       videoEnabled,
+      audioEnabled,
+      videoDeviceId,
+      audioDeviceId,
+    });
+  };
+
+  const handlePresentJoin = () => {
+    const cleanName = username.trim();
+    if (!cleanName) {
+      toast.error('Please enter your name to present');
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('hx_meet_username', cleanName);
+    }
+    onSubmit({
+      username: cleanName,
+      videoEnabled: false,
       audioEnabled,
       videoDeviceId,
       audioDeviceId,
@@ -175,8 +261,34 @@ export function GoogleMeetGreenRoom({
       .catch(() => toast.error('Failed to copy link'));
   };
 
-  const activeVideoName = videoDevices.find((d) => d.deviceId === videoDeviceId)?.label || 'Default Camera';
-  const activeAudioName = audioDevices.find((d) => d.deviceId === audioDeviceId)?.label || 'Default Microphone';
+  const playTestSound = () => {
+    try {
+      setTestSoundPlaying(true);
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.35);
+      setTimeout(() => {
+        setTestSoundPlaying(false);
+        ctx.close().catch(() => undefined);
+      }, 400);
+    } catch {
+      setTestSoundPlaying(false);
+    }
+  };
+
+  const activeVideoName =
+    videoDevices.find((d) => d.deviceId === videoDeviceId)?.label || 'Camera active';
+  const activeAudioName =
+    audioDevices.find((d) => d.deviceId === audioDeviceId)?.label || 'Microphone active';
 
   return (
     <div className="gm-greenroom-container">
@@ -185,15 +297,17 @@ export function GoogleMeetGreenRoom({
         {/* LEFT: Spacious 16:9 Video Preview */}
         <div className="gm-preview-col">
           <div className="gm-preview-card">
-            {videoEnabled ? (
-              <video
-                ref={videoEl}
-                className="gm-preview-video"
-                autoPlay
-                playsInline
-                muted
-              />
-            ) : (
+            {/* Video element is always mounted to avoid detachment bugs */}
+            <video
+              ref={videoEl}
+              className="gm-preview-video"
+              autoPlay
+              playsInline
+              muted
+              style={{ display: videoEnabled ? 'block' : 'none' }}
+            />
+
+            {!videoEnabled && (
               <div className="gm-preview-camera-off">
                 <div className="gm-preview-avatar">
                   {username.trim() ? username.trim()[0]!.toUpperCase() : 'HX'}
@@ -202,25 +316,25 @@ export function GoogleMeetGreenRoom({
               </div>
             )}
 
-            {/* Audio wave indicator (top-left of video) */}
+            {/* Audio wave indicator (top-left of video preview) */}
             {audioEnabled && (
               <div className="gm-audio-indicator" title="Microphone activity">
                 <div
                   className="gm-audio-wave-bar"
+                  style={{ height: `${Math.max(4, audioLevel * 0.22)}px` }}
+                />
+                <div
+                  className="gm-audio-wave-bar"
+                  style={{ height: `${Math.max(6, audioLevel * 0.32)}px` }}
+                />
+                <div
+                  className="gm-audio-wave-bar"
                   style={{ height: `${Math.max(4, audioLevel * 0.2)}px` }}
-                />
-                <div
-                  className="gm-audio-wave-bar"
-                  style={{ height: `${Math.max(6, audioLevel * 0.28)}px` }}
-                />
-                <div
-                  className="gm-audio-wave-bar"
-                  style={{ height: `${Math.max(4, audioLevel * 0.18)}px` }}
                 />
               </div>
             )}
 
-            {/* Floating circular control bar at bottom of video */}
+            {/* Floating circular control bar at bottom of video preview */}
             <div className="gm-preview-dock">
               {/* Mic Toggle Button */}
               <button
@@ -242,6 +356,24 @@ export function GoogleMeetGreenRoom({
                 aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
               >
                 {videoEnabled ? <CameraIcon size={22} /> : <CameraOffIcon size={22} />}
+              </button>
+
+              {/* Visual effects (Blur) toggle */}
+              <button
+                type="button"
+                className={`gm-dock-btn ${blurEnabled ? 'gm-dock-btn--active' : ''}`}
+                onClick={() => {
+                  if (!videoEnabled) {
+                    toast('Turn on camera to use visual effects');
+                    return;
+                  }
+                  setBlurEnabled((v) => !v);
+                  toast(blurEnabled ? 'Background blur disabled' : 'Background blur enabled');
+                }}
+                title={blurEnabled ? 'Remove background blur' : 'Apply background blur'}
+                aria-label="Apply visual effects"
+              >
+                <SparklesIcon size={20} />
               </button>
 
               {/* Device Settings Toggle Button */}
@@ -293,17 +425,56 @@ export function GoogleMeetGreenRoom({
                         ))}
                       </select>
                     </div>
+
+                    {speakerDevices.length > 0 && (
+                      <div className="gm-settings-group">
+                        <label className="gm-settings-label">Speakers</label>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <select
+                            className="gm-settings-select"
+                            value={speakerDeviceId}
+                            onChange={(e) => setSpeakerDeviceId(e.target.value)}
+                            style={{ flex: 1 }}
+                          >
+                            {speakerDevices.map((d) => (
+                              <option key={d.deviceId} value={d.deviceId}>
+                                {d.label || `Speaker (${d.deviceId.slice(0, 5)})`}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            className="gm-test-speaker-btn"
+                            onClick={playTestSound}
+                            disabled={testSoundPlaying}
+                            title="Test speakers"
+                          >
+                            <VolumeIcon size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Quick status line below camera */}
-          <div className="gm-preview-device-status">
-            <span>{videoEnabled ? activeVideoName : 'Camera off'}</span>
-            <span className="gm-device-bullet">•</span>
-            <span>{audioEnabled ? activeAudioName : 'Microphone muted'}</span>
+          {/* Quick Check Audio & Video Action Button */}
+          <div className="gm-preview-sub-bar">
+            <button
+              type="button"
+              className="gm-check-media-btn"
+              onClick={() => setSettingsOpen((v) => !v)}
+            >
+              <HeadphonesIcon size={16} />
+              <span>Check your audio and video</span>
+            </button>
+            <div className="gm-preview-device-status">
+              <span>{videoEnabled ? activeVideoName : 'Camera off'}</span>
+              <span className="gm-device-bullet">•</span>
+              <span>{audioEnabled ? activeAudioName : 'Microphone muted'}</span>
+            </div>
           </div>
         </div>
 
@@ -312,7 +483,7 @@ export function GoogleMeetGreenRoom({
           <div className="gm-action-card">
             <h1 className="gm-action-heading">Ready to join?</h1>
             <p className="gm-action-sub">
-              No one else is here yet. Share the code to invite others.
+              No one else is here yet. Share this meeting link to invite others.
             </p>
 
             {/* Room code pill with 1-click copy */}
@@ -342,9 +513,21 @@ export function GoogleMeetGreenRoom({
                 />
               </div>
 
-              <button type="submit" className="gm-join-btn">
-                Join now
-              </button>
+              {/* Action Buttons Row: Join now + Present */}
+              <div className="gm-action-buttons-row">
+                <button type="submit" className="gm-join-btn">
+                  Join now
+                </button>
+                <button
+                  type="button"
+                  className="gm-present-btn"
+                  onClick={handlePresentJoin}
+                  title="Join and immediately present screen"
+                >
+                  <ScreenShareIcon size={18} />
+                  <span>Present</span>
+                </button>
+              </div>
             </form>
 
             {/* Secondary Option: Join without Camera/Mic */}
@@ -354,12 +537,12 @@ export function GoogleMeetGreenRoom({
                 className="gm-secondary-btn"
                 onClick={onContinueWithoutMedia}
               >
-                Join without camera &amp; microphone
+                Other options: Join without camera &amp; microphone
               </button>
             )}
 
             <div className="gm-security-notice">
-              <ShieldCheckIcon size={16} />
+              <ShieldCheckIcon size={16} style={{ color: '#188038' }} />
               <span>Real-time encryption active for this meeting</span>
             </div>
           </div>
