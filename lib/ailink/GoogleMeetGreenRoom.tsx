@@ -760,7 +760,7 @@ export function GoogleMeetGreenRoom({
 
             {/* Room code pill with 1-click copy */}
             <div className="gm-room-badge" onClick={copyRoomLink} title="Click to copy meeting link">
-              <span className="gm-room-code-text">{roomName}</span>
+              <span className="gm-room-code-text">{roomName.toUpperCase()}</span>
               <button type="button" className="gm-room-copy-btn" aria-label="Copy meeting link">
                 <CopyIcon size={14} />
                 <span>Copy link</span>

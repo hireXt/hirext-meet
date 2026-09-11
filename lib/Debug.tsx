@@ -116,7 +116,7 @@ export const DebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
       <div className={styles.overlay}>
         <section id="room-info">
           <h3>
-            Room Info {room.name}: {roomSid}
+            Room Info {room.name?.toUpperCase()}: {roomSid}
           </h3>
         </section>
         <details open>

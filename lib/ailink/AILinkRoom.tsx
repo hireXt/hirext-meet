@@ -312,13 +312,13 @@ function TopNav(props: TopNavProps) {
             aria-haspopup="menu"
             title="Meeting details"
           >
-            <span className="ail-room-code">{room.name || props.label}</span>
+            <span className="ail-room-code">{(room.name || props.label).toUpperCase()}</span>
             <ChevronDownIcon size={14} className="ail-caret" />
           </button>
           {roomMenuOpen && (
             <div className="ail-menu-popover ail-menu-popover--left ail-room-card" role="menu">
               <div className="ail-room-card-title">Meeting details</div>
-              <div className="ail-room-card-id">{room.name || props.label}</div>
+              <div className="ail-room-card-id">{(room.name || props.label).toUpperCase()}</div>
               <div className="ail-room-card-row">
                 <ShieldCheckIcon size={15} />
                 {secure ? 'End-to-end encrypted' : 'Encrypted real-time stream'}
@@ -555,7 +555,7 @@ function GoogleMeetDock({
           onClick={copyInvite}
           title="Click to copy meeting link"
         >
-          <span>{roomName}</span>
+          <span>{roomName.toUpperCase()}</span>
           <CopyIcon size={13} />
         </button>
       </div>

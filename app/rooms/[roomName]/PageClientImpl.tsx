@@ -136,7 +136,7 @@ export function PageClientImpl(props: {
         <div className="ail-prejoin-nav-right">
           {currentTime && <span className="ail-prejoin-clock">{currentTime}</span>}
           <div className="ail-prejoin-code-pill" onClick={copyLink} title="Click to copy meeting link">
-            <span>{props.roomName}</span>
+            <span>{props.roomName.toUpperCase()}</span>
             <span style={{ fontSize: '11.5px', color: '#1a73e8', fontWeight: 600 }}>Copy link</span>
           </div>
           <div className="ail-avatar" style={{ width: 34, height: 34, fontSize: '12px' }}>
