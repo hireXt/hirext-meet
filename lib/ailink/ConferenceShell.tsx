@@ -165,15 +165,29 @@ export function ConferenceShell(props: ConferenceShellProps) {  const keyProvide
         if (props.preAcquiredTracks?.length) {
           for (const track of props.preAcquiredTracks) {
             if (cancelled) break;
-            await room.localParticipant.publishTrack(track);
+            try {
+              await room.localParticipant.publishTrack(track);
+            } catch (publishErr) {
+              console.warn('Could not publish pre-acquired track:', publishErr);
+            }
           }
         } else {
           if (props.userChoices.videoEnabled) {
-            await room.localParticipant.setCameraEnabled(true);
+            try {
+              await room.localParticipant.setCameraEnabled(true);
+            } catch (camErr) {
+              console.warn('Camera could not be enabled on join (device may be disconnected or in use):', camErr);
+              toast('Camera not detected. Joined with audio only.', { icon: '📷' });
+            }
           }
           if (cancelled) return;
           if (props.userChoices.audioEnabled) {
-            await room.localParticipant.setMicrophoneEnabled(true);
+            try {
+              await room.localParticipant.setMicrophoneEnabled(true);
+            } catch (micErr) {
+              console.warn('Microphone could not be enabled on join (device may be disconnected or in use):', micErr);
+              toast('Microphone not detected. Joined in listen-only mode.', { icon: '🎤' });
+            }
           }
         }
         if (!cancelled) setConnectState('live');

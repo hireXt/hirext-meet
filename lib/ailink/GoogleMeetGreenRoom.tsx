@@ -136,6 +136,18 @@ export function GoogleMeetGreenRoom({
   const videoEl = React.useRef<HTMLVideoElement | null>(null);
   const settingsRef = React.useRef<HTMLDivElement>(null);
 
+  const videoEnabledRef = React.useRef(videoEnabled);
+  videoEnabledRef.current = videoEnabled;
+
+  const audioEnabledRef = React.useRef(audioEnabled);
+  audioEnabledRef.current = audioEnabled;
+
+  const selectedVideoIdRef = React.useRef(selectedVideoId);
+  selectedVideoIdRef.current = selectedVideoId;
+
+  const selectedAudioIdRef = React.useRef(selectedAudioId);
+  selectedAudioIdRef.current = selectedAudioId;
+
   // Device enumeration: pure reader, ZERO mutations to deviceId state to prevent re-trigger loops
   const refreshDevices = React.useCallback(async () => {
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return;
@@ -169,8 +181,67 @@ export function GoogleMeetGreenRoom({
     };
   }, [audioEnabled, videoEnabled, selectedAudioId, selectedVideoId]);
 
-  // Calling usePreviewTracks with NO second argument to guarantee stable hook dependencies
-  const tracks = usePreviewTracks(previewOptions);
+  // Reference-stable error handler passed to usePreviewTracks.
+  // Intercepts NotFoundError (missing webcam/mic), OverconstrainedError, and NotAllowedError,
+  // preventing LiveKit from triggering unhandled console.error in Next.js dev overlay.
+  const handleTrackError = React.useCallback((err: Error) => {
+    const errName = err?.name || '';
+    const errMsg = err?.message || '';
+    const isNotFound =
+      errName === 'NotFoundError' ||
+      errName === 'DevicesNotFoundError' ||
+      errMsg.toLowerCase().includes('device not found') ||
+      errMsg.toLowerCase().includes('not found') ||
+      errMsg.toLowerCase().includes('notfound');
+    const isOverconstrained = errName === 'OverconstrainedError';
+    const isNotAllowed =
+      errName === 'NotAllowedError' ||
+      errName === 'PermissionDeniedError' ||
+      errMsg.toLowerCase().includes('permission');
+    const isNotReadable =
+      errName === 'NotReadableError' ||
+      errName === 'TrackStartError' ||
+      errMsg.toLowerCase().includes('could not start');
+
+    // If an explicitly selected device failed/disconnected, clear the ID selection
+    if (selectedVideoIdRef.current) {
+      setSelectedVideoId(undefined);
+    }
+    if (selectedAudioIdRef.current) {
+      setSelectedAudioId(undefined);
+    }
+
+    if (isNotFound || isOverconstrained) {
+      if (videoEnabledRef.current && audioEnabledRef.current) {
+        // Most commonly, the webcam is missing/unplugged. Fall back to audio-only.
+        setVideoEnabled(false);
+        toast('Camera not detected. You can join with microphone only.', { icon: '📷' });
+      } else if (videoEnabledRef.current) {
+        setVideoEnabled(false);
+        toast('Camera not detected. Video preview disabled.', { icon: '📷' });
+      } else if (audioEnabledRef.current) {
+        setAudioEnabled(false);
+        toast('Microphone not detected. You can join in listen-only mode.', { icon: '🎤' });
+      }
+    } else if (isNotAllowed) {
+      setVideoEnabled(false);
+      setAudioEnabled(false);
+      toast.error('Permissions denied. Please allow camera and microphone access in browser settings.');
+    } else if (isNotReadable) {
+      if (videoEnabledRef.current) {
+        setVideoEnabled(false);
+        toast('Camera is currently in use by another application.', { icon: '⚠️' });
+      } else if (audioEnabledRef.current) {
+        setAudioEnabled(false);
+        toast('Microphone is currently in use by another application.', { icon: '⚠️' });
+      }
+    } else {
+      console.warn('Media preview error gracefully handled:', err);
+    }
+  }, []);
+
+  // Pass handleTrackError so LiveKit delegates errors to our handler instead of console.error
+  const tracks = usePreviewTracks(previewOptions, handleTrackError);
 
   // Once tracks are first acquired and browser permission is granted, refresh device labels once
   const initialRefreshDone = React.useRef(false);
