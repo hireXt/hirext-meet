@@ -1,48 +1,12 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
 import React, { Suspense, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { encodePassphrase, generateRoomId, randomString } from '@/lib/client-utils';
 import { LogoMark } from '@/lib/ailink/icons';
 import styles from '../styles/Home.module.css';
 
-function Tabs(props: React.PropsWithChildren<{}>) {
-  const searchParams = useSearchParams();
-  const tabIndex = searchParams?.get('tab') === 'custom' ? 1 : 0;
-
-  const router = useRouter();
-  function onTabSelected(index: number) {
-    const tab = index === 1 ? 'custom' : 'demo';
-    router.push(`/?tab=${tab}`);
-  }
-
-  let tabs = React.Children.map(props.children, (child, index) => {
-    return (
-      <button
-        className="lk-button"
-        onClick={() => {
-          if (onTabSelected) {
-            onTabSelected(index);
-          }
-        }}
-        aria-pressed={tabIndex === index}
-      >
-        {/* @ts-ignore */}
-        {child?.props.label}
-      </button>
-    );
-  });
-
-  return (
-    <div className={styles.tabContainer}>
-      <div className={styles.tabSelect}>{tabs}</div>
-      {/* @ts-ignore */}
-      {props.children[tabIndex]}
-    </div>
-  );
-}
-
-function DemoMeetingTab(props: { label: string }) {
+function QuickMeetingCard() {
   const router = useRouter();
   const [e2ee, setE2ee] = useState(false);
   const [sharedPassphrase, setSharedPassphrase] = useState(randomString(64));
@@ -94,82 +58,6 @@ function DemoMeetingTab(props: { label: string }) {
   );
 }
 
-function CustomConnectionTab(props: { label: string }) {
-  const router = useRouter();
-
-  const [e2ee, setE2ee] = useState(false);
-  const [sharedPassphrase, setSharedPassphrase] = useState(randomString(64));
-
-  const onSubmit: React.FormEventHandler<HTMLFormElement> = (event) => {
-    event.preventDefault();
-    const formData = new FormData(event.target as HTMLFormElement);
-    const serverUrl = formData.get('serverUrl');
-    const token = formData.get('token');
-    if (e2ee) {
-      router.push(
-        `/custom/?liveKitUrl=${serverUrl}&token=${token}#${encodePassphrase(sharedPassphrase)}`,
-      );
-    } else {
-      router.push(`/custom/?liveKitUrl=${serverUrl}&token=${token}`);
-    }
-  };
-  return (
-    <form className={styles.tabContent} onSubmit={onSubmit}>
-      <h2 className={styles.cardTitle}>Connect to your server</h2>
-      <p className={styles.description}>
-        Connect HireXt Meet to your own real-time server.
-      </p>
-      <input
-        id="serverUrl"
-        name="serverUrl"
-        type="url"
-        className={styles.input}
-        placeholder="Server URL: wss://your-server.example.com"
-        required
-      />
-      <textarea
-        id="token"
-        name="token"
-        className={styles.textarea}
-        placeholder="Token"
-        required
-        rows={5}
-      />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div className={styles.checkboxRow}>
-          <input
-            id="use-e2ee-custom"
-            type="checkbox"
-            className={styles.checkbox}
-            checked={e2ee}
-            onChange={(ev) => setE2ee(ev.target.checked)}
-          />
-          <label htmlFor="use-e2ee-custom">Enable end-to-end encryption</label>
-        </div>
-        {e2ee && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <label htmlFor="passphrase-custom" className={styles.description}>
-              Passphrase
-            </label>
-            <input
-              id="passphrase-custom"
-              type="password"
-              className={styles.input}
-              value={sharedPassphrase}
-              onChange={(ev) => setSharedPassphrase(ev.target.value)}
-            />
-          </div>
-        )}
-      </div>
-
-      <hr className={styles.divider} />
-      <button className={styles.startButton} type="submit">
-        Connect
-      </button>
-    </form>
-  );
-}
-
 export default function Page() {
   return (
     <>
@@ -202,10 +90,7 @@ export default function Page() {
           </h2>
         </div>
         <Suspense fallback="Loading">
-          <Tabs>
-            <DemoMeetingTab label="Demo" />
-            <CustomConnectionTab label="Custom" />
-          </Tabs>
+          <QuickMeetingCard />
         </Suspense>
       </main>
       <footer>
