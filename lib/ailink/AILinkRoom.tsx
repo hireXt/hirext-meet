@@ -52,6 +52,7 @@ import {
 } from './icons';
 import { playSpeakerTestSound } from '@/lib/audioTest';
 
+
 type PanelId = 'chat' | 'participants' | 'settings' | 'info' | null;
 type LayoutMode = 'grid' | 'spotlight';
 
@@ -409,6 +410,7 @@ function GoogleMeetDock({
   onLeave,
   onFullscreen,
   fullscreen,
+  noiseCancellation,
 }: {
   roomName: string;
   mic: { enabled: boolean; pending: boolean; toggle: () => void };
@@ -421,6 +423,7 @@ function GoogleMeetDock({
   onLeave: () => void;
   onFullscreen: () => void;
   fullscreen: boolean;
+  noiseCancellation: { enabled: boolean; pending: boolean; toggle: () => void };
 }) {
   const room = useRoomContext();
   const [clockTime, setClockTime] = React.useState('');
@@ -746,7 +749,20 @@ function GoogleMeetDock({
           <ScreenShareIcon size={20} />
         </button>
 
-        {/* More actions menu */}
+        {/* AI Noise Cancellation (Krisp) Toggle — always visible in dock */}
+        <button
+          type="button"
+          className={cx('ail-circle-btn', noiseCancellation.enabled && 'ail-circle-btn--active')}
+          onClick={noiseCancellation.toggle}
+          disabled={noiseCancellation.pending}
+          title={noiseCancellation.enabled ? 'Noise Suppression: ON (click to disable)' : 'Noise Suppression: OFF (click to enable)'}
+          aria-label={noiseCancellation.enabled ? 'Disable noise suppression' : 'Enable noise suppression'}
+          style={noiseCancellation.enabled ? { color: '#81c995', borderColor: 'rgba(129,201,149,0.3)', background: 'rgba(129,201,149,0.12)' } : undefined}
+        >
+          <ShieldCheckIcon size={20} />
+        </button>
+
+
         <div className="ail-menu" ref={moreRef}>
           <button
             type="button"
@@ -887,6 +903,97 @@ export function AILinkRoom({
   const camera = useTrackToggle({ source: Track.Source.Camera });
   const screenShare = useTrackToggle({ source: Track.Source.ScreenShare });
 
+  // ─── Browser-Native Noise Suppression ────────────────────────────────────────
+  // Krisp requires LiveKit Cloud (not available on self-hosted servers).
+  // Instead, we use the browser's built-in WebRTC noiseSuppression + echoCancellation
+  // via applyConstraints() — supported in Chrome, Edge, Firefox & Safari.
+  // It uses Chromium's audio processing pipeline and is immediately audible.
+  const [isNoiseFilterEnabled, setIsNoiseFilterEnabled] = React.useState(true);
+  const [isNoiseFilterPending, setIsNoiseFilterPending] = React.useState(false);
+
+  const applyNoiseSuppression = React.useCallback(async (enable: boolean) => {
+    setIsNoiseFilterPending(true);
+    try {
+      const micPub = room.localParticipant?.getTrackPublication(Track.Source.Microphone);
+      const mediaTrack = micPub?.track?.mediaStreamTrack;
+
+      if (mediaTrack) {
+        let applied = false;
+        const supported = typeof navigator !== 'undefined' && navigator.mediaDevices?.getSupportedConstraints?.();
+        const isSafari = typeof navigator !== 'undefined' && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+        if (supported && 'noiseSuppression' in supported && supported.noiseSuppression && !isSafari) {
+          try {
+            await mediaTrack.applyConstraints({
+              noiseSuppression: enable,
+              echoCancellation: enable,
+              autoGainControl: enable,
+            });
+            applied = true;
+            console.log(`[NoiseSuppression] ${enable ? '✅ ON' : '🔇 OFF'} via applyConstraints`);
+          } catch (constraintErr) {
+            console.warn('[NoiseSuppression] applyConstraints failed, falling back to track re-acquisition:', constraintErr);
+          }
+        }
+
+        if (!applied) {
+          // Firefox / Safari fallback: re-acquire mic with updated constraints
+          console.log(`[NoiseSuppression] Re-acquiring mic track with noiseSuppression=${enable}`);
+          await room.localParticipant.setMicrophoneEnabled(false);
+          await room.localParticipant.setMicrophoneEnabled(true, {
+            noiseSuppression: enable,
+            echoCancellation: enable,
+            autoGainControl: enable,
+          });
+          console.log(`[NoiseSuppression] ${enable ? '✅ ON' : '🔇 OFF'} via track re-acquisition`);
+        }
+      } else {
+        console.warn('[NoiseSuppression] No mic track yet — preference saved for when track publishes');
+      }
+      setIsNoiseFilterEnabled(enable);
+    } catch (err) {
+      console.error('[NoiseSuppression] Failed:', err);
+      setIsNoiseFilterEnabled(enable); // still update UI
+    } finally {
+      setIsNoiseFilterPending(false);
+    }
+  }, [room]);
+
+
+  // Apply saved preference on mount and whenever mic track is published
+  React.useEffect(() => {
+    const saved = localStorage.getItem('hx_meet_krisp_enabled');
+    const shouldEnable = saved !== null ? saved === 'true' : true;
+    setIsNoiseFilterEnabled(shouldEnable);
+
+    const onTrackPublished = () => {
+      // Small delay to ensure mediaStreamTrack is ready
+      setTimeout(() => applyNoiseSuppression(shouldEnable), 300);
+    };
+
+    room.on('localTrackPublished' as any, onTrackPublished);
+
+    // If mic track is already live (reconnect scenario), apply immediately
+    const existing = room.localParticipant?.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack;
+    if (existing) {
+      applyNoiseSuppression(shouldEnable);
+    }
+
+    return () => {
+      room.off('localTrackPublished' as any, onTrackPublished);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room]);
+
+  const toggleNoiseCancellation = React.useCallback(async () => {
+    const next = !isNoiseFilterEnabled;
+    localStorage.setItem('hx_meet_krisp_enabled', String(next));
+    await applyNoiseSuppression(next);
+    toast.success(next ? 'Noise Suppression: ON' : 'Noise Suppression: OFF', { duration: 2000 });
+  }, [isNoiseFilterEnabled, applyNoiseSuppression]);
+  // ────────────────────────────────────────────────────────────────────────────
+
+
   React.useEffect(() => {
     if (participantsCount > 0) {
       setAnnouncement(
@@ -964,6 +1071,11 @@ export function AILinkRoom({
         onLeave={handleLeave}
         onFullscreen={toggleFullscreen}
         fullscreen={fullscreen}
+        noiseCancellation={{
+          enabled: isNoiseFilterEnabled,
+          pending: isNoiseFilterPending,
+          toggle: toggleNoiseCancellation,
+        }}
       />
 
       {/* Side Drawers */}
@@ -1077,14 +1189,66 @@ export function AILinkRoom({
             <CloseIcon size={16} />
           </button>
         </div>
-        <div className="ail-panel-body">
+        <div className="ail-panel-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
           {SettingsComponent ? (
             <SettingsComponent onClose={() => handlePanel(null)} />
-          ) : (
-            <div style={{ padding: 24, textAlign: 'center', color: '#5f6368' }}>
-              Settings menu
+          ) : null}
+
+          {/* AI Noise Cancellation Toggle */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <h3 style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9aa0a6', margin: 0 }}>
+              Audio Enhancement
+            </h3>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                gap: 16,
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 12,
+                padding: '14px 16px',
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ShieldCheckIcon size={16} style={{ color: isNoiseFilterEnabled ? '#81c995' : '#9aa0a6' }} />
+                  <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#e8eaed' }}>
+                    Noise Suppression
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.7rem',
+                      fontWeight: 600,
+                      padding: '2px 8px',
+                      borderRadius: 99,
+                      background: isNoiseFilterEnabled ? 'rgba(129,201,149,0.2)' : 'rgba(154,160,166,0.15)',
+                      color: isNoiseFilterEnabled ? '#81c995' : '#9aa0a6',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    {isNoiseFilterEnabled ? 'ON' : 'OFF'}
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.78rem', color: '#9aa0a6', margin: 0, lineHeight: 1.4 }}>
+                  Removes keyboard, fan, and background noise using your browser's built-in audio processing.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isNoiseFilterEnabled}
+                className={`gm-switch-btn ${isNoiseFilterEnabled ? 'gm-switch-btn--on' : ''}`}
+                onClick={toggleNoiseCancellation}
+                disabled={isNoiseFilterPending}
+                style={{ flexShrink: 0, marginTop: 2 }}
+                title={isNoiseFilterEnabled ? 'Disable noise cancellation' : 'Enable noise cancellation'}
+              >
+                <span className="gm-switch-handle" />
+              </button>
             </div>
-          )}
+          </div>
         </div>
       </aside>
 

@@ -116,25 +116,16 @@ export function GoogleMeetGreenRoom({
   onSubmit,
   onContinueWithoutMedia,
 }: GoogleMeetGreenRoomProps) {
-  const [username, setUsername] = React.useState(() => {
-    if (defaultUsername) return defaultUsername;
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('hx_meet_username') || '';
-    }
-    return '';
-  });
-
+  // SSR-safe initial values — localStorage is loaded in useEffect after hydration
+  const [username, setUsername] = React.useState(defaultUsername || '');
   const [videoEnabled, setVideoEnabled] = React.useState(defaultVideoEnabled);
   const [audioEnabled, setAudioEnabled] = React.useState(defaultAudioEnabled);
   const [selectedVideoId, setSelectedVideoId] = React.useState<string | undefined>(undefined);
   const [selectedAudioId, setSelectedAudioId] = React.useState<string | undefined>(undefined);
-  const [selectedSpeakerId, setSelectedSpeakerId] = React.useState<string | undefined>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('hx_meet_speaker_id') || undefined;
-    }
-    return undefined;
-  });
+  const [selectedSpeakerId, setSelectedSpeakerId] = React.useState<string | undefined>(undefined);
   const [blurEnabled, setBlurEnabled] = React.useState(false);
+  // Default to false for SSR; will be corrected to persisted value after mount
+  const [noiseCancellationEnabled, setNoiseCancellationEnabled] = React.useState(false);
 
   const [videoDevices, setVideoDevices] = React.useState<MediaDeviceInfo[]>([]);
   const [audioDevices, setAudioDevices] = React.useState<MediaDeviceInfo[]>([]);
@@ -143,13 +134,20 @@ export function GoogleMeetGreenRoom({
   const [micMenuOpen, setMicMenuOpen] = React.useState(false);
   const [cameraMenuOpen, setCameraMenuOpen] = React.useState(false);
   const [testSoundPlaying, setTestSoundPlaying] = React.useState(false);
-  const [noiseCancellationEnabled, setNoiseCancellationEnabled] = React.useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('hx_meet_krisp_enabled');
-      if (saved !== null) return saved === 'true';
-    }
-    return true;
-  });
+
+  // Restore persisted state from localStorage after mount (avoids SSR/client hydration mismatch)
+  React.useEffect(() => {
+    const savedUsername = !defaultUsername ? (localStorage.getItem('hx_meet_username') || '') : defaultUsername;
+    if (savedUsername) setUsername(savedUsername);
+
+    const savedSpeaker = localStorage.getItem('hx_meet_speaker_id');
+    if (savedSpeaker) setSelectedSpeakerId(savedSpeaker);
+
+    const savedKrisp = localStorage.getItem('hx_meet_krisp_enabled');
+    // Default to true (noise cancellation on) when no saved preference
+    setNoiseCancellationEnabled(savedKrisp !== null ? savedKrisp === 'true' : true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const videoEl = React.useRef<HTMLVideoElement | null>(null);
   const settingsRef = React.useRef<HTMLDivElement>(null);
@@ -695,7 +693,7 @@ export function GoogleMeetGreenRoom({
               {noiseCancellationEnabled && (
                 <>
                   <span className="gm-device-bullet">•</span>
-                  <span style={{ color: '#81c995', fontWeight: 500 }}>AI Noise Filter ON</span>
+                  <span style={{ color: '#81c995', fontWeight: 500 }}>Noise Suppression ON</span>
                 </>
               )}
             </div>

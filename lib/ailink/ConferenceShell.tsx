@@ -183,7 +183,14 @@ export function ConferenceShell(props: ConferenceShellProps) {  const keyProvide
           if (cancelled) return;
           if (props.userChoices.audioEnabled) {
             try {
-              await room.localParticipant.setMicrophoneEnabled(true);
+              const saved = typeof window !== 'undefined' ? localStorage.getItem('hx_meet_krisp_enabled') : null;
+              const nsEnabled = saved !== null ? saved === 'true' : true;
+              await room.localParticipant.setMicrophoneEnabled(true, {
+                deviceId: props.userChoices.audioDeviceId,
+                noiseSuppression: nsEnabled,
+                echoCancellation: true,
+                autoGainControl: true,
+              });
             } catch (micErr) {
               console.warn('Microphone could not be enabled on join (device may be disconnected or in use):', micErr);
               toast('Microphone not detected. Joined in listen-only mode.');

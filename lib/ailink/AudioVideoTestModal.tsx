@@ -65,14 +65,12 @@ export function AudioVideoTestModal({
   const [isTestingMic, setIsTestingMic] = React.useState(false);
   const [volumeLevel, setVolumeLevel] = React.useState(0);
   const [testSpeakerPlaying, setTestSpeakerPlaying] = React.useState(false);
-  const [krispSupported, setKrispSupported] = React.useState<boolean | null>(null);
   const [krispPending, setKrispPending] = React.useState(false);
 
   // Audio testing refs
   const audioCtxRef = React.useRef<AudioContext | null>(null);
   const audioElRef = React.useRef<HTMLAudioElement | null>(null);
   const animFrameRef = React.useRef<number | null>(null);
-  const krispProcessorRef = React.useRef<any>(null);
   const noiseEngineRef = React.useRef<VoiceNoiseFilterEngine | null>(null);
   const videoPreviewRef = React.useRef<HTMLVideoElement | null>(null);
 
@@ -86,30 +84,6 @@ export function AudioVideoTestModal({
       }
     }
   }, [activeTab, videoTrack, videoEnabled]);
-
-  // Check Krisp noise filter support on mount
-  React.useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      try {
-        const { KrispNoiseFilter, isKrispNoiseFilterSupported } = await import(
-          '@livekit/krisp-noise-filter'
-        );
-        const supported = isKrispNoiseFilterSupported();
-        if (isMounted) {
-          setKrispSupported(supported);
-          if (supported && !krispProcessorRef.current) {
-            krispProcessorRef.current = KrispNoiseFilter();
-          }
-        }
-      } catch {
-        if (isMounted) setKrispSupported(false);
-      }
-    })();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   // Stop mic test loopback audio
   const stopMicTest = React.useCallback(() => {
@@ -233,31 +207,18 @@ export function AudioVideoTestModal({
     }
   }, [audioTrack, audioEnabled, selectedSpeakerId, speakerDevices, noiseCancellationEnabled, stopMicTest]);
 
-  // Handle Noise Cancellation toggle
+  // Handle Noise Cancellation toggle in the test modal
+  // Note: This controls the DSP engine during the loopback test preview.
+  // The actual Krisp AI filter on the live call is managed by useKrispNoiseFilter in AILinkRoom.
   const handleToggleNoiseCancellation = async (nextState: boolean) => {
     setKrispPending(true);
     try {
-      // 1. Immediately toggle real-time Web Audio DSP noise filter & voice gate
+      // Toggle the real-time Web Audio DSP noise filter for the loopback preview
       if (noiseEngineRef.current) {
         noiseEngineRef.current.setEnabled(nextState);
       }
 
-      // 2. Krisp processor if supported
-      if (krispSupported && krispProcessorRef.current && audioTrack) {
-        try {
-          const currentProcessor = audioTrack.getProcessor();
-          if (!currentProcessor && nextState) {
-            await audioTrack.setProcessor(krispProcessorRef.current);
-            await krispProcessorRef.current.setEnabled(true);
-          } else if (currentProcessor) {
-            await krispProcessorRef.current.setEnabled(nextState);
-          }
-        } catch (krispErr) {
-          console.warn('Krisp processor warning:', krispErr);
-        }
-      }
-
-      // 3. Apply browser-level WebRTC noiseSuppression constraints
+      // Apply browser-level WebRTC noiseSuppression constraints on the mic track
       if (audioTrack?.mediaStreamTrack) {
         await audioTrack.mediaStreamTrack
           .applyConstraints({
@@ -267,9 +228,16 @@ export function AudioVideoTestModal({
           .catch(() => undefined);
       }
 
+      // Persist preference — AILinkRoom's useKrispNoiseFilter will read this on join
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('hx_meet_krisp_enabled', String(nextState));
+      }
+
       onToggleNoiseCancellation(nextState);
       toast.success(
-        nextState ? 'Noise Cancellation: ENABLED (Background noise cut)' : 'Noise Cancellation: DISABLED (Raw audio with room noise)',
+        nextState
+          ? 'Noise suppression ON'
+          : 'Noise suppression OFF',
         { duration: 2500 },
       );
     } catch (e) {
@@ -426,7 +394,7 @@ export function AudioVideoTestModal({
                     <span>{isTestingMic ? 'Stop Testing' : "Let's check"}</span>
                   </button>
                   <span className="gm-discord-headphone-tip">
-                    🎧 Use headphones to prevent echo while testing
+                    <HeadphonesIcon size={14} /> Use headphones to prevent echo while testing
                   </span>
                 </div>
 
@@ -451,7 +419,7 @@ export function AudioVideoTestModal({
                   <div className="gm-noise-info">
                     <div className="gm-noise-title-row">
                       <ShieldCheckIcon size={16} />
-                      <span className="gm-noise-title">AI Noise Cancellation (Krisp)</span>
+                      <span className="gm-noise-title">Noise Suppression</span>
                       <span
                         className={`gm-noise-badge ${noiseCancellationEnabled ? 'gm-noise-badge--on' : 'gm-noise-badge--off'}`}
                       >
