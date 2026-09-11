@@ -234,6 +234,77 @@ export function WarningIcon(props: IconProps) {
   );
 }
 
+export function VideoPlusIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="2.75" y="6.25" width="12.5" height="11.5" rx="2.75" />
+      <path d="m15.25 10.6 4.3-2.6a.6.6 0 0 1 .95.5v7a.6.6 0 0 1-.95.5l-4.3-2.6" />
+      <path d="M9 9.5v5" />
+      <path d="M6.5 12h5" />
+    </Svg>
+  );
+}
+
+export function KeyboardIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect width="20" height="14" x="2" y="5" rx="2" />
+      <path d="M6 10h.01" />
+      <path d="M10 10h.01" />
+      <path d="M14 10h.01" />
+      <path d="M18 10h.01" />
+      <path d="M6 14h.01" />
+      <path d="M18 14h.01" />
+      <path d="M10 14h4" />
+    </Svg>
+  );
+}
+
+export function LinkIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </Svg>
+  );
+}
+
+export function InfoIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 16v-4" />
+      <path d="M12 8h.01" />
+    </Svg>
+  );
+}
+
+export function HelpCircleIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+      <path d="M12 17h.01" />
+    </Svg>
+  );
+}
+
+export function ChevronLeftIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="m15 18-6-6 6-6" />
+    </Svg>
+  );
+}
+
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="m9 18 6-6-6-6" />
+    </Svg>
+  );
+}
+
 const LOGO_ID = 'ail-logo-gradient';
 
 /**
@@ -251,9 +322,9 @@ export function LogoMark({ size = 28 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
       <defs>
         <linearGradient id={gradientId} x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#5B5BD6" />
-          <stop offset="0.55" stopColor="#6D5AE8" />
-          <stop offset="1" stopColor="#8B5CF6" />
+          <stop offset="0" stopColor="#1a73e8" />
+          <stop offset="0.55" stopColor="#4285f4" />
+          <stop offset="1" stopColor="#6366f1" />
         </linearGradient>
       </defs>
       <rect width="32" height="32" rx="8.5" fill={`url(#${gradientId})`} />

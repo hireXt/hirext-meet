@@ -8,6 +8,7 @@ import {
   StartAudio,
   useConnectionQualityIndicator,
   useConnectionState,
+  useIsSpeaking,
   useLocalParticipant,
   useParticipants,
   useRoomContext,
@@ -29,6 +30,7 @@ import {
   CloseIcon,
   CopyIcon,
   ExpandIcon,
+  InfoIcon,
   LayoutGridIcon,
   LogoMark,
   MicIcon,
@@ -38,31 +40,20 @@ import {
   RecordIcon,
   ScreenShareIcon,
   SettingsIcon,
+  ShieldCheckIcon,
   ShrinkIcon,
   SpotlightIcon,
-  ShieldCheckIcon,
   UsersIcon,
 } from './icons';
 
-type PanelId = 'chat' | 'participants' | 'settings' | null;
+type PanelId = 'chat' | 'participants' | 'settings' | 'info' | null;
 type LayoutMode = 'grid' | 'spotlight';
 
 export interface AILinkRoomProps {
   chatMessageFormatter?: MessageFormatter;
   SettingsComponent?: React.ComponentType<{ onClose?: () => void }>;
   label?: string;
-  /**
-   * Optional leave override. When provided, the Leave button calls this
-   * instead of disconnecting directly — lets a parent (e.g. ConferenceShell)
-   * mark the leave as user-initiated before disconnecting.
-   */
   onLeaveRequest?: () => void;
-  /**
-   * When true, the interview renders the MuseTalk conversational video avatar
-   * (the AI interviewer's talking-head video participant) as the main stage.
-   * When false (or omitted), the interview is audio-only — no avatar video is
-   * rendered, matching the hxt-admin peak-hour GPU control toggle.
-   */
   museTalkEnabled?: boolean;
 }
 
@@ -123,9 +114,24 @@ function trackKey(ref: TrackReferenceOrPlaceholder): string {
   return `${ref.participant.identity}:${ref.source}`;
 }
 
-function Avatar({ name, size = 56 }: { name: string; size?: number }) {
+function Avatar({ name, size = 64 }: { name: string; size?: number }) {
   return (
-    <div className="ail-avatar" style={{ width: size, height: size, fontSize: size * 0.34 }}>
+    <div
+      className="ail-avatar"
+      style={{
+        width: size,
+        height: size,
+        fontSize: size * 0.36,
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #1a73e8, #6366f1)',
+        color: '#ffffff',
+        fontWeight: 600,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+      }}
+    >
       {initials(name)}
     </div>
   );
@@ -138,7 +144,7 @@ function ConnectionChip() {
 
   let tone = 'good';
   let pulse = false;
-  let label = 'Good connection';
+  let label = 'Good';
 
   if (state === ConnectionState.Connecting || state === ConnectionState.Reconnecting) {
     tone = 'warn';
@@ -153,11 +159,11 @@ function ConnectionChip() {
     label = 'Reconnecting…';
   } else if (quality === 'poor') {
     tone = 'warn';
-    label = 'Weak connection';
+    label = 'Weak';
   }
 
   return (
-    <div className={cx('ail-chip', 'ail-conn', `ail-conn--${tone}`)}>
+    <div className={cx('ail-chip', 'ail-conn', `ail-conn--${tone}`)} title={`Connection: ${label}`}>
       <span className={cx('ail-dot', pulse && 'ail-dot--pulse')} />
       <span>{label}</span>
     </div>
@@ -166,15 +172,16 @@ function ConnectionChip() {
 
 function Tile({
   trackRef,
-  speaking,
+  isSpotlight = false,
 }: {
   trackRef: TrackReferenceOrPlaceholder;
-  speaking: boolean;
+  isSpotlight?: boolean;
 }) {
   const { participant, source } = trackRef;
   const isScreen = source === Track.Source.ScreenShare;
   const camMuted = useIsTrackMuted(participant, Track.Source.Camera);
   const micMuted = useIsTrackMuted(participant, Track.Source.Microphone);
+  const isSpeaking = useIsSpeaking(participant);
   const hasVideo =
     isTrackReference(trackRef) && !!trackRef.publication && !trackRef.publication.isMuted;
   const showVideo = isScreen ? hasVideo : hasVideo && !camMuted;
@@ -182,7 +189,12 @@ function Tile({
 
   return (
     <div
-      className={cx('ail-tile', speaking && 'ail-tile--speaking', isScreen && 'ail-tile--screen')}
+      className={cx(
+        'ail-tile',
+        isSpeaking && !micMuted && 'ail-tile--speaking',
+        isScreen && 'ail-tile--screen',
+        isSpotlight && 'ail-tile--spotlight',
+      )}
       data-identity={participant.identity}
     >
       {showVideo ? (
@@ -193,18 +205,20 @@ function Tile({
         />
       ) : (
         <div className="ail-tile-avatar">
-          <Avatar name={name} />
+          <div className={cx('ail-avatar-halo', isSpeaking && !micMuted && 'ail-avatar-halo--speaking')}>
+            <Avatar name={name} size={isSpotlight ? 96 : 72} />
+          </div>
           {!isScreen && camMuted && <span className="ail-tile-hint">Camera off</span>}
         </div>
       )}
       <div className="ail-chip ail-name-pill">
-        {isScreen ? `${name}'s screen` : `${name}${participant.isLocal ? ' (You)' : ''}`}
+        <span>{isScreen ? `${name}'s screen` : `${name}${participant.isLocal ? ' (You)' : ''}`}</span>
+        {micMuted && !isScreen && (
+          <span className="ail-mic-muted-icon" title="Microphone muted">
+            <MicOffIcon size={13} />
+          </span>
+        )}
       </div>
-      {micMuted && !isScreen && (
-        <div className="ail-chip ail-mic-badge" title="Microphone muted">
-          <MicOffIcon size={13} />
-        </div>
-      )}
     </div>
   );
 }
@@ -244,28 +258,21 @@ function Menu({
   );
 }
 
-interface NavProps {
+interface TopNavProps {
   label: string;
-  panel: PanelId;
   layout: LayoutMode;
   recording: ReturnType<typeof useRecording>;
   fullscreen: boolean;
-  participantsCount: number;
   onLayout: (mode: LayoutMode) => void;
-  onPanel: (id: PanelId) => void;
   onFullscreen: () => void;
-  onLeave: () => void;
 }
 
-function TopNav(props: NavProps) {
+function TopNav(props: TopNavProps) {
   const room = useRoomContext();
   const [roomMenuOpen, setRoomMenuOpen] = React.useState(false);
   const [layoutMenuOpen, setLayoutMenuOpen] = React.useState(false);
-  const [moreMenuOpen, setMoreMenuOpen] = React.useState(false);
   const roomMenuRef = React.useRef<HTMLDivElement>(null);
-  const menuRef = React.useRef<HTMLDivElement>(null);
   useClickOutside(roomMenuRef, roomMenuOpen, () => setRoomMenuOpen(false));
-  useClickOutside(menuRef, moreMenuOpen, () => setMoreMenuOpen(false));
 
   const copyInvite = () => {
     navigator.clipboard
@@ -273,24 +280,11 @@ function TopNav(props: NavProps) {
       .then(() =>
         toast.success(
           window.location.hash
-            ? 'Invite link copied — it includes the encryption passphrase'
-            : 'Invite link copied',
+            ? 'Invite link copied (with passphrase)'
+            : 'Invite link copied to clipboard',
         ),
       )
       .catch(() => toast.error('Could not copy link'));
-    setMoreMenuOpen(false);
-    setRoomMenuOpen(false);
-  };
-
-  // B.5 fix: passphrase-free sharing option (plain room link, no #hash).
-  const copyRoomLink = () => {
-    const url = new URL(window.location.href);
-    url.hash = '';
-    navigator.clipboard
-      .writeText(url.toString())
-      .then(() => toast.success('Room link copied (no passphrase)'))
-      .catch(() => toast.error('Could not copy link'));
-    setMoreMenuOpen(false);
     setRoomMenuOpen(false);
   };
 
@@ -311,28 +305,23 @@ function TopNav(props: NavProps) {
             onClick={() => setRoomMenuOpen((v) => !v)}
             aria-expanded={roomMenuOpen}
             aria-haspopup="menu"
+            title="Meeting details"
           >
             <span className="ail-room-code">{room.name || props.label}</span>
             <ChevronDownIcon size={14} className="ail-caret" />
           </button>
           {roomMenuOpen && (
             <div className="ail-menu-popover ail-menu-popover--left ail-room-card" role="menu">
-              <div className="ail-room-card-title">Meeting code</div>
+              <div className="ail-room-card-title">Meeting details</div>
               <div className="ail-room-card-id">{room.name || props.label}</div>
               <div className="ail-room-card-row">
                 <ShieldCheckIcon size={15} />
-                {secure ? 'End-to-end encrypted' : 'Encrypted connection'}
+                {secure ? 'End-to-end encrypted' : 'Encrypted real-time stream'}
               </div>
               <button type="button" className="ail-menu-item" onClick={copyInvite}>
                 <CopyIcon size={15} />
-                Copy invite link
+                Copy joining link
               </button>
-              {window.location.hash && (
-                <button type="button" className="ail-menu-item" onClick={copyRoomLink}>
-                  <CopyIcon size={15} />
-                  Copy link without passphrase
-                </button>
-              )}
             </div>
           )}
         </div>
@@ -369,7 +358,7 @@ function TopNav(props: NavProps) {
               }}
             >
               <LayoutGridIcon size={16} />
-              Grid
+              Grid view
               {props.layout === 'grid' && <CheckIcon size={14} className="ail-check" />}
             </button>
             <button
@@ -383,7 +372,7 @@ function TopNav(props: NavProps) {
               }}
             >
               <SpotlightIcon size={16} />
-              Spotlight
+              Spotlight view
               {props.layout === 'spotlight' && <CheckIcon size={14} className="ail-check" />}
             </button>
           </Menu>
@@ -391,91 +380,237 @@ function TopNav(props: NavProps) {
 
         <button
           type="button"
-          className={cx('ail-icon-btn', props.panel === 'participants' && 'ail-icon-btn--active')}
-          onClick={() => props.onPanel(props.panel === 'participants' ? null : 'participants')}
-          title="Participants"
+          className="ail-icon-btn"
+          onClick={props.onFullscreen}
+          title={props.fullscreen ? 'Exit full screen' : 'Full screen'}
         >
-          <UsersIcon size={18} />
-          <span className="ail-count-badge">{Math.max(props.participantsCount, 1)}</span>
-        </button>
-
-        <div className="ail-menu" ref={menuRef}>
-          <button
-            type="button"
-            className={cx('ail-icon-btn', moreMenuOpen && 'ail-icon-btn--active')}
-            onClick={() => setMoreMenuOpen((v) => !v)}
-            aria-expanded={moreMenuOpen}
-            aria-haspopup="menu"
-            title="More options"
-          >
-            <MoreIcon size={18} />
-          </button>
-          {moreMenuOpen && (
-            <div className="ail-menu-popover ail-menu-popover--right" role="menu">
-              <button type="button" className="ail-menu-item" onClick={copyInvite}>
-                <CopyIcon size={16} />
-                Copy invite link
-              </button>
-              <button
-                type="button"
-                className="ail-menu-item"
-                onClick={() => {
-                  props.onFullscreen();
-                  setMoreMenuOpen(false);
-                }}
-              >
-                {props.fullscreen ? <ShrinkIcon size={16} /> : <ExpandIcon size={16} />}
-                {props.fullscreen ? 'Exit full screen' : 'Full screen'}
-              </button>
-            </div>
-          )}
-        </div>
-
-        <button type="button" className="ail-leave" onClick={props.onLeave}>
-          <PhoneOffIcon size={17} />
-          <span>Leave</span>
+          {props.fullscreen ? <ShrinkIcon size={18} /> : <ExpandIcon size={18} />}
         </button>
       </div>
     </header>
   );
 }
 
-function ControlDockButton({
-  icon,
-  label,
-  on,
-  danger,
-  processing,
-  disabled,
-  onClick,
+/** Google Meet style bottom control dock */
+function GoogleMeetDock({
+  roomName,
+  mic,
+  camera,
+  screenShare,
+  recording,
+  panel,
+  participantsCount,
+  onPanel,
+  onLeave,
+  onFullscreen,
+  fullscreen,
 }: {
-  icon: React.ReactNode;
-  label: string;
-  on?: boolean;
-  danger?: boolean;
-  processing?: boolean;
-  disabled?: boolean;
-  onClick: () => void;
+  roomName: string;
+  mic: { enabled: boolean; pending: boolean; toggle: () => void };
+  camera: { enabled: boolean; pending: boolean; toggle: () => void };
+  screenShare: { enabled: boolean; pending: boolean; toggle: () => void };
+  recording: ReturnType<typeof useRecording>;
+  panel: PanelId;
+  participantsCount: number;
+  onPanel: (id: PanelId) => void;
+  onLeave: () => void;
+  onFullscreen: () => void;
+  fullscreen: boolean;
 }) {
+  const [clockTime, setClockTime] = React.useState('');
+  const [moreOpen, setMoreOpen] = React.useState(false);
+  const moreRef = React.useRef<HTMLDivElement>(null);
+  useClickOutside(moreRef, moreOpen, () => setMoreOpen(false));
+
+  React.useEffect(() => {
+    const update = () => {
+      setClockTime(new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const copyInvite = () => {
+    navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => toast.success('Meeting link copied!'))
+      .catch(() => toast.error('Could not copy link'));
+  };
+
   return (
-    <button
-      type="button"
-      className={cx(
-        'ail-dock-btn',
-        on && 'ail-dock-btn--on',
-        danger && on && 'ail-dock-btn--danger',
-        processing && 'ail-dock-btn--processing',
-      )}
-      onClick={onClick}
-      disabled={disabled}
-      aria-pressed={!!on}
-      title={label}
-    >
-      <span className="ail-dock-btn-icon">
-        {processing ? <span className="ail-spinner" /> : icon}
-      </span>
-      <span className="ail-dock-btn-label">{label}</span>
-    </button>
+    <footer className="ail-gm-dock">
+      {/* Left section: Time and Room Name */}
+      <div className="ail-dock-left">
+        {clockTime && <span className="ail-dock-time">{clockTime}</span>}
+        <span className="ail-dock-divider">|</span>
+        <button
+          type="button"
+          className="ail-dock-code"
+          onClick={copyInvite}
+          title="Click to copy meeting link"
+        >
+          <span>{roomName}</span>
+          <CopyIcon size={13} />
+        </button>
+      </div>
+
+      {/* Center section: Circular controls + Red End Call Pill */}
+      <div className="ail-dock-center">
+        {/* Mic toggle */}
+        <button
+          type="button"
+          className={cx('ail-circle-btn', !mic.enabled && 'ail-circle-btn--muted')}
+          onClick={() => mic.toggle()}
+          disabled={mic.pending}
+          title={mic.enabled ? 'Turn off microphone' : 'Turn on microphone'}
+          aria-label={mic.enabled ? 'Turn off microphone' : 'Turn on microphone'}
+        >
+          {mic.enabled ? <MicIcon size={20} /> : <MicOffIcon size={20} />}
+        </button>
+
+        {/* Camera toggle */}
+        <button
+          type="button"
+          className={cx('ail-circle-btn', !camera.enabled && 'ail-circle-btn--muted')}
+          onClick={() => camera.toggle()}
+          disabled={camera.pending}
+          title={camera.enabled ? 'Turn off camera' : 'Turn on camera'}
+          aria-label={camera.enabled ? 'Turn off camera' : 'Turn on camera'}
+        >
+          {camera.enabled ? <CameraIcon size={20} /> : <CameraOffIcon size={20} />}
+        </button>
+
+        {/* Screen share toggle */}
+        <button
+          type="button"
+          className={cx('ail-circle-btn', screenShare.enabled && 'ail-circle-btn--active')}
+          onClick={() => screenShare.toggle()}
+          disabled={screenShare.pending}
+          title={screenShare.enabled ? 'Stop presenting' : 'Present now (share screen)'}
+          aria-label={screenShare.enabled ? 'Stop presenting' : 'Present now'}
+        >
+          <ScreenShareIcon size={20} />
+        </button>
+
+        {/* More actions menu */}
+        <div className="ail-menu" ref={moreRef}>
+          <button
+            type="button"
+            className={cx('ail-circle-btn', moreOpen && 'ail-circle-btn--active')}
+            onClick={() => setMoreOpen((v) => !v)}
+            title="More options"
+            aria-label="More options"
+          >
+            <MoreIcon size={20} />
+          </button>
+          {moreOpen && (
+            <div className="ail-menu-popover ail-menu-popover--up" role="menu">
+              <button
+                type="button"
+                className="ail-menu-item"
+                onClick={() => {
+                  recording.toggle();
+                  setMoreOpen(false);
+                }}
+              >
+                <RecordIcon size={16} />
+                {recording.isRecording ? 'Stop recording' : 'Start recording'}
+              </button>
+              <button
+                type="button"
+                className="ail-menu-item"
+                onClick={() => {
+                  onFullscreen();
+                  setMoreOpen(false);
+                }}
+              >
+                {fullscreen ? <ShrinkIcon size={16} /> : <ExpandIcon size={16} />}
+                {fullscreen ? 'Exit full screen' : 'Full screen'}
+              </button>
+              <button
+                type="button"
+                className="ail-menu-item"
+                onClick={() => {
+                  onPanel('settings');
+                  setMoreOpen(false);
+                }}
+              >
+                <SettingsIcon size={16} />
+                Settings
+              </button>
+              <button
+                type="button"
+                className="ail-menu-item"
+                onClick={() => {
+                  copyInvite();
+                  setMoreOpen(false);
+                }}
+              >
+                <CopyIcon size={16} />
+                Copy meeting link
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Signature Red Leave / End Call Pill */}
+        <button
+          type="button"
+          className="ail-end-call-btn"
+          onClick={onLeave}
+          title="Leave call"
+          aria-label="Leave call"
+        >
+          <PhoneOffIcon size={20} />
+          <span className="ail-end-call-label">Leave</span>
+        </button>
+      </div>
+
+      {/* Right section: Info, Participants, Chat, Settings */}
+      <div className="ail-dock-right">
+        <button
+          type="button"
+          className={cx('ail-dock-action-btn', panel === 'info' && 'ail-dock-action-btn--active')}
+          onClick={() => onPanel(panel === 'info' ? null : 'info')}
+          title="Meeting details"
+          aria-label="Meeting details"
+        >
+          <InfoIcon size={20} />
+        </button>
+
+        <button
+          type="button"
+          className={cx('ail-dock-action-btn', panel === 'participants' && 'ail-dock-action-btn--active')}
+          onClick={() => onPanel(panel === 'participants' ? null : 'participants')}
+          title="People"
+          aria-label="Participants"
+        >
+          <UsersIcon size={20} />
+          <span className="ail-badge">{Math.max(participantsCount, 1)}</span>
+        </button>
+
+        <button
+          type="button"
+          className={cx('ail-dock-action-btn', panel === 'chat' && 'ail-dock-action-btn--active')}
+          onClick={() => onPanel(panel === 'chat' ? null : 'chat')}
+          title="In-call messages"
+          aria-label="Chat messages"
+        >
+          <ChatIcon size={20} />
+        </button>
+
+        <button
+          type="button"
+          className={cx('ail-dock-action-btn', panel === 'settings' && 'ail-dock-action-btn--active')}
+          onClick={() => onPanel(panel === 'settings' ? null : 'settings')}
+          title="Settings"
+          aria-label="Settings"
+        >
+          <SettingsIcon size={20} />
+        </button>
+      </div>
+    </footer>
   );
 }
 
@@ -499,16 +634,18 @@ export function AILinkRoom({
   const camera = useTrackToggle({ source: Track.Source.Camera });
   const screenShare = useTrackToggle({ source: Track.Source.ScreenShare });
 
-  // Screen-reader announcements for room state changes (E.10 fix).
   React.useEffect(() => {
     if (participantsCount > 0) {
-      setAnnouncement(`You are in the meeting. ${participantsCount} participant${participantsCount === 1 ? '' : 's'} connected.`);
+      setAnnouncement(
+        `In meeting. ${participantsCount} participant${participantsCount === 1 ? '' : 's'}.`,
+      );
     }
   }, [participantsCount]);
 
   React.useEffect(() => {
-    if (!recording.isRecording) return;
-    setAnnouncement('This meeting is now being recorded.');
+    if (recording.isRecording) {
+      setAnnouncement('Meeting is being recorded.');
+    }
   }, [recording.isRecording]);
 
   React.useEffect(() => {
@@ -525,7 +662,7 @@ export function AILinkRoom({
         await rootRef.current?.requestFullscreen();
       }
     } catch (error) {
-      console.warn('Fullscreen not available', error);
+      console.warn('Fullscreen unavailable', error);
     }
   }, []);
 
@@ -547,84 +684,49 @@ export function AILinkRoom({
     <div className="ail-root" ref={rootRef}>
       <TopNav
         label={label ?? 'HireXt Meet'}
-        panel={panel}
         layout={layout}
         recording={recording}
         fullscreen={fullscreen}
-        participantsCount={participantsCount}
         onLayout={setLayout}
-        onPanel={handlePanel}
         onFullscreen={toggleFullscreen}
-        onLeave={handleLeave}
       />
 
       <main className="ail-stage-wrap">
         <VideoStage
-          fullscreen={fullscreen}
-          onToggleFullscreen={toggleFullscreen}
+          layout={layout}
           museTalkEnabled={museTalkEnabled}
         />
       </main>
 
-      {recording.isRecording && (
-        <div className="ail-rec-float" title="This meeting is being recorded">
-          <span className="ail-rec-dot" />
-          <span className="ail-rec-label">REC</span>
-          <span className="ail-rec-time">{recording.durationLabel}</span>
-        </div>
-      )}
+      {/* Google Meet signature bottom bar */}
+      <GoogleMeetDock
+        roomName={room.name || label || 'HireXt Meet'}
+        mic={mic}
+        camera={camera}
+        screenShare={screenShare}
+        recording={recording}
+        panel={panel}
+        participantsCount={participantsCount}
+        onPanel={handlePanel}
+        onLeave={handleLeave}
+        onFullscreen={toggleFullscreen}
+        fullscreen={fullscreen}
+      />
 
-      <footer className="ail-dock">
-        <ControlDockButton
-          icon={mic.enabled ? <MicIcon size={20} /> : <MicOffIcon size={20} />}
-          label={mic.enabled ? 'Mic on' : 'Mic off'}
-          on={mic.enabled}
-          danger={!mic.enabled}
-          processing={mic.pending}
-          onClick={() => mic.toggle()}
-        />
-        <ControlDockButton
-          icon={camera.enabled ? <CameraIcon size={20} /> : <CameraOffIcon size={20} />}
-          label={camera.enabled ? 'Camera on' : 'Camera off'}
-          on={camera.enabled}
-          danger={!camera.enabled}
-          processing={camera.pending}
-          onClick={() => camera.toggle()}
-        />
-        <ControlDockButton
-          icon={<ScreenShareIcon size={20} />}
-          label={screenShare.enabled ? 'Stop sharing' : 'Share screen'}
-          on={screenShare.enabled}
-          processing={screenShare.pending}
-          onClick={() => screenShare.toggle()}
-        />
-        <span className="ail-h-divider" aria-hidden="true" />
-        <ControlDockButton
-          icon={<ChatIcon size={20} />}
-          label="Chat"
-          on={panel === 'chat'}
-          onClick={() => handlePanel('chat')}
-        />
-        <ControlDockButton
-          icon={<RecordIcon size={20} />}
-          label={recording.isRecording ? 'Stop recording' : 'Record'}
-          on={recording.isRecording}
-          danger
-          processing={recording.processing}
-          onClick={() => recording.toggle()}
-        />
-        <ControlDockButton
-          icon={<SettingsIcon size={20} />}
-          label="Settings"
-          on={panel === 'settings'}
-          onClick={() => handlePanel('settings')}
-        />
-      </footer>
-
-      <aside className={cx('ail-panel', panel === 'chat' && 'ail-panel--open')} aria-hidden={panel !== 'chat'}>
+      {/* Side Drawers */}
+      {/* 1. Chat Panel */}
+      <aside
+        className={cx('ail-panel', panel === 'chat' && 'ail-panel--open')}
+        aria-hidden={panel !== 'chat'}
+      >
         <div className="ail-panel-header">
-          <span>Messages</span>
-          <button type="button" className="ail-icon-btn" onClick={() => handlePanel(null)} title="Close chat">
+          <span>In-call messages</span>
+          <button
+            type="button"
+            className="ail-icon-btn"
+            onClick={() => handlePanel(null)}
+            title="Close messages"
+          >
             <CloseIcon size={16} />
           </button>
         </div>
@@ -633,16 +735,22 @@ export function AILinkRoom({
         </div>
       </aside>
 
+      {/* 2. Participants Panel */}
       <aside
         className={cx('ail-panel', panel === 'participants' && 'ail-panel--open')}
         aria-hidden={panel !== 'participants'}
       >
         <div className="ail-panel-header">
           <span>
-            Participants
+            People
             <span className="ail-panel-count">{Math.max(participantsCount, 1)}</span>
           </span>
-          <button type="button" className="ail-icon-btn" onClick={() => handlePanel(null)} title="Close participants">
+          <button
+            type="button"
+            className="ail-icon-btn"
+            onClick={() => handlePanel(null)}
+            title="Close people"
+          >
             <CloseIcon size={16} />
           </button>
         </div>
@@ -651,70 +759,155 @@ export function AILinkRoom({
         </div>
       </aside>
 
+      {/* 3. Meeting Info Panel */}
+      <aside
+        className={cx('ail-panel', panel === 'info' && 'ail-panel--open')}
+        aria-hidden={panel !== 'info'}
+      >
+        <div className="ail-panel-header">
+          <span>Meeting details</span>
+          <button
+            type="button"
+            className="ail-icon-btn"
+            onClick={() => handlePanel(null)}
+            title="Close details"
+          >
+            <CloseIcon size={16} />
+          </button>
+        </div>
+        <div className="ail-panel-body" style={{ padding: '20px 24px' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#202124', marginBottom: 6 }}>
+            Joining info
+          </h3>
+          <p style={{ fontSize: '0.85rem', color: '#5f6368', marginBottom: 16, wordBreak: 'break-all' }}>
+            {typeof window !== 'undefined' ? window.location.href : ''}
+          </p>
+          <button
+            type="button"
+            className="ail-gate-primary"
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            onClick={() => {
+              navigator.clipboard
+                .writeText(window.location.href)
+                .then(() => toast.success('Joining info copied!'))
+                .catch(() => toast.error('Failed to copy info'));
+            }}
+          >
+            <CopyIcon size={16} />
+            Copy joining info
+          </button>
+
+          <hr style={{ margin: '24px 0', border: 'none', borderTop: '1px solid #e8eaed' }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#3c4043', fontSize: '0.9rem' }}>
+            <ShieldCheckIcon size={18} style={{ color: '#34a853' }} />
+            <span>
+              {room.isE2EEEnabled ? 'End-to-end encrypted' : 'Encrypted connection'}
+            </span>
+          </div>
+        </div>
+      </aside>
+
+      {/* 4. Settings Panel */}
       <aside
         className={cx('ail-panel', panel === 'settings' && 'ail-panel--open')}
         aria-hidden={panel !== 'settings'}
       >
         <div className="ail-panel-header">
           <span>Settings</span>
-          <button type="button" className="ail-icon-btn" onClick={() => handlePanel(null)} title="Close settings">
+          <button
+            type="button"
+            className="ail-icon-btn"
+            onClick={() => handlePanel(null)}
+            title="Close settings"
+          >
             <CloseIcon size={16} />
           </button>
         </div>
         <div className="ail-panel-body">
-          {SettingsComponent ? <SettingsComponent onClose={() => handlePanel(null)} /> : null}
+          {SettingsComponent ? (
+            <SettingsComponent onClose={() => handlePanel(null)} />
+          ) : (
+            <div style={{ padding: 24, textAlign: 'center', color: '#5f6368' }}>
+              Settings menu
+            </div>
+          )}
         </div>
       </aside>
 
       <RoomAudioRenderer />
       <StartAudio label="Click to enable audio" className="ail-start-audio" />
-      {/* Screen-reader live region for join/recording announcements (E.10 fix). */}
       <div role="status" aria-live="polite" className="ail-sr-only">
         {announcement}
       </div>
-      <div className="ail-powered">Powered by LiveKit</div>
     </div>
   );
 }
 
 function ParticipantsList() {
   const participants = useParticipants();
+  const [search, setSearch] = React.useState('');
+
+  const filtered = participants.filter((p) =>
+    displayName(p).toLowerCase().includes(search.toLowerCase()),
+  );
+
   return (
-    <ul className="ail-people">
-      {participants.map((p) => (
-        <ParticipantRow key={p.identity} participant={p} />
-      ))}
-    </ul>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f3f4' }}>
+        <input
+          type="text"
+          placeholder="Search for people"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="ail-gate-input"
+          style={{ width: '100%', fontSize: '0.9rem', padding: '8px 12px' }}
+        />
+      </div>
+      <ul className="ail-people" style={{ flex: 1, overflowY: 'auto' }}>
+        {filtered.map((p) => (
+          <ParticipantRow key={p.identity} participant={p} />
+        ))}
+      </ul>
+    </div>
   );
 }
 
 function ParticipantRow({ participant }: { participant: Participant }) {
   const micMuted = useIsTrackMuted(participant, Track.Source.Microphone);
   const camMuted = useIsTrackMuted(participant, Track.Source.Camera);
+  const isSpeaking = useIsSpeaking(participant);
+
   return (
     <li className="ail-person">
-      <Avatar name={displayName(participant)} size={32} />
+      <div className={cx('ail-person-avatar-wrap', isSpeaking && !micMuted && 'ail-person-avatar-wrap--speaking')}>
+        <Avatar name={displayName(participant)} size={36} />
+      </div>
       <span className="ail-person-name">
         {displayName(participant)}
         {participant.isLocal && <span className="ail-you-tag">You</span>}
       </span>
-      <span className={cx('ail-person-state', micMuted && 'ail-person-state--off')} title={micMuted ? 'Mic muted' : 'Mic on'}>
-        {micMuted ? <MicOffIcon size={15} /> : <MicIcon size={15} />}
+      <span
+        className={cx('ail-person-state', micMuted && 'ail-person-state--off')}
+        title={micMuted ? 'Mic muted' : 'Mic on'}
+      >
+        {micMuted ? <MicOffIcon size={16} /> : <MicIcon size={16} />}
       </span>
-      <span className={cx('ail-person-state', camMuted && 'ail-person-state--off')} title={camMuted ? 'Camera off' : 'Camera on'}>
-        {camMuted ? <CameraOffIcon size={15} /> : <CameraIcon size={15} />}
+      <span
+        className={cx('ail-person-state', camMuted && 'ail-person-state--off')}
+        title={camMuted ? 'Camera off' : 'Camera on'}
+      >
+        {camMuted ? <CameraOffIcon size={16} /> : <CameraIcon size={16} />}
       </span>
     </li>
   );
 }
 
 function VideoStage({
-  fullscreen,
-  onToggleFullscreen,
+  layout,
   museTalkEnabled,
 }: {
-  fullscreen: boolean;
-  onToggleFullscreen: () => void;
+  layout: LayoutMode;
   museTalkEnabled: boolean;
 }) {
   const tracks = useTracks(
@@ -727,9 +920,6 @@ function VideoStage({
   const cameraTracks = tracks.filter((t) => t.source === Track.Source.Camera);
   const screenTracks = tracks.filter((t) => t.source === Track.Source.ScreenShare);
 
-  // The MuseTalk avatar is the AI interviewer participant. Identity/name is
-  // `monika-avatar`, published on behalf of the agent. When enabled we render
-  // its video as the whole stage; the AudioRenderer handles its audio.
   const avatarTrack = cameraTracks.find((t) =>
     ['monika-avatar', 'rosie', 'avatar'].some(
       (k) =>
@@ -743,24 +933,66 @@ function VideoStage({
       <div className="ail-stage-top">
         <ConnectionChip />
       </div>
-      <button
-        type="button"
-        className="ail-fullscreen-btn"
-        onClick={onToggleFullscreen}
-        title={fullscreen ? 'Exit full screen' : 'Enter full screen'}
-      >
-        {fullscreen ? <ShrinkIcon size={15} /> : <ExpandIcon size={15} />}
-      </button>
 
       {museTalkEnabled ? (
         <MuseTalkStage
           avatarTrack={avatarTrack}
           candidateTracks={cameraTracks.filter((t) => t !== avatarTrack)}
         />
-      ) : (
-        <AudioOnlyStage
-          ordered={screenTracks.length > 0 ? [...cameraTracks, ...screenTracks] : cameraTracks}
+      ) : screenTracks.length > 0 || layout === 'spotlight' ? (
+        <SpotlightStage
+          screenTracks={screenTracks}
+          cameraTracks={cameraTracks}
         />
+      ) : (
+        <GoogleGridStage tracks={cameraTracks} />
+      )}
+    </div>
+  );
+}
+
+/** Standard responsive grid for Google Meet */
+function GoogleGridStage({ tracks }: { tracks: TrackReferenceOrPlaceholder[] }) {
+  const count = tracks.length;
+
+  return (
+    <div className="ail-grid-container" data-count={Math.min(count, 9)}>
+      {tracks.map((ref) => (
+        <div className="ail-grid-cell" key={trackKey(ref)}>
+          <Tile trackRef={ref} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Spotlight / Screen share view with filmstrip */
+function SpotlightStage({
+  screenTracks,
+  cameraTracks,
+}: {
+  screenTracks: TrackReferenceOrPlaceholder[];
+  cameraTracks: TrackReferenceOrPlaceholder[];
+}) {
+  // If there's screen share, it takes the main stage, otherwise the first camera track
+  const mainTrack = screenTracks.length > 0 ? screenTracks[0] : cameraTracks[0];
+  const sideTracks = screenTracks.length > 0
+    ? cameraTracks
+    : cameraTracks.slice(1);
+
+  return (
+    <div className="ail-spotlight-wrap">
+      <div className="ail-spotlight-main">
+        {mainTrack && <Tile trackRef={mainTrack} isSpotlight />}
+      </div>
+      {sideTracks.length > 0 && (
+        <div className="ail-filmstrip">
+          {sideTracks.map((ref) => (
+            <div className="ail-filmstrip-item" key={trackKey(ref)}>
+              <Tile trackRef={ref} />
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -773,10 +1005,6 @@ function MuseTalkStage({
   avatarTrack: TrackReferenceOrPlaceholder | undefined;
   candidateTracks: TrackReferenceOrPlaceholder[];
 }) {
-  // Only render the avatar's video element once the track is a REAL subscribed
-  // reference with an unmuted, usable video publication. A placeholder (given
-  // by useTracks withPlaceholder) or a not-yet-subscribed publication has no
-  // media — rendering <VideoTrack> then shows a black/empty frame.
   const avatarReady =
     !!avatarTrack &&
     isTrackReference(avatarTrack) &&
@@ -784,13 +1012,8 @@ function MuseTalkStage({
     !avatarTrack.publication.isMuted &&
     !!avatarTrack.publication.track;
 
-  // After Leave (or a dropped call) the avatar track disappears — show an
-  // "ended" state instead of a spinner that can never resolve.
   const connState = useConnectionState();
   const ended = connState === ConnectionState.Disconnected;
-
-  // Keep the PiP only to the candidate's own camera (skip the avatar, proctor,
-  // and any other observer so the interview view stays clean).
   const localTracks = candidateTracks.filter((t) => t.participant.isLocal);
 
   return (
@@ -824,41 +1047,10 @@ function MuseTalkStage({
       {localTracks.length > 0 && (
         <div className="ail-candidate-pip">
           {localTracks.map((ref) => (
-            <Tile key={trackKey(ref)} trackRef={ref} speaking={false} />
+            <Tile key={trackKey(ref)} trackRef={ref} />
           ))}
         </div>
       )}
     </>
-  );
-}
-
-function AudioOnlyStage({
-  ordered,
-}: {
-  ordered: TrackReferenceOrPlaceholder[];
-}) {
-  const local = ordered.find((t) => t.participant.isLocal);
-  const remote = ordered.filter((t) => !t.participant.isLocal);
-  const remoteHasVideo = remote.some(
-    (t) => isTrackReference(t) && t.publication && !t.publication.isMuted,
-  );
-
-  // Audio-only interview: no avatar video. Show a subtle "voice only" stage —
-  // the candidate's self view (if any) and, if a remote video is present (e.g.
-  // a proctor / observer), a small tile. The AI interviewer is heard over the
-  // RoomAudioRenderer, with no rendered video.
-  return (
-    <div className="ail-stage-grid">
-      {!remoteHasVideo && local && (
-        <div className="ail-self-tile">
-          <Tile trackRef={local} speaking={false} />
-        </div>
-      )}
-      {remote.map((ref) => (
-        <div className="ail-self-tile" key={trackKey(ref)}>
-          <Tile trackRef={ref} speaking={false} />
-        </div>
-      ))}
-    </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 import { LogoMark, PhoneOffIcon } from './icons';
 
 /**
@@ -12,43 +13,71 @@ import { LogoMark, PhoneOffIcon } from './icons';
  * for dropped/errored sessions.
  */
 export function MeetingEndedScreen({
-  title = 'Meeting ended',
-  message = 'You ended the interview. Thanks for your time!',
+  title = 'You left the meeting',
+  message = 'Thanks for your time. Have a great day!',
   onRejoin,
   rejoinHref,
 }: {
   title?: string;
   message?: string;
-  /** Called by the "Rejoin" button; parent remounts the shell for a fresh connect. */
   onRejoin?: () => void;
-  /** Alternative to `onRejoin`: navigate to this href to rejoin. */
   rejoinHref?: string;
 }) {
   const canRejoin = Boolean(onRejoin || rejoinHref);
+  const [rated, setRated] = React.useState(false);
+
   return (
     <div className="ail-ended" role="status">
       <div className="ail-ended-card">
         <div className="ail-ended-mark" aria-hidden="true">
-          <LogoMark size={38} />
-        </div>
-        <div className="ail-ended-icon" aria-hidden="true">
-          <PhoneOffIcon size={24} />
+          <LogoMark size={48} />
         </div>
         <h1 className="ail-ended-title">{title}</h1>
         <p className="ail-ended-msg">{message}</p>
-        {canRejoin && (
-          <button
-            type="button"
-            className="ail-ended-cta"
-            onClick={() => (onRejoin ? onRejoin() : undefined)}
-          >
-            Rejoin meeting
-          </button>
+
+        <div className="ail-ended-actions">
+          {canRejoin && (
+            <button
+              type="button"
+              className="ail-ended-btn-primary"
+              onClick={() => (onRejoin ? onRejoin() : undefined)}
+            >
+              Rejoin
+            </button>
+          )}
+          <Link href="/" className={canRejoin ? 'ail-ended-btn-secondary' : 'ail-ended-btn-primary'}>
+            Return to home screen
+          </Link>
+        </div>
+
+        {!rated ? (
+          <div className="ail-ended-feedback">
+            <span style={{ fontSize: '13px', color: '#5f6368' }}>How was the audio and video?</span>
+            <div className="ail-ended-stars">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  className="ail-star-btn"
+                  onClick={() => {
+                    setRated(true);
+                    toast.success('Thank you for your feedback!');
+                  }}
+                  title={`Rate ${star} out of 5`}
+                  aria-label={`Rate ${star} out of 5`}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p style={{ fontSize: '13px', color: '#34a853', marginTop: 16 }}>
+            ✓ Thank you for your feedback!
+          </p>
         )}
-        <Link href="/" className={canRejoin ? 'ail-ended-secondary' : 'ail-ended-cta'}>
-          Go to Home
-        </Link>
-        <p className="ail-ended-hint">You can close this tab now.</p>
+
+        <p className="ail-ended-hint">Your meeting was protected with HireXt real-time encryption.</p>
       </div>
     </div>
   );

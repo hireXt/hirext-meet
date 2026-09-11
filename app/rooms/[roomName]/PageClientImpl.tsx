@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { LocalUserChoices, PreJoin } from '@livekit/components-react';
 import { ConferenceShell, fetchConnectionDetailsWithRetry } from '@/lib/ailink/ConferenceShell';
@@ -104,9 +105,34 @@ export function PageClientImpl(props: {
     );
   }
 
+  const copyLink = () => {
+    navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => toast.success('Meeting link copied!'))
+      .catch(() => toast.error('Failed to copy link'));
+  };
+
   return (
-    <main style={{ height: '100%', position: 'relative' }}>
-      <div style={{ display: 'grid', placeItems: 'center', height: '100%' }}>
+    <div className="ail-prejoin-page">
+      <header className="ail-prejoin-nav">
+        <Link href="/" className="ail-brand" title="HireXt Meet Home">
+          <span className="ail-brand-mark">HX</span>
+          <span className="ail-brand-name">
+            HireXt <span style={{ color: '#1a73e8', fontWeight: 600 }}>Meet</span>
+          </span>
+        </Link>
+        <div className="ail-prejoin-nav-right">
+          <div className="ail-prejoin-code-pill" onClick={copyLink} title="Click to copy meeting link">
+            <span>{props.roomName}</span>
+            <span style={{ fontSize: '11px', color: '#1a73e8', fontWeight: 600 }}>Copy link</span>
+          </div>
+          <div className="ail-avatar" style={{ width: 34, height: 34, fontSize: '12px' }}>
+            HX
+          </div>
+        </div>
+      </header>
+
+      <main className="ail-prejoin-main">
         {mintState === 'minting' ? (
           <div className="ail-gate" role="status" aria-live="polite">
             <div className="ail-gate-card">
@@ -151,7 +177,7 @@ export function PageClientImpl(props: {
             />
           </MediaDeviceGuard>
         )}
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

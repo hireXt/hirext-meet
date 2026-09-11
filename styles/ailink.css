@@ -42,22 +42,19 @@
     'Helvetica Neue', Arial, sans-serif;
 }
 
-/* ---------- base shell ---------- */
-
 .ail-root {
   display: flex;
   flex-direction: column;
   height: 100%;
+  height: 100dvh;
   min-height: 0;
   position: relative;
-  background-color: var(--ail-bg);
-  background-image:
-    radial-gradient(52rem 22rem at 12% -6%, rgba(124, 92, 252, 0.055), transparent 60%),
-    radial-gradient(48rem 20rem at 88% -8%, rgba(62, 99, 221, 0.05), transparent 60%);
-  font-family: var(--ail-font);
-  color: var(--ail-fg);
+  background-color: #202124;
+  font-family: var(--gm-font, var(--ail-font));
+  color: #e8eaed;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow: hidden;
 }
 
 .ail-root button {
@@ -187,16 +184,16 @@
 /* ---------- top navigation ---------- */
 
 .ail-nav {
-  height: var(--ail-nav-h);
+  height: var(--ail-nav-h, 56px);
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 0 16px 0 20px;
-  background: rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--ail-border);
+  background: #202124;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e8eaed;
   z-index: 30;
 }
 
@@ -213,15 +210,15 @@
   align-items: center;
   gap: 10px;
   text-decoration: none;
-  color: inherit;
+  color: #e8eaed;
   border-radius: var(--ail-radius-sm);
 }
 
 .ail-brand-name {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--ail-fg);
+  color: #e8eaed;
   white-space: nowrap;
 }
 
@@ -239,24 +236,25 @@
   border: 1px solid transparent;
   border-radius: 10px;
   background: transparent;
+  color: #e8eaed;
   cursor: pointer;
   transition: background-color 0.15s ease;
   max-width: 320px;
 }
 
 .ail-room-trigger:hover {
-  background: rgba(18, 20, 43, 0.055);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .ail-room-code {
   font-size: 13.5px;
-  font-weight: 650;
+  font-weight: 500;
   letter-spacing: 0.02em;
-  color: var(--ail-fg);
-  background: var(--ail-accent-soft);
-  border: 1px solid var(--ail-accent-border);
+  color: #e8eaed;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
-  padding: 2px 8px;
+  padding: 3px 10px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1916,3 +1914,737 @@
   color: var(--ail-fg-2);
   text-decoration: underline;
 }
+
+/* ============================================================
+   GOOGLE MEET UI & RESPONSIVE LAYOUT OVERHAUL
+   ============================================================ */
+
+/* 1. Google Meet Bottom Control Dock */
+.ail-gm-dock {
+  height: 80px;
+  background: #202124;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: relative;
+  z-index: 30;
+  flex: none;
+  user-select: none;
+}
+
+.ail-dock-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #e8eaed;
+  font-size: 14px;
+  min-width: 200px;
+}
+
+.ail-dock-time {
+  font-size: 15px;
+  font-weight: 500;
+  color: #e8eaed;
+  white-space: nowrap;
+}
+
+.ail-dock-divider {
+  color: rgba(255, 255, 255, 0.2);
+  font-weight: 300;
+}
+
+.ail-dock-code {
+  background: transparent;
+  border: none;
+  color: #e8eaed;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+  font-family: inherit;
+}
+
+.ail-dock-code:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ail-dock-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.ail-circle-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: #3c4043;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  position: relative;
+}
+
+.ail-circle-btn:hover:not(:disabled) {
+  background: #4a4d51;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.ail-circle-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.ail-circle-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ail-circle-btn--muted {
+  background: #ea4335 !important;
+  color: #ffffff !important;
+}
+
+.ail-circle-btn--muted:hover:not(:disabled) {
+  background: #d93025 !important;
+}
+
+.ail-circle-btn--active {
+  background: #1a73e8 !important;
+  color: #ffffff !important;
+}
+
+.ail-circle-btn--active:hover:not(:disabled) {
+  background: #1557b0 !important;
+}
+
+/* Google Meet Signature End Call Red Pill Button */
+.ail-end-call-btn {
+  height: 48px;
+  padding: 0 24px;
+  min-width: 84px;
+  border-radius: 9999px;
+  border: none;
+  background: #ea4335;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  font-family: inherit;
+}
+
+.ail-end-call-btn:hover {
+  background: #d93025;
+  box-shadow: 0 2px 6px rgba(234, 67, 53, 0.4);
+}
+
+.ail-end-call-btn:active {
+  transform: scale(0.96);
+}
+
+.ail-dock-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 200px;
+}
+
+.ail-dock-action-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #e8eaed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.15s ease;
+}
+
+.ail-dock-action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ail-dock-action-btn--active {
+  background: #8ab4f8 !important;
+  color: #202124 !important;
+}
+
+.ail-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #1a73e8;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border: 1px solid #202124;
+}
+
+.ail-menu-popover--up {
+  bottom: calc(100% + 10px);
+  top: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2d2e30;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #e8eaed;
+  min-width: 220px;
+}
+
+.ail-menu-popover--up .ail-menu-item {
+  color: #e8eaed;
+  font-size: 13.5px;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+.ail-menu-popover--up .ail-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* 2. Responsive Google Meet Grid */
+.ail-stage {
+  background: #202124;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.ail-grid-container {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  gap: 16px;
+  padding: 12px;
+  place-content: center;
+  flex: 1;
+  min-height: 0;
+}
+
+.ail-grid-container[data-count="1"] {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 1080px;
+  max-height: 82vh;
+  margin: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.ail-grid-container[data-count="2"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 1380px;
+  margin: auto;
+}
+
+.ail-grid-container[data-count="3"],
+.ail-grid-container[data-count="4"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  max-width: 1380px;
+  margin: auto;
+}
+
+.ail-grid-container[data-count="5"],
+.ail-grid-container[data-count="6"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  max-width: 1480px;
+  margin: auto;
+}
+
+.ail-grid-container[data-count="7"],
+.ail-grid-container[data-count="8"],
+.ail-grid-container[data-count="9"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  max-width: 1540px;
+  margin: auto;
+}
+
+.ail-grid-cell {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+.ail-grid-cell .ail-tile {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+  background: #2d2e30;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.ail-tile--speaking {
+  box-shadow: 0 0 0 3px #8ab4f8 !important;
+  border-color: #8ab4f8 !important;
+}
+
+.ail-avatar-halo {
+  display: inline-flex;
+  border-radius: 50%;
+  transition: box-shadow 0.2s ease;
+}
+
+.ail-avatar-halo--speaking {
+  box-shadow: 0 0 0 6px rgba(138, 180, 248, 0.4), 0 0 0 12px rgba(138, 180, 248, 0.2);
+  animation: ail-halo 1.6s infinite ease-in-out;
+}
+
+@keyframes ail-halo {
+  0%, 100% {
+    box-shadow: 0 0 0 4px rgba(138, 180, 248, 0.4), 0 0 0 10px rgba(138, 180, 248, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(138, 180, 248, 0.6), 0 0 0 16px rgba(138, 180, 248, 0.25);
+  }
+}
+
+.ail-name-pill {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(32, 33, 36, 0.8);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  max-width: calc(100% - 24px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ail-mic-muted-icon {
+  display: inline-flex;
+  color: #ea4335;
+  margin-left: 2px;
+}
+
+/* Spotlight & Screen Share Layout */
+.ail-spotlight-wrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  gap: 12px;
+  padding: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.ail-spotlight-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ail-spotlight-main .ail-tile {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  background: #2d2e30;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.ail-filmstrip {
+  height: 110px;
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  justify-content: center;
+  flex: none;
+  padding-bottom: 4px;
+}
+
+.ail-filmstrip-item {
+  width: 170px;
+  height: 100%;
+  flex: none;
+}
+
+.ail-filmstrip-item .ail-tile {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+}
+
+/* 3. Google Meet Pre-join Green Room */
+.ail-prejoin-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100dvh;
+  background: #ffffff;
+  color: #202124;
+}
+
+.ail-prejoin-nav {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid #e8eaed;
+  flex: none;
+}
+
+.ail-brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1a73e8, #6366f1);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ail-prejoin-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ail-prejoin-code-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: #f1f3f4;
+  font-size: 13px;
+  font-weight: 500;
+  color: #3c4043;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.ail-prejoin-code-pill:hover {
+  background: #e8eaed;
+}
+
+.ail-prejoin-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Overriding LiveKit PreJoin to Google Meet 2-column lobby */
+.ail-prejoin-main .lk-prejoin {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 56px;
+  max-width: 1040px;
+  width: 100%;
+  background: transparent;
+  padding: 0;
+  align-items: center;
+}
+
+.ail-prejoin-main .lk-video-container {
+  aspect-ratio: 16 / 9;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  background: #202124;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.ail-prejoin-main .lk-button-group-container {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.ail-prejoin-main .lk-button-group-container > .lk-button-group {
+  width: auto;
+}
+
+.ail-prejoin-main .lk-button-group > .lk-button {
+  border-radius: 50% !important;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #3c4043;
+  color: #ffffff;
+}
+
+.ail-prejoin-main .lk-button-group > .lk-button:hover {
+  background: #4a4d51;
+}
+
+.ail-prejoin-main .lk-username-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.ail-prejoin-main .lk-form-control,
+.ail-prejoin-main .lk-join-input {
+  border-radius: 8px;
+  border: 1px solid #dadce0;
+  padding: 14px 16px;
+  font-size: 1rem;
+  width: 100%;
+  background: #ffffff;
+  color: #202124;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.ail-prejoin-main .lk-form-control:focus,
+.ail-prejoin-main .lk-join-input:focus {
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+}
+
+.ail-prejoin-main .lk-button.lk-join-button,
+.ail-prejoin-main button[type='submit'] {
+  border-radius: 9999px;
+  background: #1a73e8;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 14px 28px;
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(26, 115, 232, 0.3);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ail-prejoin-main .lk-button.lk-join-button:hover,
+.ail-prejoin-main button[type='submit']:hover {
+  background: #1557b0;
+  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
+}
+
+/* 4. Side Panels Google Meet Styling */
+.ail-panel {
+  position: absolute;
+  top: 16px;
+  bottom: calc(80px + 16px);
+  right: 16px;
+  width: 360px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  border: 1px solid #dadce0;
+  z-index: 50;
+  overflow: hidden;
+}
+
+.ail-panel-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e8eaed;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #202124;
+}
+
+.ail-panel-count {
+  background: #e8f0fe;
+  color: #1a73e8;
+  font-weight: 700;
+}
+
+/* 5. Meeting Ended Screen Google Meet Styling */
+.ail-ended-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.ail-ended-btn-primary {
+  padding: 11px 24px;
+  border-radius: 9999px;
+  background: #1a73e8;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+}
+
+.ail-ended-btn-primary:hover {
+  background: #1557b0;
+}
+
+.ail-ended-btn-secondary {
+  padding: 11px 24px;
+  border-radius: 9999px;
+  background: transparent;
+  color: #1a73e8;
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid #dadce0;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+}
+
+.ail-ended-btn-secondary:hover {
+  background: #f1f3f4;
+}
+
+.ail-ended-feedback {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.ail-ended-stars {
+  display: flex;
+  gap: 6px;
+}
+
+.ail-star-btn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: #dadce0;
+  cursor: pointer;
+  transition: color 0.15s ease, transform 0.1s ease;
+}
+
+.ail-star-btn:hover {
+  color: #fbbc04;
+  transform: scale(1.15);
+}
+
+/* 6. Mobile Responsiveness */
+@media (max-width: 860px) {
+  .ail-prejoin-main .lk-prejoin {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    max-width: 480px;
+  }
+}
+
+@media (max-width: 768px) {
+  .ail-gm-dock {
+    height: 72px;
+    padding: 0 16px;
+  }
+
+  .ail-dock-left {
+    display: none;
+  }
+
+  .ail-dock-center {
+    gap: 8px;
+  }
+
+  .ail-circle-btn {
+    width: 42px;
+    height: 42px;
+  }
+
+  .ail-end-call-btn {
+    height: 42px;
+    padding: 0 16px;
+    min-width: 42px;
+  }
+
+  .ail-end-call-label {
+    display: none;
+  }
+
+  .ail-dock-right {
+    min-width: auto;
+    gap: 4px;
+  }
+
+  .ail-dock-right .ail-dock-action-btn:nth-child(1),
+  .ail-dock-right .ail-dock-action-btn:nth-child(4) {
+    display: none;
+  }
+
+  .ail-grid-container[data-count="2"] {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(2, 1fr);
+  }
+
+  .ail-panel {
+    top: auto;
+    bottom: 72px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 70vh;
+    border-radius: 20px 20px 0 0;
+  }
+}
+
