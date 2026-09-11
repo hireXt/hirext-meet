@@ -2040,6 +2040,266 @@
   background: #1557b0 !important;
 }
 
+/* Google Meet Signature Split Device Buttons & Popovers */
+.gm-split-btn-wrapper,
+.ail-split-btn-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.gm-split-btn,
+.ail-split-btn {
+  height: 48px;
+  border-radius: 9999px;
+  background: #3c4043;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+}
+
+.gm-split-btn:hover,
+.ail-split-btn:hover {
+  background: #4a4d51;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.gm-split-btn--muted,
+.ail-split-btn--muted {
+  background: #ea4335 !important;
+  color: #ffffff !important;
+}
+
+.gm-split-btn--muted:hover,
+.ail-split-btn--muted:hover {
+  background: #d93025 !important;
+}
+
+.gm-split-btn-action,
+.ail-split-btn-action {
+  width: 44px;
+  height: 48px;
+  border-top-left-radius: 9999px;
+  border-bottom-left-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  padding: 0;
+}
+
+.gm-split-btn-action:hover,
+.ail-split-btn-action:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.gm-split-btn--muted .gm-split-btn-action:hover,
+.ail-split-btn--muted .ail-split-btn-action:hover {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.gm-split-btn-divider,
+.ail-split-btn-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.22);
+  flex-shrink: 0;
+}
+
+.gm-split-btn--muted .gm-split-btn-divider,
+.ail-split-btn--muted .ail-split-btn-divider {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.gm-split-btn-chevron,
+.ail-split-btn-chevron {
+  width: 24px;
+  height: 48px;
+  border-top-right-radius: 9999px;
+  border-bottom-right-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  padding: 0 4px 0 0;
+}
+
+.gm-split-btn-chevron:hover,
+.ail-split-btn-chevron:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.gm-split-btn--muted .gm-split-btn-chevron:hover,
+.ail-split-btn--muted .ail-split-btn-chevron:hover {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.gm-split-btn-chevron--active,
+.ail-split-btn-chevron--active {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Google Meet Dark Floating Device Popover */
+.gm-device-popover,
+.ail-device-popover {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  background: #282a2d;
+  color: #e8eaed;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 10px 6px;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  animation: gmPopIn 0.15s cubic-bezier(0, 0, 0.2, 1);
+}
+
+@keyframes gmPopIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.gm-device-section-title,
+.ail-device-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9aa0a6;
+  letter-spacing: 0.6px;
+  padding: 6px 12px 4px;
+  text-transform: uppercase;
+}
+
+.gm-device-list,
+.ail-device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.gm-device-item,
+.ail-device-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #e8eaed;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+  font-family: inherit;
+}
+
+.gm-device-item:hover,
+.ail-device-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.gm-device-item--selected,
+.ail-device-item--selected {
+  color: #8ab4f8;
+  font-weight: 500;
+  background: rgba(138, 180, 248, 0.08);
+}
+
+.gm-device-item--selected:hover,
+.ail-device-item--selected:hover {
+  background: rgba(138, 180, 248, 0.14);
+}
+
+.gm-device-check,
+.ail-device-check {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8ab4f8;
+  flex-shrink: 0;
+}
+
+.gm-device-name,
+.ail-device-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gm-device-divider,
+.ail-device-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 6px 8px;
+}
+
+.gm-device-test-btn,
+.ail-device-test-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #8ab4f8;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+  font-family: inherit;
+}
+
+.gm-device-test-btn:hover,
+.ail-device-test-btn:hover {
+  background: rgba(138, 180, 248, 0.12);
+}
+
+.gm-device-test-btn:disabled,
+.ail-device-test-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.gm-device-empty,
+.ail-device-empty {
+  padding: 6px 12px;
+  font-size: 12.5px;
+  color: #9aa0a6;
+  font-style: italic;
+}
+
 /* Google Meet Signature End Call Red Pill Button */
 .ail-end-call-btn {
   height: 48px;

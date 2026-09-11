@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 import {
   CameraIcon,
   CameraOffIcon,
+  CheckIcon,
+  ChevronDownIcon,
   CopyIcon,
   HeadphonesIcon,
   MicIcon,
@@ -131,10 +133,14 @@ export function GoogleMeetGreenRoom({
   const [audioDevices, setAudioDevices] = React.useState<MediaDeviceInfo[]>([]);
   const [speakerDevices, setSpeakerDevices] = React.useState<MediaDeviceInfo[]>([]);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [micMenuOpen, setMicMenuOpen] = React.useState(false);
+  const [cameraMenuOpen, setCameraMenuOpen] = React.useState(false);
   const [testSoundPlaying, setTestSoundPlaying] = React.useState(false);
 
   const videoEl = React.useRef<HTMLVideoElement | null>(null);
   const settingsRef = React.useRef<HTMLDivElement>(null);
+  const micMenuRef = React.useRef<HTMLDivElement>(null);
+  const cameraMenuRef = React.useRef<HTMLDivElement>(null);
 
   const videoEnabledRef = React.useRef(videoEnabled);
   videoEnabledRef.current = videoEnabled;
@@ -324,17 +330,24 @@ export function GoogleMeetGreenRoom({
     };
   }, [videoTrack, blurEnabled]);
 
-  // Close settings popup when clicking outside
+  // Close popups when clicking outside
   React.useEffect(() => {
-    if (!settingsOpen) return;
+    if (!settingsOpen && !micMenuOpen && !cameraMenuOpen) return;
     const handler = (e: MouseEvent) => {
-      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (settingsOpen && settingsRef.current && !settingsRef.current.contains(target)) {
         setSettingsOpen(false);
+      }
+      if (micMenuOpen && micMenuRef.current && !micMenuRef.current.contains(target)) {
+        setMicMenuOpen(false);
+      }
+      if (cameraMenuOpen && cameraMenuRef.current && !cameraMenuRef.current.contains(target)) {
+        setCameraMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [settingsOpen]);
+  }, [settingsOpen, micMenuOpen, cameraMenuOpen]);
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -450,27 +463,173 @@ export function GoogleMeetGreenRoom({
 
             {/* Floating circular control bar at bottom of video preview */}
             <div className="gm-preview-dock">
-              {/* Mic Toggle Button */}
-              <button
-                type="button"
-                className={`gm-dock-btn ${!audioEnabled ? 'gm-dock-btn--muted' : ''}`}
-                onClick={() => setAudioEnabled((prev) => !prev)}
-                title={audioEnabled ? 'Turn off microphone' : 'Turn on microphone'}
-                aria-label={audioEnabled ? 'Turn off microphone' : 'Turn on microphone'}
-              >
-                {audioEnabled ? <MicIcon size={22} /> : <MicOffIcon size={22} />}
-              </button>
+              {/* Google Meet Split Mic Button */}
+              <div className="gm-split-btn-wrapper" ref={micMenuRef}>
+                <div className={`gm-split-btn ${!audioEnabled ? 'gm-split-btn--muted' : ''}`}>
+                  <button
+                    type="button"
+                    className="gm-split-btn-action"
+                    onClick={() => setAudioEnabled((prev) => !prev)}
+                    title={audioEnabled ? 'Turn off microphone' : 'Turn on microphone'}
+                    aria-label={audioEnabled ? 'Turn off microphone' : 'Turn on microphone'}
+                  >
+                    {audioEnabled ? <MicIcon size={20} /> : <MicOffIcon size={20} />}
+                  </button>
+                  <span className="gm-split-btn-divider" />
+                  <button
+                    type="button"
+                    className={`gm-split-btn-chevron ${micMenuOpen ? 'gm-split-btn-chevron--active' : ''}`}
+                    onClick={() => {
+                      setMicMenuOpen((v) => !v);
+                      setCameraMenuOpen(false);
+                      setSettingsOpen(false);
+                    }}
+                    title="Audio settings (Microphone & Speaker)"
+                    aria-label="Select audio devices"
+                    aria-expanded={micMenuOpen}
+                  >
+                    <ChevronDownIcon size={14} />
+                  </button>
+                </div>
 
-              {/* Camera Toggle Button */}
-              <button
-                type="button"
-                className={`gm-dock-btn ${!videoEnabled ? 'gm-dock-btn--muted' : ''}`}
-                onClick={() => setVideoEnabled((prev) => !prev)}
-                title={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
-                aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
-              >
-                {videoEnabled ? <CameraIcon size={22} /> : <CameraOffIcon size={22} />}
-              </button>
+                {/* Upward Audio Popover Menu */}
+                {micMenuOpen && (
+                  <div className="gm-device-popover" role="menu">
+                    <div className="gm-device-section-title">MICROPHONE</div>
+                    <div className="gm-device-list">
+                      {audioDevices.length === 0 ? (
+                        <div className="gm-device-empty">No microphones found</div>
+                      ) : (
+                        audioDevices.map((d, i) => {
+                          const isSelected = selectedAudioId ? selectedAudioId === d.deviceId : i === 0;
+                          return (
+                            <button
+                              key={d.deviceId || i}
+                              type="button"
+                              className={`gm-device-item ${isSelected ? 'gm-device-item--selected' : ''}`}
+                              onClick={() => {
+                                setSelectedAudioId(d.deviceId);
+                                setMicMenuOpen(false);
+                                toast.success(`Microphone: ${d.label || `Microphone ${i + 1}`}`);
+                              }}
+                            >
+                              <span className="gm-device-check">
+                                {isSelected && <CheckIcon size={16} />}
+                              </span>
+                              <span className="gm-device-name">{d.label || `Microphone ${i + 1}`}</span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div className="gm-device-divider" />
+
+                    <div className="gm-device-section-title">SPEAKERS</div>
+                    <div className="gm-device-list">
+                      {speakerDevices.length === 0 ? (
+                        <div className="gm-device-empty">Default system speaker</div>
+                      ) : (
+                        speakerDevices.map((d, i) => {
+                          const isSelected = selectedSpeakerId ? selectedSpeakerId === d.deviceId : i === 0;
+                          return (
+                            <button
+                              key={d.deviceId || i}
+                              type="button"
+                              className={`gm-device-item ${isSelected ? 'gm-device-item--selected' : ''}`}
+                              onClick={() => {
+                                setSelectedSpeakerId(d.deviceId);
+                                setMicMenuOpen(false);
+                                toast.success(`Speaker: ${d.label || `Speaker ${i + 1}`}`);
+                              }}
+                            >
+                              <span className="gm-device-check">
+                                {isSelected && <CheckIcon size={16} />}
+                              </span>
+                              <span className="gm-device-name">{d.label || `Speaker ${i + 1}`}</span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div className="gm-device-divider" />
+
+                    <button
+                      type="button"
+                      className="gm-device-test-btn"
+                      onClick={playTestSound}
+                      disabled={testSoundPlaying}
+                    >
+                      <VolumeIcon size={15} />
+                      <span>{testSoundPlaying ? 'Playing test tone…' : 'Test speakers'}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Google Meet Split Camera Button */}
+              <div className="gm-split-btn-wrapper" ref={cameraMenuRef}>
+                <div className={`gm-split-btn ${!videoEnabled ? 'gm-split-btn--muted' : ''}`}>
+                  <button
+                    type="button"
+                    className="gm-split-btn-action"
+                    onClick={() => setVideoEnabled((prev) => !prev)}
+                    title={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
+                    aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
+                  >
+                    {videoEnabled ? <CameraIcon size={20} /> : <CameraOffIcon size={20} />}
+                  </button>
+                  <span className="gm-split-btn-divider" />
+                  <button
+                    type="button"
+                    className={`gm-split-btn-chevron ${cameraMenuOpen ? 'gm-split-btn-chevron--active' : ''}`}
+                    onClick={() => {
+                      setCameraMenuOpen((v) => !v);
+                      setMicMenuOpen(false);
+                      setSettingsOpen(false);
+                    }}
+                    title="Camera settings"
+                    aria-label="Select camera device"
+                    aria-expanded={cameraMenuOpen}
+                  >
+                    <ChevronDownIcon size={14} />
+                  </button>
+                </div>
+
+                {/* Upward Camera Popover Menu */}
+                {cameraMenuOpen && (
+                  <div className="gm-device-popover" role="menu">
+                    <div className="gm-device-section-title">CAMERA</div>
+                    <div className="gm-device-list">
+                      {videoDevices.length === 0 ? (
+                        <div className="gm-device-empty">No cameras found</div>
+                      ) : (
+                        videoDevices.map((d, i) => {
+                          const isSelected = selectedVideoId ? selectedVideoId === d.deviceId : i === 0;
+                          return (
+                            <button
+                              key={d.deviceId || i}
+                              type="button"
+                              className={`gm-device-item ${isSelected ? 'gm-device-item--selected' : ''}`}
+                              onClick={() => {
+                                setSelectedVideoId(d.deviceId);
+                                setCameraMenuOpen(false);
+                                toast.success(`Camera: ${d.label || `Camera ${i + 1}`}`);
+                              }}
+                            >
+                              <span className="gm-device-check">
+                                {isSelected && <CheckIcon size={16} />}
+                              </span>
+                              <span className="gm-device-name">{d.label || `Camera ${i + 1}`}</span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Visual effects (Blur) toggle */}
               <button

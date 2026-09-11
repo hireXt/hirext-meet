@@ -27,6 +27,7 @@ import {
   ChatIcon,
   CheckIcon,
   ChevronDownIcon,
+  ChevronUpIcon,
   CloseIcon,
   CopyIcon,
   ExpandIcon,
@@ -46,6 +47,7 @@ import {
   ShrinkIcon,
   SpotlightIcon,
   UsersIcon,
+  VolumeIcon,
 } from './icons';
 
 type PanelId = 'chat' | 'participants' | 'settings' | 'info' | null;
@@ -419,11 +421,117 @@ function GoogleMeetDock({
   onFullscreen: () => void;
   fullscreen: boolean;
 }) {
+  const room = useRoomContext();
   const [clockTime, setClockTime] = React.useState('');
   const [moreOpen, setMoreOpen] = React.useState(false);
   const [handRaised, setHandRaised] = React.useState(false);
+
+  const [videoDevices, setVideoDevices] = React.useState<MediaDeviceInfo[]>([]);
+  const [audioDevices, setAudioDevices] = React.useState<MediaDeviceInfo[]>([]);
+  const [speakerDevices, setSpeakerDevices] = React.useState<MediaDeviceInfo[]>([]);
+  const [activeVideoId, setActiveVideoId] = React.useState<string | undefined>(undefined);
+  const [activeAudioId, setActiveAudioId] = React.useState<string | undefined>(undefined);
+  const [activeSpeakerId, setActiveSpeakerId] = React.useState<string | undefined>(undefined);
+  const [micMenuOpen, setMicMenuOpen] = React.useState(false);
+  const [cameraMenuOpen, setCameraMenuOpen] = React.useState(false);
+  const [testSoundPlaying, setTestSoundPlaying] = React.useState(false);
+
   const moreRef = React.useRef<HTMLDivElement>(null);
+  const micMenuRef = React.useRef<HTMLDivElement>(null);
+  const cameraMenuRef = React.useRef<HTMLDivElement>(null);
+
   useClickOutside(moreRef, moreOpen, () => setMoreOpen(false));
+  useClickOutside(micMenuRef, micMenuOpen, () => setMicMenuOpen(false));
+  useClickOutside(cameraMenuRef, cameraMenuOpen, () => setCameraMenuOpen(false));
+
+  const refreshDevices = React.useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setVideoDevices(devices.filter((d) => d.kind === 'videoinput'));
+      setAudioDevices(devices.filter((d) => d.kind === 'audioinput'));
+      setSpeakerDevices(devices.filter((d) => d.kind === 'audiooutput'));
+
+      const currentAudio = room.getActiveDevice('audioinput');
+      const currentVideo = room.getActiveDevice('videoinput');
+      const currentSpeaker = room.getActiveDevice('audiooutput');
+      if (currentAudio) setActiveAudioId(currentAudio);
+      if (currentVideo) setActiveVideoId(currentVideo);
+      if (currentSpeaker) setActiveSpeakerId(currentSpeaker);
+    } catch (e) {
+      console.warn('In-call device enumeration error', e);
+    }
+  }, [room]);
+
+  React.useEffect(() => {
+    refreshDevices();
+    if (navigator.mediaDevices?.addEventListener) {
+      navigator.mediaDevices.addEventListener('devicechange', refreshDevices);
+      return () => {
+        navigator.mediaDevices.removeEventListener('devicechange', refreshDevices);
+      };
+    }
+  }, [refreshDevices]);
+
+  const handleSwitchAudio = async (deviceId: string, label: string) => {
+    try {
+      await room.switchActiveDevice('audioinput', deviceId);
+      setActiveAudioId(deviceId);
+      toast.success(`Microphone: ${label}`);
+    } catch (err) {
+      toast.error('Could not switch microphone');
+      console.warn('Switch audio error', err);
+    }
+    setMicMenuOpen(false);
+  };
+
+  const handleSwitchSpeaker = async (deviceId: string, label: string) => {
+    try {
+      await room.switchActiveDevice('audiooutput', deviceId);
+      setActiveSpeakerId(deviceId);
+      toast.success(`Speaker: ${label}`);
+    } catch (err) {
+      toast.error('Could not switch speaker');
+      console.warn('Switch speaker error', err);
+    }
+    setMicMenuOpen(false);
+  };
+
+  const handleSwitchVideo = async (deviceId: string, label: string) => {
+    try {
+      await room.switchActiveDevice('videoinput', deviceId);
+      setActiveVideoId(deviceId);
+      toast.success(`Camera: ${label}`);
+    } catch (err) {
+      toast.error('Could not switch camera');
+      console.warn('Switch camera error', err);
+    }
+    setCameraMenuOpen(false);
+  };
+
+  const playTestSound = () => {
+    try {
+      setTestSoundPlaying(true);
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.35);
+      setTimeout(() => {
+        setTestSoundPlaying(false);
+        ctx.close().catch(() => undefined);
+      }, 400);
+    } catch {
+      setTestSoundPlaying(false);
+    }
+  };
 
   React.useEffect(() => {
     const update = () => {
@@ -460,29 +568,163 @@ function GoogleMeetDock({
 
       {/* Center section: Circular controls + Red End Call Pill */}
       <div className="ail-dock-center">
-        {/* Mic toggle */}
-        <button
-          type="button"
-          className={cx('ail-circle-btn', !mic.enabled && 'ail-circle-btn--muted')}
-          onClick={() => mic.toggle()}
-          disabled={mic.pending}
-          title={mic.enabled ? 'Turn off microphone' : 'Turn on microphone'}
-          aria-label={mic.enabled ? 'Turn off microphone' : 'Turn on microphone'}
-        >
-          {mic.enabled ? <MicIcon size={20} /> : <MicOffIcon size={20} />}
-        </button>
+        {/* Google Meet Split Mic Button */}
+        <div className="ail-split-btn-wrapper" ref={micMenuRef}>
+          <div className={cx('ail-split-btn', !mic.enabled && 'ail-split-btn--muted')}>
+            <button
+              type="button"
+              className="ail-split-btn-action"
+              onClick={() => mic.toggle()}
+              disabled={mic.pending}
+              title={mic.enabled ? 'Turn off microphone' : 'Turn on microphone'}
+              aria-label={mic.enabled ? 'Turn off microphone' : 'Turn on microphone'}
+            >
+              {mic.enabled ? <MicIcon size={20} /> : <MicOffIcon size={20} />}
+            </button>
+            <span className="ail-split-btn-divider" />
+            <button
+              type="button"
+              className={cx('ail-split-btn-chevron', micMenuOpen && 'ail-split-btn-chevron--active')}
+              onClick={() => {
+                setMicMenuOpen((v) => !v);
+                setCameraMenuOpen(false);
+                setMoreOpen(false);
+              }}
+              title="Audio settings (Microphone & Speaker)"
+              aria-label="Select audio devices"
+              aria-expanded={micMenuOpen}
+            >
+              <ChevronUpIcon size={14} />
+            </button>
+          </div>
 
-        {/* Camera toggle */}
-        <button
-          type="button"
-          className={cx('ail-circle-btn', !camera.enabled && 'ail-circle-btn--muted')}
-          onClick={() => camera.toggle()}
-          disabled={camera.pending}
-          title={camera.enabled ? 'Turn off camera' : 'Turn on camera'}
-          aria-label={camera.enabled ? 'Turn off camera' : 'Turn on camera'}
-        >
-          {camera.enabled ? <CameraIcon size={20} /> : <CameraOffIcon size={20} />}
-        </button>
+          {/* Upward Audio Popover Menu */}
+          {micMenuOpen && (
+            <div className="ail-device-popover" role="menu">
+              <div className="ail-device-section-title">MICROPHONE</div>
+              <div className="ail-device-list">
+                {audioDevices.length === 0 ? (
+                  <div className="ail-device-empty">No microphones found</div>
+                ) : (
+                  audioDevices.map((d, i) => {
+                    const isSelected = activeAudioId ? activeAudioId === d.deviceId : i === 0;
+                    return (
+                      <button
+                        key={d.deviceId || i}
+                        type="button"
+                        className={cx('ail-device-item', isSelected && 'ail-device-item--selected')}
+                        onClick={() => handleSwitchAudio(d.deviceId, d.label || `Microphone ${i + 1}`)}
+                      >
+                        <span className="ail-device-check">
+                          {isSelected && <CheckIcon size={16} />}
+                        </span>
+                        <span className="ail-device-name">{d.label || `Microphone ${i + 1}`}</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="ail-device-divider" />
+
+              <div className="ail-device-section-title">SPEAKERS</div>
+              <div className="ail-device-list">
+                {speakerDevices.length === 0 ? (
+                  <div className="ail-device-empty">Default system speaker</div>
+                ) : (
+                  speakerDevices.map((d, i) => {
+                    const isSelected = activeSpeakerId ? activeSpeakerId === d.deviceId : i === 0;
+                    return (
+                      <button
+                        key={d.deviceId || i}
+                        type="button"
+                        className={cx('ail-device-item', isSelected && 'ail-device-item--selected')}
+                        onClick={() => handleSwitchSpeaker(d.deviceId, d.label || `Speaker ${i + 1}`)}
+                      >
+                        <span className="ail-device-check">
+                          {isSelected && <CheckIcon size={16} />}
+                        </span>
+                        <span className="ail-device-name">{d.label || `Speaker ${i + 1}`}</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="ail-device-divider" />
+
+              <button
+                type="button"
+                className="ail-device-test-btn"
+                onClick={playTestSound}
+                disabled={testSoundPlaying}
+              >
+                <VolumeIcon size={15} />
+                <span>{testSoundPlaying ? 'Playing test tone…' : 'Test speakers'}</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Google Meet Split Camera Button */}
+        <div className="ail-split-btn-wrapper" ref={cameraMenuRef}>
+          <div className={cx('ail-split-btn', !camera.enabled && 'ail-split-btn--muted')}>
+            <button
+              type="button"
+              className="ail-split-btn-action"
+              onClick={() => camera.toggle()}
+              disabled={camera.pending}
+              title={camera.enabled ? 'Turn off camera' : 'Turn on camera'}
+              aria-label={camera.enabled ? 'Turn off camera' : 'Turn on camera'}
+            >
+              {camera.enabled ? <CameraIcon size={20} /> : <CameraOffIcon size={20} />}
+            </button>
+            <span className="ail-split-btn-divider" />
+            <button
+              type="button"
+              className={cx('ail-split-btn-chevron', cameraMenuOpen && 'ail-split-btn-chevron--active')}
+              onClick={() => {
+                setCameraMenuOpen((v) => !v);
+                setMicMenuOpen(false);
+                setMoreOpen(false);
+              }}
+              title="Camera settings"
+              aria-label="Select camera device"
+              aria-expanded={cameraMenuOpen}
+            >
+              <ChevronUpIcon size={14} />
+            </button>
+          </div>
+
+          {/* Upward Camera Popover Menu */}
+          {cameraMenuOpen && (
+            <div className="ail-device-popover" role="menu">
+              <div className="ail-device-section-title">CAMERA</div>
+              <div className="ail-device-list">
+                {videoDevices.length === 0 ? (
+                  <div className="ail-device-empty">No cameras found</div>
+                ) : (
+                  videoDevices.map((d, i) => {
+                    const isSelected = activeVideoId ? activeVideoId === d.deviceId : i === 0;
+                    return (
+                      <button
+                        key={d.deviceId || i}
+                        type="button"
+                        className={cx('ail-device-item', isSelected && 'ail-device-item--selected')}
+                        onClick={() => handleSwitchVideo(d.deviceId, d.label || `Camera ${i + 1}`)}
+                      >
+                        <span className="ail-device-check">
+                          {isSelected && <CheckIcon size={16} />}
+                        </span>
+                        <span className="ail-device-name">{d.label || `Camera ${i + 1}`}</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Raise hand toggle */}
         <button
