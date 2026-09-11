@@ -15,11 +15,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'HireXt Meet | Secure AI-powered video meetings',
+    default: 'HireXt Meet | Secure premium video meetings',
     template: '%s | HireXt Meet',
   },
   description:
-    'HireXt Meet is an AI-native video meeting platform with secure real-time connections, screen sharing, chat and recording.',
+    'HireXt Meet is a secure real-time video meeting platform with HD video, screen sharing, chat, and recording.',
   twitter: {
     card: 'summary_large_image',
   },

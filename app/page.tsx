@@ -16,6 +16,7 @@ import {
   LogoMark,
   SettingsIcon,
   ShieldCheckIcon,
+  UsersIcon,
   VideoPlusIcon,
 } from '@/lib/ailink/icons';
 import styles from '../styles/Home.module.css';
@@ -38,17 +39,17 @@ const CAROUSEL_SLIDES = [
     ),
   },
   {
-    title: 'AI-powered interview intelligence',
+    title: 'See everyone together',
     description:
-      'Host AI candidate interviews, automated screenings, and crystal clear multi-party conferences.',
-    accentBg: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(238,242,255,0.6) 100%)',
+      'Enjoy crystal-clear HD audio and video, adaptive streaming, and background noise cancellation.',
+    accentBg: 'radial-gradient(circle, rgba(26,115,232,0.12) 0%, rgba(232,240,254,0.6) 100%)',
     icon: (
       <div style={{ position: 'relative', width: 100, height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 80, height: 80, borderRadius: 20, background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 8px 24px rgba(99,102,241,0.35)' }}>
-          <LogoMark size={46} />
+        <div style={{ width: 80, height: 80, borderRadius: 20, background: 'linear-gradient(135deg, #1a73e8, #4285f4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 8px 24px rgba(26,115,232,0.35)' }}>
+          <UsersIcon size={44} />
         </div>
-        <div style={{ position: 'absolute', top: -4, right: -4, width: 28, height: 28, borderRadius: '50%', background: '#fbbc04', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#202124', border: '3px solid #fff', fontSize: '11px', fontWeight: 800 }}>
-          AI
+        <div style={{ position: 'absolute', bottom: -4, right: -4, width: 32, height: 32, borderRadius: '50%', background: '#34a853', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', border: '3px solid #fff' }}>
+          <CameraIcon size={16} />
         </div>
       </div>
     ),
@@ -217,8 +218,8 @@ function HomeLandingContent() {
               Now free for everyone.
             </h1>
             <p className={styles.subtitle}>
-              We re-engineered HireXt Meet for secure, AI-powered real-time meetings.
-              Share the link and start collaborating or interviewing with anyone, anywhere.
+              We re-engineered HireXt Meet for secure, crystal-clear real-time video meetings.
+              Share the link and start collaborating with anyone, anywhere.
             </p>
 
             <div className={styles.actionRow}>
@@ -389,7 +390,7 @@ function HomeLandingContent() {
 
       {/* Footer */}
       <footer className={styles.footer}>
-        <div>HireXt Meet — AI-powered, secure video meetings</div>
+        <div>HireXt Meet — Premium, secure video meetings</div>
         <div>Powered by LiveKit</div>
       </footer>
     </div>
