@@ -3,10 +3,10 @@
 import React from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { LocalUserChoices, PreJoin } from '@livekit/components-react';
+import { LocalUserChoices } from '@livekit/components-react';
 import { ConferenceShell, fetchConnectionDetailsWithRetry } from '@/lib/ailink/ConferenceShell';
 import { ConnectionDetails } from '@/lib/types';
-import { MediaDeviceGuard } from '@/lib/MediaDeviceGuard';
+import { GoogleMeetGreenRoom } from '@/lib/ailink/GoogleMeetGreenRoom';
 
 const CONN_DETAILS_ENDPOINT =
   process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT ?? '/api/connection-details';
@@ -169,13 +169,14 @@ export function PageClientImpl(props: {
             </button>
           </form>
         ) : (
-          <MediaDeviceGuard onContinueWithoutMedia={handleContinueWithoutMedia}>
-            <PreJoin
-              defaults={preJoinDefaults}
-              onSubmit={handlePreJoinSubmit}
-              onError={handlePreJoinError}
-            />
-          </MediaDeviceGuard>
+          <GoogleMeetGreenRoom
+            roomName={props.roomName}
+            defaultUsername=""
+            defaultVideoEnabled={!continueWithoutMedia}
+            defaultAudioEnabled={!continueWithoutMedia}
+            onSubmit={handlePreJoinSubmit}
+            onContinueWithoutMedia={handleContinueWithoutMedia}
+          />
         )}
       </main>
     </div>

@@ -3,8 +3,16 @@ import '../styles/ailink.css';
 import '@livekit/components-styles';
 import '@livekit/components-styles/prefabs';
 import type { Metadata, Viewport } from 'next';
+import { Inter } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from '@/lib/ThemeProvider';
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-sans',
+});
+
 export const metadata: Metadata = {
   title: {
     default: 'HireXt Meet | Secure AI-powered video meetings',
@@ -34,13 +42,13 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#f7f8fb',
+  themeColor: '#ffffff',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body suppressHydrationWarning>
+    <html lang="en" className={inter.variable}>
+      <body className={inter.className} suppressHydrationWarning>
         <ThemeProvider>
           <Toaster
             containerClassName="ail-toast-viewport"

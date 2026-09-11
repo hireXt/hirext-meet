@@ -4,11 +4,11 @@ import * as React from 'react';
 import {
   LocalUserChoices,
   MediaDeviceMenu,
-  PreJoin,
 } from '@livekit/components-react';
 import { createLocalTracks } from 'livekit-client';
 import toast from 'react-hot-toast';
 import { CameraIcon, MicIcon, ShieldCheckIcon } from './icons';
+import { GoogleMeetGreenRoom } from './GoogleMeetGreenRoom';
 
 export interface MediaGateResult extends LocalUserChoices {
   /** Tracks acquired in the click gesture (caller stops them on join/fail). */
@@ -129,35 +129,35 @@ export function CustomMediaGate(props: {
   }
 
   return (
-    <div className="ail-gate">
-      <div className="ail-gate-card ail-gate-card--wide">
-        <h1 className="ail-gate-title">Check your camera &amp; microphone</h1>
-        <p className="ail-gate-sub">
-          Camera and microphone are <strong>required</strong> for this interview. Confirm the
-          preview below, then join.
-        </p>
-        <div className="ail-gate-badges">
-          <span className="ail-gate-badge">
-            <CameraIcon size={13} /> Camera required
-          </span>
-          <span className="ail-gate-badge">
-            <MicIcon size={13} /> Microphone required
+    <div className="ail-prejoin-page">
+      <header className="ail-prejoin-nav">
+        <div className="ail-brand" title="HireXt Meet">
+          <span className="ail-brand-mark">HX</span>
+          <span className="ail-brand-name">
+            HireXt <span style={{ color: '#1a73e8', fontWeight: 600 }}>Interview</span>
           </span>
         </div>
-        <PreJoin
-          defaults={{ username: '', videoEnabled: true, audioEnabled: true }}
+        <div className="ail-prejoin-nav-right">
+          <div className="ail-gate-badges" style={{ margin: 0 }}>
+            <span className="ail-gate-badge">
+              <CameraIcon size={13} /> Camera required
+            </span>
+            <span className="ail-gate-badge">
+              <MicIcon size={13} /> Microphone required
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <main className="ail-prejoin-main">
+        <GoogleMeetGreenRoom
+          roomName="HireXt AI Interview"
+          defaultUsername=""
+          defaultVideoEnabled={true}
+          defaultAudioEnabled={true}
           onSubmit={handleSubmit}
-          onError={(e) => toast.error(e.message)}
-          persistUserChoices={false}
-          joinLabel="Check devices & join"
-          userLabel="Your name"
-          micLabel="Microphone"
-          camLabel="Camera"
         />
-        <p className="ail-gate-note">
-          <ShieldCheckIcon size={13} /> Your video and audio stay in this meeting only.
-        </p>
-      </div>
+      </main>
     </div>
   );
 }
