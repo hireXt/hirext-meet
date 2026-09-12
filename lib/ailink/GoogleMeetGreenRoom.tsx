@@ -194,10 +194,17 @@ export function GoogleMeetGreenRoom({
   // Otherwise pass boolean true so getUserMedia() is called ONCE without loop resets.
   const previewOptions = React.useMemo(() => {
     return {
-      audio: audioEnabled ? (selectedAudioId ? { deviceId: selectedAudioId } : true) : false,
+      audio: audioEnabled
+        ? {
+            ...(selectedAudioId ? { deviceId: selectedAudioId } : {}),
+            noiseSuppression: noiseCancellationEnabled,
+            echoCancellation: true,
+            autoGainControl: true,
+          }
+        : false,
       video: videoEnabled ? (selectedVideoId ? { deviceId: selectedVideoId } : true) : false,
     };
-  }, [audioEnabled, videoEnabled, selectedAudioId, selectedVideoId]);
+  }, [audioEnabled, videoEnabled, selectedAudioId, selectedVideoId, noiseCancellationEnabled]);
 
   // Reference-stable error handler passed to usePreviewTracks.
   // Intercepts NotFoundError (missing webcam/mic), OverconstrainedError, and NotAllowedError,
@@ -806,6 +813,18 @@ export function GoogleMeetGreenRoom({
           setNoiseCancellationEnabled(enabled);
           if (typeof window !== 'undefined') {
             localStorage.setItem('hx_meet_krisp_enabled', String(enabled));
+          }
+          const audioTrack = tracks?.find((t) => t.kind === Track.Kind.Audio);
+          if (audioTrack?.mediaStreamTrack) {
+            audioTrack.mediaStreamTrack
+              .applyConstraints({
+                noiseSuppression: enabled,
+                echoCancellation: true,
+                autoGainControl: enabled,
+                // @ts-ignore - Apple / Chromium Voice Isolation
+                voiceIsolation: enabled,
+              })
+              .catch(() => undefined);
           }
         }}
       />

@@ -157,31 +157,50 @@ export function AudioVideoTestModal({
       const engine = new VoiceNoiseFilterEngine(ctx, stream, noiseCancellationEnabled);
       noiseEngineRef.current = engine;
 
-      // Route filtered/raw output to audio destination
-      const dest = ctx.createMediaStreamDestination();
-      engine.connect(dest);
-
-      const audio = new Audio();
-      audio.srcObject = dest.stream;
-      audioElRef.current = audio;
-
       const sinkId = selectedSpeakerId || (speakerDevices[0]?.deviceId ?? '');
+
+      let routedViaAudioEl = false;
       if (
-        typeof (audio as unknown as { setSinkId?: (id: string) => Promise<void> }).setSinkId ===
+        typeof (ctx as unknown as { setSinkId?: (id: string) => Promise<void> }).setSinkId ===
           'function' &&
         sinkId &&
         sinkId !== 'default'
       ) {
         try {
-          await (audio as unknown as { setSinkId: (id: string) => Promise<void> }).setSinkId(
-            sinkId,
-          );
+          await (ctx as unknown as { setSinkId: (id: string) => Promise<void> }).setSinkId(sinkId);
         } catch (sinkErr) {
-          console.warn('Mic test setSinkId warning:', sinkErr);
+          console.warn('AudioContext setSinkId warning:', sinkErr);
         }
       }
 
-      await audio.play();
+      // If a specific non-default speaker is chosen and ctx.setSinkId is not available, route via Audio element
+      if (
+        sinkId &&
+        sinkId !== 'default' &&
+        typeof (ctx as unknown as { setSinkId?: unknown }).setSinkId !== 'function'
+      ) {
+        const dest = ctx.createMediaStreamDestination();
+        engine.connect(dest);
+        const audio = new Audio();
+        audio.srcObject = dest.stream;
+        audioElRef.current = audio;
+        if (
+          typeof (audio as unknown as { setSinkId?: (id: string) => Promise<void> }).setSinkId ===
+          'function'
+        ) {
+          try {
+            await (audio as unknown as { setSinkId: (id: string) => Promise<void> }).setSinkId(sinkId);
+          } catch {}
+        }
+        await audio.play();
+        routedViaAudioEl = true;
+      }
+
+      // Route directly to hardware destination with zero latency if not routed via audio element
+      if (!routedViaAudioEl) {
+        engine.connect(ctx.destination);
+      }
+
       setIsTestingMic(true);
 
       // Real-time volume meter update loop from engine analyser
@@ -209,7 +228,7 @@ export function AudioVideoTestModal({
 
   // Handle Noise Cancellation toggle in the test modal
   // Note: This controls the DSP engine during the loopback test preview.
-  // The actual Krisp AI filter on the live call is managed by useKrispNoiseFilter in AILinkRoom.
+  // The actual voice isolation on the live call is managed in AILinkRoom.
   const handleToggleNoiseCancellation = async (nextState: boolean) => {
     setKrispPending(true);
     try {
@@ -218,17 +237,20 @@ export function AudioVideoTestModal({
         noiseEngineRef.current.setEnabled(nextState);
       }
 
-      // Apply browser-level WebRTC noiseSuppression constraints on the mic track
+      // Apply browser-level WebRTC noiseSuppression and voiceIsolation constraints on the mic track
       if (audioTrack?.mediaStreamTrack) {
         await audioTrack.mediaStreamTrack
           .applyConstraints({
             noiseSuppression: nextState,
             echoCancellation: true,
+            autoGainControl: nextState,
+            // @ts-ignore - Apple / Chromium Voice Isolation
+            voiceIsolation: nextState,
           })
           .catch(() => undefined);
       }
 
-      // Persist preference — AILinkRoom's useKrispNoiseFilter will read this on join
+      // Persist preference — AILinkRoom and GreenRoom will read this
       if (typeof window !== 'undefined') {
         localStorage.setItem('hx_meet_krisp_enabled', String(nextState));
       }

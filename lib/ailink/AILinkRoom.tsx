@@ -965,11 +965,15 @@ export function AILinkRoom({
         }
 
         // Also update baseline WebRTC constraints
-        await mediaTrack.applyConstraints({
-          noiseSuppression: enable,
-          echoCancellation: true,
-          autoGainControl: enable,
-        }).catch(() => undefined);
+        await mediaTrack
+          .applyConstraints({
+            noiseSuppression: enable,
+            echoCancellation: true,
+            autoGainControl: enable,
+            // @ts-ignore - Apple / Chromium Voice Isolation
+            voiceIsolation: enable,
+          })
+          .catch(() => undefined);
       } else {
         console.warn('[NoiseSuppression] No mic track yet — preference saved for when track publishes');
       }
