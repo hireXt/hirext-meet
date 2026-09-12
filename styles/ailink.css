@@ -1202,28 +1202,33 @@
 /* ---------- meeting ended ---------- */
 
 .ail-ended {
-  position: absolute;
+  position: fixed;
   inset: 0;
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  background:
+  padding: 32px 24px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  background-color: var(--ail-bg, #ffffff);
+  background-image:
     radial-gradient(52rem 22rem at 12% -6%, rgba(124, 92, 252, 0.07), transparent 60%),
     radial-gradient(48rem 20rem at 88% -8%, rgba(62, 99, 221, 0.06), transparent 60%);
 }
 
 .ail-ended-card {
+  margin: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 18px;
-  width: min(420px, 100%);
+  width: min(440px, 100%);
   padding: 40px 32px 32px;
-  background: var(--ail-surface);
-  border: 1px solid var(--ail-border);
+  background: var(--ail-surface, #ffffff);
+  border: 1px solid var(--ail-border, rgba(0, 0, 0, 0.1));
   border-radius: 20px;
-  box-shadow: var(--ail-shadow-md);
+  box-shadow: var(--ail-shadow-md, 0 8px 24px rgba(0, 0, 0, 0.08));
   text-align: center;
   animation: ail-pop 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 }
