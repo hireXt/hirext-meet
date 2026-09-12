@@ -17,7 +17,8 @@ import {
   VideoTrack,
 } from '@livekit/components-react';
 import type { MessageFormatter, TrackReferenceOrPlaceholder } from '@livekit/components-react';
-import { ConnectionState, Participant, ParticipantEvent, Track } from 'livekit-client';
+import { ConnectionState, LocalAudioTrack, Participant, ParticipantEvent, Track } from 'livekit-client';
+import { LiveKitVoiceNoiseProcessor } from '../audioNoiseFilter';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { useRecording } from './useRecording';
@@ -910,43 +911,65 @@ export function AILinkRoom({
   // It uses Chromium's audio processing pipeline and is immediately audible.
   const [isNoiseFilterEnabled, setIsNoiseFilterEnabled] = React.useState(true);
   const [isNoiseFilterPending, setIsNoiseFilterPending] = React.useState(false);
+  const noiseProcessorRef = React.useRef<LiveKitVoiceNoiseProcessor | null>(null);
 
   const applyNoiseSuppression = React.useCallback(async (enable: boolean) => {
     setIsNoiseFilterPending(true);
     try {
       const micPub = room.localParticipant?.getTrackPublication(Track.Source.Microphone);
-      const mediaTrack = micPub?.track?.mediaStreamTrack;
+      const localTrack = micPub?.track as LocalAudioTrack | undefined;
+      const mediaTrack = localTrack?.mediaStreamTrack;
 
-      if (mediaTrack) {
-        let applied = false;
-        const supported = typeof navigator !== 'undefined' && navigator.mediaDevices?.getSupportedConstraints?.();
-        const isSafari = typeof navigator !== 'undefined' && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-        if (supported && 'noiseSuppression' in supported && supported.noiseSuppression && !isSafari) {
-          try {
-            await mediaTrack.applyConstraints({
-              noiseSuppression: enable,
-              echoCancellation: enable,
-              autoGainControl: enable,
-            });
-            applied = true;
-            console.log(`[NoiseSuppression] ${enable ? '✅ ON' : '🔇 OFF'} via applyConstraints`);
-          } catch (constraintErr) {
-            console.warn('[NoiseSuppression] applyConstraints failed, falling back to track re-acquisition:', constraintErr);
+      if (localTrack && mediaTrack) {
+        // Ensure an AudioContext is attached to LocalAudioTrack for LiveKit processor support
+        let audioCtx = (localTrack as unknown as { audioContext?: AudioContext }).audioContext;
+        if (!audioCtx && typeof window !== 'undefined') {
+          const AudioContextClass =
+            window.AudioContext ||
+            (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+          if (AudioContextClass) {
+            try {
+              audioCtx = new AudioContextClass();
+              if (audioCtx.state === 'suspended') {
+                await audioCtx.resume().catch(() => undefined);
+              }
+              localTrack.setAudioContext(audioCtx);
+            } catch (ctxErr) {
+              console.warn('[NoiseSuppression] AudioContext creation warning:', ctxErr);
+            }
           }
         }
 
-        if (!applied) {
-          // Firefox / Safari fallback: re-acquire mic with updated constraints
-          console.log(`[NoiseSuppression] Re-acquiring mic track with noiseSuppression=${enable}`);
-          await room.localParticipant.setMicrophoneEnabled(false);
-          await room.localParticipant.setMicrophoneEnabled(true, {
-            noiseSuppression: enable,
-            echoCancellation: enable,
-            autoGainControl: enable,
-          });
-          console.log(`[NoiseSuppression] ${enable ? '✅ ON' : '🔇 OFF'} via track re-acquisition`);
+        if (enable) {
+          if (!noiseProcessorRef.current) {
+            noiseProcessorRef.current = new LiveKitVoiceNoiseProcessor(true);
+          } else {
+            noiseProcessorRef.current.setEnabled(true);
+          }
+          try {
+            await localTrack.setProcessor(noiseProcessorRef.current);
+            console.log('[NoiseSuppression] ✅ LiveKit DSP Voice Isolation processor active on mic track');
+          } catch (procErr) {
+            console.warn('[NoiseSuppression] setProcessor error, falling back to constraints:', procErr);
+          }
+        } else {
+          if (noiseProcessorRef.current) {
+            noiseProcessorRef.current.setEnabled(false);
+          }
+          try {
+            await localTrack.stopProcessor();
+            console.log('[NoiseSuppression] 🔇 Processor stopped — raw microphone audio active');
+          } catch (stopErr) {
+            console.warn('[NoiseSuppression] stopProcessor error:', stopErr);
+          }
         }
+
+        // Also update baseline WebRTC constraints
+        await mediaTrack.applyConstraints({
+          noiseSuppression: enable,
+          echoCancellation: true,
+          autoGainControl: enable,
+        }).catch(() => undefined);
       } else {
         console.warn('[NoiseSuppression] No mic track yet — preference saved for when track publishes');
       }
