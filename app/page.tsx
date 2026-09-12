@@ -178,7 +178,7 @@ function HomeLandingContent() {
     <div className={styles.container}>
       {/* Top Navbar */}
       <header className={styles.navbar}>
-        <Link href="/" className={styles.navBrand} title="HireXt Meet Home">
+        <Link href="/" className={styles.navBrand} title="meetXt Home">
           <BrandLogo theme="light" size={36} />
         </Link>
         <div className={styles.navRight}>
@@ -187,7 +187,7 @@ function HomeLandingContent() {
             type="button"
             className={styles.navIconBtn}
             title="Help & Feedback"
-            onClick={() => toast('HireXt Meet: Premium real-time video meetings')}
+            onClick={() => toast('meetXt: Premium real-time video meetings')}
           >
             <HelpCircleIcon size={20} />
           </button>
@@ -211,12 +211,10 @@ function HomeLandingContent() {
           {/* Left Column: Actions */}
           <div className={styles.leftCol}>
             <h1 className={styles.headline}>
-              Premium video meetings.{' '}
-              <br />
-              Now free for everyone.
+              Your next video meetings{' '}
             </h1>
             <p className={styles.subtitle}>
-              We re-engineered HireXt Meet for secure, crystal-clear real-time video meetings.
+              We re-engineered meetXt for secure, crystal-clear real-time video meetings.
               Share the link and start collaborating with anyone, anywhere.
             </p>
 
@@ -335,7 +333,7 @@ function HomeLandingContent() {
                   rel="noopener noreferrer"
                   className={styles.learnMoreLink}
                 >
-                  Learn more about HireXt Meet
+                  Learn more about meetXt
                 </a>
               </span>
             </div>
@@ -390,7 +388,7 @@ function HomeLandingContent() {
 
       {/* Footer */}
       <footer className={styles.footer}>
-        <div>HireXt Meet — Premium, secure video meetings</div>
+        <div>meetXt — Premium, secure video meetings</div>
         <div>Powered by LiveKit</div>
       </footer>
     </div>
@@ -399,7 +397,7 @@ function HomeLandingContent() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div style={{ padding: 24, textAlign: 'center' }}>Loading HireXt Meet…</div>}>
+    <Suspense fallback={<div style={{ padding: 24, textAlign: 'center' }}>Loading meetXt…</div>}>
       <HomeLandingContent />
     </Suspense>
   );

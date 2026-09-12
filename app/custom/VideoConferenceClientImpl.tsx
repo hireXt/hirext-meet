@@ -53,7 +53,7 @@ export function VideoConferenceClientImpl(props: {
       codec={props.codec}
       singlePeerConnection={props.singlePeerConnection}
       museTalkEnabled={props.museTalkEnabled}
-      label="HireXt Meet"
+      label="meetXt"
     />
   );
 }
