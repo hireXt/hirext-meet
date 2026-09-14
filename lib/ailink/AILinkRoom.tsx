@@ -1458,7 +1458,24 @@ function MuseTalkStage({
 
   const connState = useConnectionState();
   const ended = connState === ConnectionState.Disconnected;
-  const localTracks = candidateTracks.filter((t) => t.participant.isLocal);
+  const { localParticipant } = useLocalParticipant();
+
+  // Build a local camera TrackReference directly from the local participant's
+  // publication. useTracks (withPlaceholder) can miss the local camera on the
+  // first render after joining, leaving localTracks empty and the self-video
+  // PIP hidden even though the hardware camera is active.
+  const localCameraPub = localParticipant?.getTrackPublication(Track.Source.Camera);
+  const localCameraRef = localCameraPub
+    ? { participant: localParticipant, source: Track.Source.Camera, publication: localCameraPub }
+    : undefined;
+
+  // Merge: prefer real track references from useTracks, but always include the
+  // local camera so the PIP renders as soon as the publication exists.
+  const mergedCandidateTracks = [...candidateTracks];
+  if (localCameraRef && !mergedCandidateTracks.some((t) => t.participant.isLocal && t.source === Track.Source.Camera)) {
+    mergedCandidateTracks.push(localCameraRef as TrackReferenceOrPlaceholder);
+  }
+  const localTracks = mergedCandidateTracks.filter((t) => t.participant.isLocal && t.source === Track.Source.Camera);
 
   return (
     <>
