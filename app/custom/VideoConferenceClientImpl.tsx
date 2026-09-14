@@ -11,6 +11,7 @@ export function VideoConferenceClientImpl(props: {
   codec: VideoCodec | undefined;
   singlePeerConnection: boolean | undefined;
   museTalkEnabled?: boolean;
+  resultBase?: string;
 }) {
   // Gate: nothing connects until the user passes the mandatory device check.
   // `gate` holds the user's name + device ids + tracks acquired in the click.
@@ -53,6 +54,7 @@ export function VideoConferenceClientImpl(props: {
       codec={props.codec}
       singlePeerConnection={props.singlePeerConnection}
       museTalkEnabled={props.museTalkEnabled}
+      resultBase={props.resultBase}
       label="meetXt"
     />
   );

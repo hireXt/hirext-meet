@@ -27,6 +27,7 @@ import { DebugMode } from '@/lib/Debug';
 import { KeyboardShortcuts } from '@/lib/KeyboardShortcuts';
 import { SettingsMenu } from '@/lib/SettingsMenu';
 import { AILinkRoom } from '@/lib/ailink/AILinkRoom';
+import { InterviewCompletedScreen } from '@/lib/ailink/InterviewCompletedScreen';
 import { MeetingEndedScreen } from '@/lib/ailink/MeetingEndedScreen';
 import { MeetingErrorBoundary } from '@/lib/MeetingErrorBoundary';
 import { decodePassphrase } from '@/lib/client-utils';
@@ -49,6 +50,8 @@ export interface ConferenceShellProps {
   singlePeerConnection: boolean | undefined;
   museTalkEnabled?: boolean;
   label?: string;
+  /** Main-app origin for the post-interview report redirect (e.g. https://hirext.in). */
+  resultBase?: string;
   onLeave?: () => void;
   onError?: (error: Error) => void;
 }
@@ -70,6 +73,11 @@ export function ConferenceShell(props: ConferenceShellProps) {  const keyProvide
   );
   const [endReason, setEndReason] = React.useState<ConferenceEndReason | null>(null);
   const [fatalError, setFatalError] = React.useState<Error | null>(null);
+  // AI-concluded state: set when the interview agent publishes
+  // {"type":"interview_concluded","summary"} on the room data channel
+  // (interview-musetalk server.py). Replaces the conference UI with the
+  // completion screen; auto-redirects to the report when resultUrl is set.
+  const [aiConcluded, setAiConcluded] = React.useState<{ summary: string } | null>(null);
 
   // Room memo keyed on options (A.6 fix): hq/codec changes recreate the room
   // instead of being silently ignored. Callers treat them as pre-join-only;
@@ -261,10 +269,29 @@ export function ConferenceShell(props: ConferenceShellProps) {  const keyProvide
     room.on(RoomEvent.Disconnected, onDisconnected);
     room.on(RoomEvent.EncryptionError, onEncryptionError);
     room.on(RoomEvent.MediaDevicesError, onMediaError);
+
+    // AI conclude signal from the interview agent (see interview-musetalk
+    // server.py _on_interview_concluded / _force_finalize). Swallow-all
+    // parse: anything that isn't the expected shape is ignored — the data
+    // channel also carries cheating-engine protocol traffic.
+    const onAgentConcluded = (payload: Uint8Array) => {
+      try {
+        const text = new TextDecoder().decode(payload);
+        const msg = JSON.parse(text);
+        if (msg && msg.type === 'interview_concluded') {
+          setAiConcluded({ summary: typeof msg.summary === 'string' ? msg.summary : '' });
+        }
+      } catch {
+        // non-JSON protocol traffic — ignore
+      }
+    };
+    room.on(RoomEvent.DataReceived, onAgentConcluded);
+
     return () => {
       room.off(RoomEvent.Disconnected, onDisconnected);
       room.off(RoomEvent.EncryptionError, onEncryptionError);
       room.off(RoomEvent.MediaDevicesError, onMediaError);
+      room.off(RoomEvent.DataReceived, onAgentConcluded);
     };
   }, [room, fatalError, reportError]);
 
@@ -301,6 +328,18 @@ export function ConferenceShell(props: ConferenceShellProps) {  const keyProvide
     setEndReason(null);
     setConnectState('connecting');
   }, []);
+
+  // AI-concluded completion screen: the agent finished the interview. Takes
+  // priority over the leave/drop ended screens — a natural completion must
+  // always land on "Interview completed" (report redirect), never "You left".
+  const roomName = room.name;
+  const resultUrl =
+    props.resultBase && roomName
+      ? `${props.resultBase.replace(/\/$/, '')}/mock-interviews/result/${encodeURIComponent(roomName)}`
+      : undefined;
+  if (aiConcluded) {
+    return <InterviewCompletedScreen summary={aiConcluded.summary} resultUrl={resultUrl} />;
+  }
 
   if (endReason) {
     if (endReason === 'left') return <MeetingEndedScreen />;

@@ -30,9 +30,10 @@ export default async function CustomRoomConnection(props: {
     token?: string;
     codec?: string;
     singlePC?: string;
+    resultBase?: string;
   }>;
 }) {
-  const { liveKitUrl, token, codec, singlePC } = await props.searchParams;
+  const { liveKitUrl, token, codec, singlePC, resultBase } = await props.searchParams;
   if (typeof liveKitUrl !== 'string') {
     return <h2>Missing server URL</h2>;
   }
@@ -53,6 +54,7 @@ export default async function CustomRoomConnection(props: {
         codec={codec}
         singlePeerConnection={singlePC === 'true'}
         museTalkEnabled={museTalkEnabled}
+        resultBase={resultBase}
       />
     </main>
   );
