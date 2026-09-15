@@ -4,8 +4,9 @@ import { isVideoCodec } from '@/lib/types';
 
 /**
  * Decode the MuseTalk flag from the signed JWT token's payload.
- * The Node server embeds { museTalkEnabled: boolean } in the token metadata,
- * which is HMAC-signed — tampering invalidates the token when LiveKit verifies it.
+ * The Node server embeds { museTalkEnabled: boolean, recording: boolean } in the
+ * token metadata, which is HMAC-signed — tampering invalidates the token when
+ * LiveKit verifies it.
  */
 function decodeMuseTalkFlag(token: string): boolean {
   try {
@@ -19,6 +20,25 @@ function decodeMuseTalkFlag(token: string): boolean {
     // which lands in the JWT payload's "metadata" field as a string
     const meta = typeof payload.metadata === 'string' ? JSON.parse(payload.metadata) : payload.metadata;
     return meta?.museTalkEnabled === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Same decode for the Egress recording flag — read alongside museTalkEnabled so
+ * the meet UI shows the real "this interview is being recorded" banner when the
+ * server armed auto-recording (LIVEKIT_EGRESS_ENABLED=true).
+ */
+function decodeRecordingFlag(token: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return false;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const payload = JSON.parse(atob(padded));
+    const meta = typeof payload.metadata === 'string' ? JSON.parse(payload.metadata) : payload.metadata;
+    return meta?.recording === true;
   } catch {
     return false;
   }
@@ -45,6 +65,7 @@ export default async function CustomRoomConnection(props: {
   }
 
   const museTalkEnabled = decodeMuseTalkFlag(token);
+  const recordingEnabled = decodeRecordingFlag(token);
 
   return (
     <main style={{ height: '100%', position: 'relative' }}>
@@ -54,6 +75,7 @@ export default async function CustomRoomConnection(props: {
         codec={codec}
         singlePeerConnection={singlePC === 'true'}
         museTalkEnabled={museTalkEnabled}
+        recordingEnabled={recordingEnabled}
         resultBase={resultBase}
       />
     </main>

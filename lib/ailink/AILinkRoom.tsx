@@ -59,10 +59,16 @@ type LayoutMode = 'grid' | 'spotlight';
 
 export interface AILinkRoomProps {
   chatMessageFormatter?: MessageFormatter;
-  SettingsComponent?: React.ComponentType<{ onClose?: () => void }>;
+  SettingsComponent?: React.ComponentType<{ onClose?: () => void; recordingEnabled?: boolean }>;
   label?: string;
   onLeaveRequest?: () => void;
   museTalkEnabled?: boolean;
+  /**
+   * True when the server armed this interview for recording (Egress). The REC
+   * pill + announcement show whenever Egress is active (real state) OR armed —
+   * the honest, non-cosmetic version of the banner.
+   */
+  recordingEnabled?: boolean;
 }
 
 function cx(...parts: Array<string | false | null | undefined>): string {
@@ -405,6 +411,7 @@ function GoogleMeetDock({
   camera,
   screenShare,
   recording,
+  recordingEnforced,
   panel,
   participantsCount,
   onPanel,
@@ -418,6 +425,7 @@ function GoogleMeetDock({
   camera: { enabled: boolean; pending: boolean; toggle: () => void };
   screenShare: { enabled: boolean; pending: boolean; toggle: () => void };
   recording: ReturnType<typeof useRecording>;
+  recordingEnforced?: boolean;
   panel: PanelId;
   participantsCount: number;
   onPanel: (id: PanelId) => void;
@@ -776,6 +784,7 @@ function GoogleMeetDock({
           </button>
           {moreOpen && (
             <div className="ail-menu-popover ail-menu-popover--up" role="menu">
+              {!recordingEnforced && (
               <button
                 type="button"
                 className="ail-menu-item"
@@ -787,6 +796,7 @@ function GoogleMeetDock({
                 <RecordIcon size={16} />
                 {recording.isRecording ? 'Stop recording' : 'Start recording'}
               </button>
+              )}
               <button
                 type="button"
                 className="ail-menu-item"
@@ -889,6 +899,7 @@ export function AILinkRoom({
   SettingsComponent,
   label,
   museTalkEnabled = false,
+  recordingEnabled = false,
   onLeaveRequest,
 }: AILinkRoomProps) {
   const room = useRoomContext();
@@ -897,6 +908,13 @@ export function AILinkRoom({
   const [layout, setLayout] = React.useState<LayoutMode>('grid');
   const [fullscreen, setFullscreen] = React.useState(false);
   const recording = useRecording();
+  // The REC pill/announcement reflect REAL recorded state (room.isRecording via
+  // useRecording) and — for interviews where the server armed Egress but the
+  // room metadata hasn't flipped yet — the armed flag itself.
+  const recordingUI = React.useMemo(
+    () => ({ ...recording, isRecording: recording.isRecording || recordingEnabled }),
+    [recording, recordingEnabled],
+  );
   const participantsCount = useParticipants().length;
   const [announcement, setAnnouncement] = React.useState('');
 
@@ -1030,10 +1048,10 @@ export function AILinkRoom({
   }, [participantsCount]);
 
   React.useEffect(() => {
-    if (recording.isRecording) {
+    if (recording.isRecording || recordingEnabled) {
       setAnnouncement('Meeting is being recorded.');
     }
-  }, [recording.isRecording]);
+  }, [recording.isRecording, recordingEnabled]);
 
   React.useEffect(() => {
     const onChange = () => setFullscreen(!!document.fullscreenElement);
@@ -1072,7 +1090,7 @@ export function AILinkRoom({
       <TopNav
         label={label ?? 'meetXt'}
         layout={layout}
-        recording={recording}
+        recording={recordingUI}
         fullscreen={fullscreen}
         onLayout={setLayout}
         onFullscreen={toggleFullscreen}
@@ -1091,7 +1109,8 @@ export function AILinkRoom({
         mic={mic}
         camera={camera}
         screenShare={screenShare}
-        recording={recording}
+        recording={recordingUI}
+        recordingEnforced={recordingEnabled}
         panel={panel}
         participantsCount={participantsCount}
         onPanel={handlePanel}
@@ -1218,7 +1237,7 @@ export function AILinkRoom({
         </div>
         <div className="ail-panel-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
           {SettingsComponent ? (
-            <SettingsComponent onClose={() => handlePanel(null)} />
+            <SettingsComponent onClose={() => handlePanel(null)} recordingEnabled={recordingEnabled} />
           ) : null}
 
           {/* AI Noise Cancellation Toggle */}

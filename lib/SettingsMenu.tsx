@@ -11,6 +11,11 @@ import { useRecording } from './ailink/useRecording';
  */
 export interface SettingsMenuProps extends React.HTMLAttributes<HTMLDivElement> {
   onClose?: () => void;
+  /**
+   * True when this is an interview whose recording is managed server-side
+   * (LiveKit Egress). The manual Start/Stop control is disabled in that case.
+   */
+  recordingEnabled?: boolean;
 }
 
 /**
@@ -20,6 +25,7 @@ export function SettingsMenu(props: SettingsMenuProps) {
   const layoutContext = useMaybeLayoutContext();
   const recordingEndpoint = process.env.NEXT_PUBLIC_LK_RECORD_ENDPOINT;
   const recording = useRecording();
+  const { recordingEnabled = false } = props;
 
   const settings = React.useMemo(() => {
     return {
@@ -99,12 +105,16 @@ export function SettingsMenu(props: SettingsMenuProps) {
             <h3>Record Meeting</h3>
             <section>
               <p>
-                {recording.isRecording
-                  ? 'Meeting is currently being recorded'
+                {recordingEnabled || recording.isRecording
+                  ? 'This interview is being recorded'
                   : 'No active recordings for this meeting'}
               </p>
-              <button disabled={recording.processing} onClick={() => recording.toggle()}>
-                {recording.isRecording ? 'Stop' : 'Start'} Recording
+              <button
+                disabled={recording.processing || recordingEnabled}
+                onClick={() => recording.toggle()}
+                title={recordingEnabled ? 'Recording is managed by the interviewer' : undefined}
+              >
+                {recordingEnabled ? 'Managed by host' : recording.isRecording ? 'Stop' : 'Start'} Recording
               </button>
             </section>
           </>

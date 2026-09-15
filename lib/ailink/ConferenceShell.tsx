@@ -50,6 +50,8 @@ export interface ConferenceShellProps {
   singlePeerConnection: boolean | undefined;
   museTalkEnabled?: boolean;
   label?: string;
+  /** True when the server armed this interview for Egress recording. */
+  recordingEnabled?: boolean;
   /** Main-app origin for the post-interview report redirect (e.g. https://hirext.in). */
   resultBase?: string;
   onLeave?: () => void;
@@ -372,6 +374,7 @@ export function ConferenceShell(props: ConferenceShellProps) {  const keyProvide
             SettingsComponent={SettingsMenu}
             label={props.label ?? 'meetXt'}
             museTalkEnabled={props.museTalkEnabled}
+            recordingEnabled={props.recordingEnabled}
             onLeaveRequest={handleLeaveClick}
           />
           <DebugMode logLevel={LogLevel.debug} />
