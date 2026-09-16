@@ -30,12 +30,18 @@ import { AILinkRoom } from '@/lib/ailink/AILinkRoom';
 import { InterviewCompletedScreen } from '@/lib/ailink/InterviewCompletedScreen';
 import { MeetingEndedScreen } from '@/lib/ailink/MeetingEndedScreen';
 import { MeetingErrorBoundary } from '@/lib/MeetingErrorBoundary';
-import { decodePassphrase } from '@/lib/client-utils';
+import { decodePassphrase, redirectToInterviewReport } from '@/lib/client-utils';
 import { ConnectionDetails } from '@/lib/types';
 import { useSetupE2EE } from '@/lib/useSetupE2EE';
 import { useLowCPUOptimizer } from '@/lib/usePerformanceOptimizer';
 
 const SHOW_SETTINGS_MENU = process.env.NEXT_PUBLIC_SHOW_SETTINGS_MENU == 'true';
+
+/** Deep link to the post-interview report page in the main app (room name == interview sessionId). */
+const buildResultUrl = (resultBase: string | undefined, roomName: string | undefined) =>
+  resultBase && roomName
+    ? `${resultBase.replace(/\/$/, '')}/mock-interviews/result/${encodeURIComponent(roomName)}`
+    : undefined;
 
 export type ConferenceEndReason = 'left' | 'dropped' | 'error';
 
@@ -318,6 +324,14 @@ export function ConferenceShell(props: ConferenceShellProps) {  const keyProvide
   const handleLeaveClick = React.useCallback(() => {
     userLeftRef.current = true;
     props.onLeave?.();
+    // AI interview (resultBase armed, room name == sessionId): a manual end
+    // must land on the report just like an AI-concluded interview — close the
+    // popup and open the report in the main app window.
+    const settleUrl = buildResultUrl(props.resultBase, room.name);
+    if (settleUrl) {
+      redirectToInterviewReport(settleUrl);
+      return;
+    }
     room.disconnect();
   }, [room, props]);
 
@@ -335,10 +349,7 @@ export function ConferenceShell(props: ConferenceShellProps) {  const keyProvide
   // priority over the leave/drop ended screens — a natural completion must
   // always land on "Interview completed" (report redirect), never "You left".
   const roomName = room.name;
-  const resultUrl =
-    props.resultBase && roomName
-      ? `${props.resultBase.replace(/\/$/, '')}/mock-interviews/result/${encodeURIComponent(roomName)}`
-      : undefined;
+  const resultUrl = buildResultUrl(props.resultBase, roomName);
   if (aiConcluded) {
     return <InterviewCompletedScreen summary={aiConcluded.summary} resultUrl={resultUrl} />;
   }
