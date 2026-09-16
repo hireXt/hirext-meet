@@ -57,7 +57,7 @@ export function VideoConferenceClientImpl(props: {
       museTalkEnabled={props.museTalkEnabled}
       recordingEnabled={props.recordingEnabled}
       resultBase={props.resultBase}
-      label="meetXt"
+      label="meeXt"
     />
   );
 }

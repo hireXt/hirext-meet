@@ -415,8 +415,8 @@ export function StarIcon(props: IconProps) {
   );
 }
 
-/** Clarified alias for the meetXt mark — prefer this in new code. */
-export const MeetXtLogoMark = LogoMark;
+/** Clarified alias for the meeXt mark — prefer this in new code. */
+export const meeXtLogoMark = LogoMark;
 export const HireXtLogoMark = LogoMark;
 
 export { BrandLogo } from './BrandLogo';

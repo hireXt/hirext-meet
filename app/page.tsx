@@ -178,7 +178,7 @@ function HomeLandingContent() {
     <div className={styles.container}>
       {/* Top Navbar */}
       <header className={styles.navbar}>
-        <Link href="/" className={styles.navBrand} title="meetXt Home">
+        <Link href="/" className={styles.navBrand} title="meeXt Home">
           <BrandLogo theme="light" size={36} />
         </Link>
         <div className={styles.navRight}>
@@ -187,7 +187,7 @@ function HomeLandingContent() {
             type="button"
             className={styles.navIconBtn}
             title="Help & Feedback"
-            onClick={() => toast('meetXt: Premium real-time video meetings')}
+            onClick={() => toast('meeXt: Premium real-time video meetings')}
           >
             <HelpCircleIcon size={20} />
           </button>
@@ -214,7 +214,7 @@ function HomeLandingContent() {
               Your next video meetings{' '}
             </h1>
             <p className={styles.subtitle}>
-              We re-engineered meetXt for secure, crystal-clear real-time video meetings.
+              We re-engineered meeXt for secure, crystal-clear real-time video meetings.
               Share the link and start collaborating with anyone, anywhere.
             </p>
 
@@ -333,7 +333,7 @@ function HomeLandingContent() {
                   rel="noopener noreferrer"
                   className={styles.learnMoreLink}
                 >
-                  Learn more about meetXt
+                  Learn more about meeXt
                 </a>
               </span>
             </div>
@@ -388,7 +388,7 @@ function HomeLandingContent() {
 
       {/* Footer */}
       <footer className={styles.footer}>
-        <div>meetXt — Premium, secure video meetings</div>
+        <div>meeXt — Premium, secure video meetings</div>
         <div>Powered by LiveKit</div>
       </footer>
     </div>
@@ -397,7 +397,7 @@ function HomeLandingContent() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div style={{ padding: 24, textAlign: 'center' }}>Loading meetXt…</div>}>
+    <Suspense fallback={<div style={{ padding: 24, textAlign: 'center' }}>Loading meeXt…</div>}>
       <HomeLandingContent />
     </Suspense>
   );

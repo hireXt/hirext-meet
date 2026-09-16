@@ -113,7 +113,7 @@ export function PageClientImpl(props: {
           hq={props.hq}
           codec={props.codec}
           singlePeerConnection={props.singlePeerConnection}
-          label="meetXt"
+          label="meeXt"
         />
       </main>
     );
@@ -130,7 +130,7 @@ export function PageClientImpl(props: {
   return (
     <div className="ail-prejoin-page">
       <header className="ail-prejoin-nav">
-        <Link href="/" title="meetXt Home" style={{ textDecoration: 'none' }}>
+        <Link href="/" title="meeXt Home" style={{ textDecoration: 'none' }}>
           <BrandLogo theme="light" size={36} />
         </Link>
         <div className="ail-prejoin-nav-right">

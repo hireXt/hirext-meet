@@ -372,7 +372,7 @@ export function ConferenceShell(props: ConferenceShellProps) {  const keyProvide
           <AILinkRoom
             chatMessageFormatter={formatChatMessageLinks}
             SettingsComponent={SettingsMenu}
-            label={props.label ?? 'meetXt'}
+            label={props.label ?? 'meeXt'}
             museTalkEnabled={props.museTalkEnabled}
             recordingEnabled={props.recordingEnabled}
             onLeaveRequest={handleLeaveClick}

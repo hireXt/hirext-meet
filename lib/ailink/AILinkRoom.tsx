@@ -307,7 +307,7 @@ function TopNav(props: TopNavProps) {
   return (
     <header className="ail-nav">
       <div className="ail-nav-left">
-        <Link className="ail-brand" href="/" title="meetXt home">
+        <Link className="ail-brand" href="/" title="meeXt home">
           <BrandLogo theme="dark" size={32} />
         </Link>
         <span className="ail-v-divider" aria-hidden="true" />
@@ -1088,7 +1088,7 @@ export function AILinkRoom({
   return (
     <div className="ail-root" ref={rootRef}>
       <TopNav
-        label={label ?? 'meetXt'}
+        label={label ?? 'meeXt'}
         layout={layout}
         recording={recordingUI}
         fullscreen={fullscreen}
@@ -1105,7 +1105,7 @@ export function AILinkRoom({
 
       {/* Google Meet signature bottom bar */}
       <GoogleMeetDock
-        roomName={room.name || label || 'meetXt'}
+        roomName={room.name || label || 'meeXt'}
         mic={mic}
         camera={camera}
         screenShare={screenShare}

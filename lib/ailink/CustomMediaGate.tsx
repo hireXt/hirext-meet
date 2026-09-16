@@ -132,7 +132,7 @@ export function CustomMediaGate(props: {
   return (
     <div className="ail-prejoin-page">
       <header className="ail-prejoin-nav">
-        <div title="meetXt">
+        <div title="meeXt">
           <BrandLogo theme="light" size={36} />
         </div>
         <div className="ail-prejoin-nav-right">
@@ -149,7 +149,7 @@ export function CustomMediaGate(props: {
 
       <main className="ail-prejoin-main">
         <GoogleMeetGreenRoom
-          roomName="meetXt AI Interview"
+          roomName="meeXt AI Interview"
           defaultUsername=""
           defaultVideoEnabled={true}
           defaultAudioEnabled={true}

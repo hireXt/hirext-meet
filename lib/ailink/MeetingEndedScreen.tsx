@@ -78,7 +78,7 @@ export function MeetingEndedScreen({
           </p>
         )}
 
-        <p className="ail-ended-hint">Your meeting was protected with meetXt real-time encryption.</p>
+        <p className="ail-ended-hint">Your meeting was protected with meeXt real-time encryption.</p>
       </div>
     </div>
   );

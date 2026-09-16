@@ -15,11 +15,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'meetXt | Secure premium video meetings',
-    template: '%s | meetXt',
+    default: 'meeXt | Secure premium video meetings',
+    template: '%s | meeXt',
   },
   description:
-    'meetXt is a secure real-time video meeting platform with HD video, screen sharing, chat, and recording.',
+    'meeXt is a secure real-time video meeting platform with HD video, screen sharing, chat, and recording.',
   twitter: {
     card: 'summary_large_image',
   },
