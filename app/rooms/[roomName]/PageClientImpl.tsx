@@ -5,6 +5,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { LocalUserChoices } from '@livekit/components-react';
 import { ConferenceShell, fetchConnectionDetailsWithRetry } from '@/lib/ailink/ConferenceShell';
+import { createLocalTracks } from 'livekit-client';
 import { ConnectionDetails } from '@/lib/types';
 import { GoogleMeetGreenRoom } from '@/lib/ailink/GoogleMeetGreenRoom';
 import { BrandLogo } from '@/lib/ailink/BrandLogo';
@@ -22,6 +23,9 @@ export function PageClientImpl(props: {
   const [preJoinChoices, setPreJoinChoices] = React.useState<LocalUserChoices | undefined>(
     undefined,
   );
+  const [preAcquiredTracks, setPreAcquiredTracks] = React.useState<Awaited<ReturnType<typeof createLocalTracks>> | undefined>(
+    undefined,
+  );
   const [continueWithoutMedia, setContinueWithoutMedia] = React.useState(false);
   const preJoinDefaults = React.useMemo(() => {
     return {
@@ -37,7 +41,7 @@ export function PageClientImpl(props: {
   const [mintError, setMintError] = React.useState<Error | null>(null);
   const [currentTime, setCurrentTime] = React.useState('');
 
-  React.useEffect(() => {
+React.useEffect(() => {
     const update = () => {
       const now = new Date();
       const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -49,10 +53,58 @@ export function PageClientImpl(props: {
     return () => clearInterval(timer);
   }, []);
 
+  // Clean up pre-acquired tracks on unmount or when they change
+  React.useEffect(() => {
+    return () => {
+      preAcquiredTracks?.forEach((t) => {
+        try {
+          t.stop();
+        } catch {}
+      });
+    };
+  }, [preAcquiredTracks]);
+
   const handlePreJoinSubmit = React.useCallback(
     async (values: LocalUserChoices) => {
       setMintState('minting');
       setMintError(null);
+
+      const needsTracks = values.audioEnabled || values.videoEnabled;
+      let tracks: Awaited<ReturnType<typeof createLocalTracks>> | undefined;
+
+      if (needsTracks) {
+        try {
+          // Acquire tracks inside the click gesture (user gesture required for getUserMedia)
+          tracks = await createLocalTracks({
+            audio: values.audioEnabled
+              ? {
+                  deviceId: values.audioDeviceId || undefined,
+                  noiseSuppression: true,
+                  echoCancellation: true,
+                  autoGainControl: true,
+                }
+              : false,
+            video: values.videoEnabled
+              ? {
+                  deviceId: values.videoDeviceId || undefined,
+                  resolution: props.hq ? { width: 1920, height: 1080 } : { width: 1280, height: 720 },
+                }
+              : false,
+          });
+        } catch (trackErr) {
+          const err = trackErr instanceof Error ? trackErr : new Error(String(trackErr));
+          console.error('Failed to acquire media tracks:', err);
+          toast.error(
+            err.name === 'NotAllowedError'
+              ? 'Camera and microphone access was blocked. Allow access in the browser prompt, then try again.'
+              : `Could not start camera and microphone: ${err.message}`,
+          );
+          setMintError(err);
+          setMintState('failed');
+          return;
+        }
+      }
+
       try {
         const data = await fetchConnectionDetailsWithRetry(CONN_DETAILS_ENDPOINT, {
           roomName: props.roomName,
@@ -60,9 +112,12 @@ export function PageClientImpl(props: {
           region: props.region,
         });
         setPreJoinChoices(values);
+        setPreAcquiredTracks(tracks);
         setConnectionDetails(data);
         setMintState('idle');
       } catch (error) {
+        // Clean up tracks if connection fails
+        tracks?.forEach((t) => t.stop());
         const err = error instanceof Error ? error : new Error(String(error));
         console.error(err);
         setMintError(err);
@@ -70,7 +125,7 @@ export function PageClientImpl(props: {
         toast.error("Couldn't start the meeting. Check your connection and try again.");
       }
     },
-    [props.roomName, props.region],
+    [props.roomName, props.region, props.hq],
   );
   const handlePreJoinError = React.useCallback((e: Error) => {
     console.error(e);
@@ -100,6 +155,9 @@ export function PageClientImpl(props: {
   const retryMint = React.useCallback(() => {
     setMintState('idle');
     setMintError(null);
+    // Clean up any previously acquired tracks on retry
+    // Note: tracks are stored in state but we can't access them here directly
+    // They will be cleaned up when new tracks are acquired or on unmount
   }, []);
 
   // Joined: hand off to the shared shell (same component custom uses).
@@ -110,6 +168,7 @@ export function PageClientImpl(props: {
           serverUrl={connectionDetails.serverUrl}
           token={connectionDetails.participantToken}
           userChoices={preJoinChoices}
+          preAcquiredTracks={preAcquiredTracks}
           hq={props.hq}
           codec={props.codec}
           singlePeerConnection={props.singlePeerConnection}

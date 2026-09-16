@@ -22,7 +22,7 @@ export function BrandLogo({
     <span className={`ail-brand-container ail-brand-theme--${theme} ${className}`.trim()}>
       <GoogleMeetLogo size={size} />
       <span className="ail-brand-text">
-        meet<span className="ail-brand-highlight">X</span>t
+        mee<span className="ail-brand-highlight">X</span>t
       </span>
     </span>
   );
