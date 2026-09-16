@@ -40,3 +40,76 @@ Steps to get a local dev setup up and running:
 3. Update the missing environment variables in the newly created `.env.local` file.
 4. Run `pnpm dev` to start the development server and visit [http://localhost:3000](http://localhost:3000) to see the result.
 5. Start development 🎉
+
+## Local LiveKit via Docker
+
+This repo ships a Docker setup for a local LiveKit SFU, so no LiveKit Cloud project is
+needed for development:
+
+```bash
+docker compose up -d        # start the SFU (background)
+docker compose ps           # status + health
+docker compose logs -f      # server logs
+docker compose down         # stop it again
+```
+
+The SFU is configured by [`livekit.yaml`](./livekit.yaml) and listens on:
+
+| Port         | Purpose                                      |
+| ------------ | -------------------------------------------- |
+| `7880` (TCP) | Signalling — HTTP API + WebSocket            |
+| `7881` (TCP) | ICE/TCP fallback when UDP is blocked         |
+| `7882` (UDP) | RTC media — single UDP mux port for everyone |
+
+### Credentials
+
+`docker-compose.yml` starts the server with `LIVEKIT_KEYS` taken from the ambient
+`LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` values (the HireXt monorepo root `.env`
+exports them), and falls back to LiveKit's well-known dev pair `devkey` / `secret`
+when they are not exported. `.env.local` holds the same fallback pair, so a fresh
+clone works out of the box.
+
+### App configuration
+
+The app must be pointed at the Docker SFU — `.env.local` already does this:
+
+```bash
+LIVEKIT_URL=ws://127.0.0.1:7880
+```
+
+> **Note:** Next.js gives already-exported process environment variables precedence
+> over `.env.local`. This monorepo's root `.env` exports `LIVEKIT_URL=ws://127.0.0.1:3000`,
+> which would send browsers to the Next dev server instead of the SFU. Either fix that
+> value to `ws://127.0.0.1:7880` for the whole stack, or start this app with an explicit
+> override:
+>
+> ```bash
+> LIVEKIT_URL=ws://127.0.0.1:7880 pnpm dev
+> ```
+
+### Testing from another device (phone on the same LAN)
+
+Docker Desktop cannot advertise the container's own IP, so `livekit.yaml` sets
+`rtc.node_ip` to an address the browser can reach. For LAN testing, change it to this
+machine's LAN IP and set `LIVEKIT_URL` accordingly:
+
+```yaml
+# livekit.yaml
+rtc:
+  node_ip: 192.168.0.10 # e.g. `ipconfig getifaddr en0`
+```
+
+```bash
+LIVEKIT_URL=ws://192.168.0.10:7880
+```
+
+### Troubleshooting
+
+- `docker compose logs livekit` — set `logging.level: debug` in `livekit.yaml` for
+  per-transport ICE/DTLS detail, then `docker compose up -d --force-recreate`
+  (compose does not track edits to the bind-mounted config).
+- `curl http://127.0.0.1:7880/debug/rooms` — active rooms as JSON (`--dev` mode only).
+- `enable_loopback_candidate` must stay disabled: with it, the SFU also binds its UDP
+  mux to `127.0.0.1` inside the container, so media arriving on `eth0` (Docker NAT
+  rewrites the destination to the container IP) is attributed to the wrong socket and
+  ICE fails silently with `could not connect after timeout`.

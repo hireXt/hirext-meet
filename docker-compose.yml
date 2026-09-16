@@ -1,0 +1,42 @@
+# Local LiveKit SFU for developing HireXt Meet.
+#
+#   docker compose up -d        start (background)
+#   docker compose logs -f      follow server logs
+#   docker compose ps           status / health
+#   docker compose down         stop & remove
+#
+# The SFU is configured by ./livekit.yaml and uses the LiveKit dev credentials
+# (devkey / secret) which must match LIVEKIT_API_KEY / LIVEKIT_API_SECRET in
+# .env.local. See README.md > "Local LiveKit via Docker".
+#
+# Only one UDP port is published (rtc.udp_port = 7882) instead of the
+# 50000-60000 range, because Docker Desktop on macOS cannot forward large UDP
+# ranges reliably.
+services:
+  livekit:
+    image: livekit/livekit-server:v1.13.6 # keep in sync with the prod pin (interview-musetalk/infra/env.example)
+    container_name: hirext-livekit
+    # --dev: dev credentials defaults + /debug/rooms + /debug/goroutine endpoints
+    # --bind 0.0.0.0: without it dev mode would only bind 127.0.0.1 *inside* the container
+    command: --config /etc/livekit.yaml --dev --bind 0.0.0.0
+    restart: unless-stopped
+    environment:
+      # Follow the ambient repo credentials when they are exported (the HireXt
+      # monorepo .env exports LIVEKIT_API_KEY / LIVEKIT_API_SECRET), otherwise fall
+      # back to LiveKit's well-known dev pair used by .env.local.
+      # LIVEKIT_KEYS is a supported livekit-server env var and takes precedence over
+      # `keys:` in livekit.yaml (the pair must be "key: secret", space included).
+      LIVEKIT_KEYS: '${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-secret}'
+    ports:
+      - '7880:7880' # signalling: HTTP API + WebSocket (LIVEKIT_URL=ws://127.0.0.1:7880)
+      - '7881:7881' # ICE/TCP fallback (when UDP is blocked)
+      - '7882:7882/udp' # RTC media: single UDP mux port
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    healthcheck:
+      # /rtc/validate needs a token (401), so use the dev-mode debug endpoint.
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:7880/debug/rooms']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s

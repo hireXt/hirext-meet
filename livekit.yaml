@@ -1,0 +1,40 @@
+# LiveKit SFU config for LOCAL DEVELOPMENT (started via docker-compose.yml).
+#
+# This is the `livekit-server --dev` behaviour with a Docker-friendly RTC port
+# layout. The API key/secret pair must match .env.local.
+port: 7880
+
+rtc:
+  # ICE over TCP fallback — must be published on the node (no TLS/load balancer).
+  tcp_port: 7881
+
+  # Single UDP mux port: every participant's media is multiplexed over 7882, so
+  # Docker only needs to publish one UDP port (the 50000-60000 range used in
+  # production is not reliably forwarded by Docker Desktop on macOS).
+  udp_port: 7882
+
+  # The container is behind Docker NAT, so the SFU must advertise an address the
+  # browser can actually reach: the *published* host port. 127.0.0.1 is correct
+  # for browsers running on this Mac. To join from another device on the LAN,
+  # change this to the Mac's LAN IP (e.g. 192.168.68.101) and restart the
+  # container; note that LIVEKIT_URL in .env.local must match.
+  node_ip: 127.0.0.1
+
+  # An explicit node_ip is used as-is; never auto-discover the (unreachable)
+  # container IP via STUN.
+  use_external_ip: false
+
+  # NOTE: do NOT enable `enable_loopback_candidate` here. It makes the SFU bind its
+  # UDP mux to 127.0.0.1 *inside* the container as well, so packets that arrive on
+  # eth0 (Docker NAT rewrites the destination to the container IP) are attributed
+  # to the eth0 socket instead of the advertised loopback candidate and ICE dies
+  # silently (STUN requests arrive, no replies, "could not connect after timeout").
+
+keys:
+  # LiveKit's well-known development credentials — dev only, never production.
+  # Must match LIVEKIT_API_KEY / LIVEKIT_API_SECRET in .env.local.
+  devkey: secret
+
+logging:
+  # 'debug' is helpful when debugging ICE/transport issues; 'info' is the default here.
+  level: info

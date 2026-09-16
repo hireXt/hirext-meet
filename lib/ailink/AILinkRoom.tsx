@@ -17,7 +17,7 @@ import {
   VideoTrack,
 } from '@livekit/components-react';
 import type { MessageFormatter, TrackReferenceOrPlaceholder } from '@livekit/components-react';
-import { ConnectionState, LocalAudioTrack, Participant, ParticipantEvent, Track } from 'livekit-client';
+import { ConnectionState, LocalAudioTrack, Participant, ParticipantEvent, Track, TrackEvent } from 'livekit-client';
 import { LiveKitVoiceNoiseProcessor } from '../audioNoiseFilter';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -104,20 +104,35 @@ function useClickOutside(
 }
 
 function useIsTrackMuted(participant: Participant, source: Track.Source): boolean {
-  const [muted, setMuted] = React.useState(
-    () => participant.getTrackPublication(source)?.isMuted ?? true,
-  );
+  const readMuted = () => {
+    const pub = participant.getTrackPublication(source);
+    // isMuted is the source of truth VideoStage/Tile render on; fall back to
+    // the underlying track state when the publication hasn't synced yet.
+    return pub ? pub.isMuted : (participant.getTrackPublication(source)?.track?.isMuted ?? true);
+  };
+  const [muted, setMuted] = React.useState<boolean>(() => readMuted());
   React.useEffect(() => {
-    const update = () => setMuted(participant.getTrackPublication(source)?.isMuted ?? true);
-    update();
+    const update = () => setMuted(readMuted());
+    const resubscribeToPublication = () => {
+      const pub = participant.getTrackPublication(source);
+      // Publication objects are stable across mute toggles (mute/unmute only
+      // flips a flag), but they are REPLACED on unpublish/republish — so
+      // (re)attach publication-level listeners whenever one (re)appears.
+      pub?.on?.(TrackEvent.Muted, update);
+      pub?.on?.(TrackEvent.Unmuted, update);
+      update();
+    };
+    resubscribeToPublication();
     participant.on(ParticipantEvent.TrackMuted, update);
     participant.on(ParticipantEvent.TrackUnmuted, update);
-    participant.on(ParticipantEvent.TrackPublished, update);
+    participant.on(ParticipantEvent.TrackPublished, resubscribeToPublication);
     participant.on(ParticipantEvent.TrackUnpublished, update);
     return () => {
+      participant.getTrackPublication(source)?.off?.(TrackEvent.Muted, update);
+      participant.getTrackPublication(source)?.off?.(TrackEvent.Unmuted, update);
       participant.off(ParticipantEvent.TrackMuted, update);
       participant.off(ParticipantEvent.TrackUnmuted, update);
-      participant.off(ParticipantEvent.TrackPublished, update);
+      participant.off(ParticipantEvent.TrackPublished, resubscribeToPublication);
       participant.off(ParticipantEvent.TrackUnpublished, update);
     };
   }, [participant, source]);
