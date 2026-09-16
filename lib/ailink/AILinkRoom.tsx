@@ -106,27 +106,29 @@ function useClickOutside(
 function useIsTrackMuted(participant: Participant, source: Track.Source): boolean {
   const readMuted = () => {
     const pub = participant.getTrackPublication(source);
-    // isMuted is the source of truth VideoStage/Tile render on; fall back to
-    // the underlying track state when the publication hasn't synced yet.
-    return pub ? pub.isMuted : (participant.getTrackPublication(source)?.track?.isMuted ?? true);
+    return pub ? pub.isMuted : true;
   };
   const [muted, setMuted] = React.useState<boolean>(() => readMuted());
+
   React.useEffect(() => {
     const update = () => setMuted(readMuted());
     const resubscribeToPublication = () => {
       const pub = participant.getTrackPublication(source);
-      // Publication objects are stable across mute toggles (mute/unmute only
-      // flips a flag), but they are REPLACED on unpublish/republish — so
-      // (re)attach publication-level listeners whenever one (re)appears.
       pub?.on?.(TrackEvent.Muted, update);
       pub?.on?.(TrackEvent.Unmuted, update);
       update();
     };
+
     resubscribeToPublication();
+
     participant.on(ParticipantEvent.TrackMuted, update);
     participant.on(ParticipantEvent.TrackUnmuted, update);
     participant.on(ParticipantEvent.TrackPublished, resubscribeToPublication);
     participant.on(ParticipantEvent.TrackUnpublished, update);
+    // Local participant emits these instead of the generic ones above
+    participant.on(ParticipantEvent.LocalTrackPublished, resubscribeToPublication);
+    participant.on(ParticipantEvent.LocalTrackUnpublished, update);
+
     return () => {
       participant.getTrackPublication(source)?.off?.(TrackEvent.Muted, update);
       participant.getTrackPublication(source)?.off?.(TrackEvent.Unmuted, update);
@@ -134,13 +136,45 @@ function useIsTrackMuted(participant: Participant, source: Track.Source): boolea
       participant.off(ParticipantEvent.TrackUnmuted, update);
       participant.off(ParticipantEvent.TrackPublished, resubscribeToPublication);
       participant.off(ParticipantEvent.TrackUnpublished, update);
+      participant.off(ParticipantEvent.LocalTrackPublished, resubscribeToPublication);
+      participant.off(ParticipantEvent.LocalTrackUnpublished, update);
     };
   }, [participant, source]);
+
   return muted;
 }
-
 function trackKey(ref: TrackReferenceOrPlaceholder): string {
   return `${ref.participant.identity}:${ref.source}`;
+}
+
+/**
+ * Google-Meet-style self-view: attaches the LIVE MediaStreamTrack directly to
+ * a <video> element. No publication flags, no mute caches, no useTracks
+ * placeholder timing — if the OS is delivering frames, they show here.
+ */
+function LocalSelfView({ mst, name }: { mst: MediaStreamTrack; name: string }) {
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  React.useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    const stream = new MediaStream([mst]);
+    el.srcObject = stream;
+    el.play().catch(() => undefined);
+    return () => {
+      try {
+        el.pause();
+      } catch {}
+      el.srcObject = null;
+    };
+  }, [mst]);
+  return (
+    <div className="ail-tile ail-tile--self" data-testid="local-selfview-tile">
+      <video ref={videoRef} className="ail-tile-video" autoPlay playsInline muted />
+      <div className="ail-chip ail-name-pill">
+        <span>{`${name} (You)`}</span>
+      </div>
+    </div>
+  );
 }
 
 function Avatar({ name, size = 64 }: { name: string; size?: number }) {
