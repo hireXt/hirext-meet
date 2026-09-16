@@ -1228,9 +1228,20 @@ export function AILinkRoom({
     return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
 
+  const participants = useParticipants();
+  const hasAIAvatar = React.useMemo(() => {
+    return participants.some((p) =>
+      ['monika-avatar', 'rosie', 'avatar', 'agent', 'bot'].some((k) =>
+        p.identity.toLowerCase().includes(k) || (p.name && p.name.toLowerCase().includes(k)),
+      ),
+    );
+  }, [participants]);
+
+  const isAIMeeting = museTalkEnabled || hasAIAvatar;
+
   // When entering an AI meeting (museTalkEnabled or AI avatar session), automatically enter full screen
   React.useEffect(() => {
-    if (!museTalkEnabled) return;
+    if (!isAIMeeting) return;
 
     let attempted = false;
     const requestAutoFullscreen = async () => {
@@ -1257,7 +1268,7 @@ export function AILinkRoom({
     // Trigger auto fullscreen immediately upon mounting the AI meeting room
     const timer = setTimeout(requestAutoFullscreen, 100);
     return () => clearTimeout(timer);
-  }, [museTalkEnabled]);
+  }, [isAIMeeting]);
 
   const toggleFullscreen = React.useCallback(async () => {
     try {
@@ -1636,7 +1647,7 @@ function VideoStage({
         <ConnectionChip />
       </div>
 
-      {museTalkEnabled ? (
+      {museTalkEnabled || !!avatarTrack ? (
         <MuseTalkStage
           avatarTrack={avatarTrack}
           candidateTracks={cameraTracksResolved.filter((t) => t !== avatarTrack)}

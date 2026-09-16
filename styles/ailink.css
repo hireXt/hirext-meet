@@ -660,11 +660,11 @@
   right: 16px;
   bottom: 16px;
   z-index: 15;
-  width: min(30vw, 260px);
-  aspect-ratio: 16 / 9;
+  width: min(30vw, 220px);
+  aspect-ratio: 3 / 4;
   border-radius: var(--ail-radius-md);
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.22);
   box-shadow: 0 8px 30px -8px rgba(0, 0, 0, 0.6);
 }
 
@@ -700,9 +700,13 @@
 
 @media (max-width: 640px) {
   .ail-candidate-pip {
-    width: min(50vw, 200px);
-    right: 10px;
-    bottom: 10px;
+    width: min(28vw, 110px);
+    aspect-ratio: 9 / 16;
+    border-radius: 12px;
+    right: 12px;
+    bottom: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -1511,13 +1515,14 @@
     text-align: center;
   }
 
-  /* self-view pip: small, doesn't cover the interviewer */
+  /* self-view pip: portrait like WhatsApp call, doesn't cover the interviewer */
   .ail-candidate-pip {
-    width: 96px;
+    width: min(28vw, 108px);
+    aspect-ratio: 9 / 16;
     right: 10px;
     bottom: 10px;
     border-width: 1.5px;
-    border-radius: 10px;
+    border-radius: 12px;
   }
 
   /* dock: comfortable touch targets */
@@ -1602,7 +1607,8 @@
 
 @media (max-width: 400px) {
   .ail-candidate-pip {
-    width: 84px;
+    width: 80px;
+    aspect-ratio: 9 / 16;
   }
 
   .ail-dock-btn {
