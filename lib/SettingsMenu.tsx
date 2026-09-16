@@ -25,7 +25,10 @@ export function SettingsMenu(props: SettingsMenuProps) {
   const layoutContext = useMaybeLayoutContext();
   const recordingEndpoint = process.env.NEXT_PUBLIC_LK_RECORD_ENDPOINT;
   const recording = useRecording();
-  const { recordingEnabled = false } = props;
+  // Strip non-DOM props before spreading the rest onto the <div> — otherwise
+  // React warns "does not recognize the `recordingEnabled` prop on a DOM
+  // element" (it was spread via {...props}).
+  const { recordingEnabled = false, onClose, className, style, ...rest } = props;
 
   const settings = React.useMemo(() => {
     return {
@@ -41,15 +44,15 @@ export function SettingsMenu(props: SettingsMenuProps) {
   const [activeTab, setActiveTab] = React.useState(tabs[0]);
 
   const handleClose = () => {
-    if (props.onClose) {
-      props.onClose();
+    if (onClose) {
+      onClose();
     } else {
       layoutContext?.widget.dispatch?.({ msg: 'toggle_settings' });
     }
   };
 
   return (
-    <div className="settings-menu" style={{ width: '100%', position: 'relative' }} {...props}>
+    <div className={`settings-menu${className ? ` ${className}` : ''}`} style={{ width: '100%', position: 'relative', ...style }} {...rest}>
       <div className={styles.tabs}>
         {tabs.map(
           (tab) =>

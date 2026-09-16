@@ -202,21 +202,36 @@ function ConnectionChip() {
 function Tile({
   trackRef,
   isSpotlight = false,
+  onRescueCamera,
+  camRescuePending = false,
 }: {
   trackRef: TrackReferenceOrPlaceholder;
   isSpotlight?: boolean;
+  onRescueCamera?: () => void;
+  camRescuePending?: boolean;
 }) {
   const { participant, source } = trackRef;
   const isScreen = source === Track.Source.ScreenShare;
   const camMuted = useIsTrackMuted(participant, Track.Source.Camera);
   const micMuted = useIsTrackMuted(participant, Track.Source.Microphone);
   const isSpeaking = useIsSpeaking(participant);
+  // Like Google Meet: if the publication carries a live track, SHOW THE VIDEO.
+  // The local camMuted flag is a separate concern (it can wedge when mute
+  // events fire before the publication registers) and must never hide a live
+  // local track — otherwise: tile says "Camera off" while the server receives
+  // frames. A stuck flag is recoverable via the rescue button, not by hiding.
+  const hasLiveLocalTrack =
+    !isScreen &&
+    participant.isLocal &&
+    isTrackReference(trackRef) &&
+    !!trackRef.publication?.track &&
+    trackRef.publication.track.mediaStreamTrack?.readyState === 'live';
   const hasVideo =
     isTrackReference(trackRef) &&
     !!trackRef.publication &&
     !!trackRef.publication.track &&
     !trackRef.publication.isMuted;
-  const showVideo = isScreen ? hasVideo : hasVideo && !camMuted;
+  const showVideo = isScreen ? hasVideo : hasVideo || hasLiveLocalTrack;
   const name = displayName(participant);
 
   return (
@@ -241,6 +256,17 @@ function Tile({
             <Avatar name={name} size={isSpotlight ? 96 : 72} />
           </div>
           {!isScreen && camMuted && <span className="ail-tile-hint">Camera off</span>}
+          {!isScreen && participant.isLocal && onRescueCamera && (
+            <button
+              type="button"
+              className="ail-tile-rescue"
+              onClick={onRescueCamera}
+              disabled={camRescuePending}
+              title="Force the camera back on"
+            >
+              {camRescuePending ? 'Starting…' : 'Turn camera back on'}
+            </button>
+          )}
         </div>
       )}
       <div className="ail-chip ail-name-pill">
@@ -991,6 +1017,46 @@ export function AILinkRoom({
   const camera = useTrackToggle({ source: Track.Source.Camera });
   const screenShare = useTrackToggle({ source: Track.Source.ScreenShare });
 
+  // LiveKit's own local-video source of truth — NOT a permission/flag cache.
+  // This mirrors how livekit's official meet app renders self-view
+  // (ParticipantTile -> useParticipantTracks -> track attached to <video>):
+  // the track object published to the room, read fresh every render.
+  // Previous revisions gated on useIsTrackMuted / publication.isMuted, which
+  // can wedge when mute events fire before listeners attach — tile says
+  // "Camera off" while the server receives frames. Reading the live track
+  // reference directly makes that class of desync impossible.
+  const { cameraTrack: liveCameraPublication, localParticipant } = useLocalParticipant();
+  const localVideoTrack = (liveCameraPublication as unknown as { track?: unknown } | undefined)?.track as
+    | { mediaStreamTrack?: MediaStreamTrack; isMuted?: boolean }
+    | undefined;
+  const localVideoMst = localVideoTrack?.mediaStreamTrack;
+  const localVideoLive = !!localVideoMst && localVideoMst.readyState === 'live' && localVideoTrack?.isMuted !== true;
+
+  // "Turn camera back on" rescue: drives the real publication (unmute, or
+  // restart a dead MediaStreamTrack, or re-enable when unpublished).
+  const [camRescuePending, setCamRescuePending] = React.useState(false);
+  const rescueCamera = React.useCallback(async () => {
+    const lp = room.localParticipant;
+    if (!lp) return;
+    setCamRescuePending(true);
+    try {
+      const pub = lp.getTrackPublication(Track.Source.Camera);
+      const track = pub?.track as import('livekit-client').LocalVideoTrack | undefined;
+      const mst = track?.mediaStreamTrack;
+      if (pub && track && mst && mst.readyState !== 'live') {
+        await track.restartTrack().catch(() => undefined);
+        await track.unmute().catch(() => undefined);
+      } else if (pub && track) {
+        // Publication muted but track alive (or vice versa) — sync via unmute.
+        await track.unmute().catch(() => undefined);
+      } else if (!pub) {
+        await lp.setCameraEnabled(true).catch(() => undefined);
+      }
+    } finally {
+      setCamRescuePending(false);
+    }
+  }, [room]);
+
   // ─── Browser-Native Noise Suppression ────────────────────────────────────────
   // Krisp requires LiveKit Cloud (not available on self-hosted servers).
   // Instead, we use the browser's built-in WebRTC noiseSuppression + echoCancellation
@@ -1166,9 +1232,20 @@ export function AILinkRoom({
       />
 
       <main className="ail-stage-wrap">
+        {/* Self-view, Google-Meet style: the LIVE local track attached
+            directly — no mute-flag gating. This is how livekit's own meet app
+            renders it (their ParticipantTile attaches the track object). If the
+            track is alive the user sees themselves, period. */}
+        {localVideoLive && localVideoMst && (
+          <div className="ail-selfview" data-testid="local-selfview">
+            <LocalSelfView mst={localVideoMst} name={displayName(localParticipant)} />
+          </div>
+        )}
         <VideoStage
           layout={layout}
           museTalkEnabled={museTalkEnabled}
+          onRescueCamera={rescueCamera}
+          camRescuePending={camRescuePending}
         />
       </main>
 
@@ -1438,9 +1515,13 @@ function ParticipantRow({ participant }: { participant: Participant }) {
 function VideoStage({
   layout,
   museTalkEnabled,
+  onRescueCamera,
+  camRescuePending,
 }: {
   layout: LayoutMode;
   museTalkEnabled: boolean;
+  onRescueCamera: () => void;
+  camRescuePending: boolean;
 }) {
   const tracks = useTracks(
     [
@@ -1494,28 +1575,44 @@ function VideoStage({
         <MuseTalkStage
           avatarTrack={avatarTrack}
           candidateTracks={cameraTracksResolved.filter((t) => t !== avatarTrack)}
+          onRescueCamera={onRescueCamera}
+          camRescuePending={camRescuePending}
         />
       ) : screenTracks.length > 0 || layout === 'spotlight' ? (
         <SpotlightStage
           screenTracks={screenTracks}
           cameraTracks={cameraTracksResolved}
+          onRescueCamera={onRescueCamera}
+          camRescuePending={camRescuePending}
         />
       ) : (
-        <GoogleGridStage tracks={cameraTracksResolved} />
+        <GoogleGridStage
+          tracks={cameraTracksResolved}
+          onRescueCamera={onRescueCamera}
+          camRescuePending={camRescuePending}
+        />
       )}
     </div>
   );
 }
 
 /** Standard responsive grid for Google Meet */
-function GoogleGridStage({ tracks }: { tracks: TrackReferenceOrPlaceholder[] }) {
+function GoogleGridStage({
+  tracks,
+  onRescueCamera,
+  camRescuePending,
+}: {
+  tracks: TrackReferenceOrPlaceholder[];
+  onRescueCamera: () => void;
+  camRescuePending: boolean;
+}) {
   const count = tracks.length;
 
   return (
     <div className="ail-grid-container" data-count={Math.min(count, 9)}>
       {tracks.map((ref) => (
         <div className="ail-grid-cell" key={trackKey(ref)}>
-          <Tile trackRef={ref} />
+          <Tile trackRef={ref} onRescueCamera={onRescueCamera} camRescuePending={camRescuePending} />
         </div>
       ))}
     </div>
@@ -1526,9 +1623,13 @@ function GoogleGridStage({ tracks }: { tracks: TrackReferenceOrPlaceholder[] }) 
 function SpotlightStage({
   screenTracks,
   cameraTracks,
+  onRescueCamera,
+  camRescuePending,
 }: {
   screenTracks: TrackReferenceOrPlaceholder[];
   cameraTracks: TrackReferenceOrPlaceholder[];
+  onRescueCamera: () => void;
+  camRescuePending: boolean;
 }) {
   // If there's screen share, it takes the main stage, otherwise the first camera track
   const mainTrack = screenTracks.length > 0 ? screenTracks[0] : cameraTracks[0];
@@ -1539,13 +1640,15 @@ function SpotlightStage({
   return (
     <div className="ail-spotlight-wrap">
       <div className="ail-spotlight-main">
-        {mainTrack && <Tile trackRef={mainTrack} isSpotlight />}
+        {mainTrack && (
+          <Tile trackRef={mainTrack} isSpotlight onRescueCamera={onRescueCamera} camRescuePending={camRescuePending} />
+        )}
       </div>
       {sideTracks.length > 0 && (
         <div className="ail-filmstrip">
           {sideTracks.map((ref) => (
             <div className="ail-filmstrip-item" key={trackKey(ref)}>
-              <Tile trackRef={ref} />
+              <Tile trackRef={ref} onRescueCamera={onRescueCamera} camRescuePending={camRescuePending} />
             </div>
           ))}
         </div>
@@ -1557,9 +1660,13 @@ function SpotlightStage({
 function MuseTalkStage({
   avatarTrack,
   candidateTracks,
+  onRescueCamera,
+  camRescuePending,
 }: {
   avatarTrack: TrackReferenceOrPlaceholder | undefined;
   candidateTracks: TrackReferenceOrPlaceholder[];
+  onRescueCamera: () => void;
+  camRescuePending: boolean;
 }) {
   const avatarReady =
     !!avatarTrack &&
@@ -1620,7 +1727,7 @@ function MuseTalkStage({
       {localTracks.length > 0 && (
         <div className="ail-candidate-pip">
           {localTracks.map((ref) => (
-            <Tile key={trackKey(ref)} trackRef={ref} />
+            <Tile key={trackKey(ref)} trackRef={ref} onRescueCamera={onRescueCamera} camRescuePending={camRescuePending} />
           ))}
         </div>
       )}

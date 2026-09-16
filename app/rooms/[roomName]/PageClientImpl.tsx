@@ -69,40 +69,20 @@ React.useEffect(() => {
       setMintState('minting');
       setMintError(null);
 
+      // The lobby already acquired + verified the join tracks INSIDE the Join
+      // click (after fully releasing its preview stream). Use them directly —
+      // creating a second stream here would reintroduce the exact race that
+      // left "camera ON, tile black" on multi-device Macs.
+      type JoinTracks = Awaited<ReturnType<typeof createLocalTracks>>;
+      const tracks = (values as unknown as { joinTracks?: JoinTracks }).joinTracks;
       const needsTracks = values.audioEnabled || values.videoEnabled;
-      let tracks: Awaited<ReturnType<typeof createLocalTracks>> | undefined;
-
-      if (needsTracks) {
-        try {
-          // Acquire tracks inside the click gesture (user gesture required for getUserMedia)
-          tracks = await createLocalTracks({
-            audio: values.audioEnabled
-              ? {
-                  deviceId: values.audioDeviceId || undefined,
-                  noiseSuppression: true,
-                  echoCancellation: true,
-                  autoGainControl: true,
-                }
-              : false,
-            video: values.videoEnabled
-              ? {
-                  deviceId: values.videoDeviceId || undefined,
-                  resolution: props.hq ? { width: 1920, height: 1080 } : { width: 1280, height: 720 },
-                }
-              : false,
-          });
-        } catch (trackErr) {
-          const err = trackErr instanceof Error ? trackErr : new Error(String(trackErr));
-          console.error('Failed to acquire media tracks:', err);
-          toast.error(
-            err.name === 'NotAllowedError'
-              ? 'Camera and microphone access was blocked. Allow access in the browser prompt, then try again.'
-              : `Could not start camera and microphone: ${err.message}`,
-          );
-          setMintError(err);
-          setMintState('failed');
-          return;
-        }
+      if (needsTracks && !tracks?.length) {
+        const err = new Error('Camera/mic setup did not complete. Please click Join again.');
+        console.error(err);
+        setMintError(err);
+        setMintState('failed');
+        toast.error(err.message);
+        return;
       }
 
       try {

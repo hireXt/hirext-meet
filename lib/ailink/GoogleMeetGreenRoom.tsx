@@ -134,6 +134,9 @@ export function GoogleMeetGreenRoom({
   const [micMenuOpen, setMicMenuOpen] = React.useState(false);
   const [cameraMenuOpen, setCameraMenuOpen] = React.useState(false);
   const [testSoundPlaying, setTestSoundPlaying] = React.useState(false);
+  // Set on Join: forces previewOptions to false so usePreviewTracks releases
+  // the camera/mic and does NOT re-acquire while we create the join stream.
+  const [leaving, setLeaving] = React.useState(false);
 
   // Restore persisted state from localStorage after mount (avoids SSR/client hydration mismatch)
   React.useEffect(() => {
@@ -192,7 +195,10 @@ export function GoogleMeetGreenRoom({
   // Stable preview options for usePreviewTracks:
   // ONLY pass deviceId when the user has explicitly selected one from the dropdown!
   // Otherwise pass boolean true so getUserMedia() is called ONCE without loop resets.
+  // On Join (leaving=true) force false so the preview releases the devices and
+  // does not re-acquire while the join stream is created.
   const previewOptions = React.useMemo(() => {
+    if (leaving) return { audio: false, video: false };
     return {
       audio: audioEnabled
         ? {
@@ -204,7 +210,7 @@ export function GoogleMeetGreenRoom({
         : false,
       video: videoEnabled ? (selectedVideoId ? { deviceId: selectedVideoId } : true) : false,
     };
-  }, [audioEnabled, videoEnabled, selectedAudioId, selectedVideoId, noiseCancellationEnabled]);
+  }, [audioEnabled, videoEnabled, selectedAudioId, selectedVideoId, noiseCancellationEnabled, leaving]);
 
   // Reference-stable error handler passed to usePreviewTracks.
   // Intercepts NotFoundError (missing webcam/mic), OverconstrainedError, and NotAllowedError,
@@ -375,14 +381,88 @@ export function GoogleMeetGreenRoom({
     if (typeof window !== 'undefined') {
       localStorage.setItem('hx_meet_username', cleanName);
     }
-    onSubmit({
-      username: cleanName,
-      videoEnabled,
-      audioEnabled,
-      videoDeviceId: selectedVideoId || '',
-      audioDeviceId: selectedAudioId || '',
-      speakerDeviceId: selectedSpeakerId || '',
-    } as unknown as LocalUserChoices);
+    // 1. Release the lobby preview FIRST: flip previewOptions to false so
+    //    usePreviewTracks stops its stream and hands the camera back.
+    // 2. Wait for the teardown to settle, then STOP the preview tracks and
+    //    wait for the MediaStreamTracks to actually end — closing a camera
+    //    stream is async in the driver, and opening the join stream while the
+    //    old one is half-closed hands back a dead stream on multi-device Macs
+    //    (Continuity Camera / virtual webcams): light on, no frames.
+    // 3. Only then create the join stream, so the meeting gets the live one.
+    setLeaving(true);
+    void (async () => {
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        const stopTracks = tracks ?? [];
+        stopTracks.forEach((t) => {
+          try {
+            t.stop();
+          } catch {}
+        });
+        const msts = stopTracks
+          .map((t) => (t as unknown as { mediaStreamTrack?: MediaStreamTrack }).mediaStreamTrack)
+          .filter((m): m is MediaStreamTrack => !!m);
+        if (msts.length > 0) {
+          await Promise.all(
+            msts.map(
+              (mst) =>
+                new Promise<void>((resolve) => {
+                  if (mst.readyState === 'ended') return resolve();
+                  const timer = setTimeout(resolve, 1500);
+                  mst.addEventListener(
+                    'ended',
+                    () => {
+                      clearTimeout(timer);
+                      resolve();
+                    },
+                    { once: true },
+                  );
+                }),
+            ),
+          ).catch(() => undefined);
+          await new Promise((resolve) => setTimeout(resolve, 150));
+        }
+        const needsTracks = videoEnabled || audioEnabled;
+        let joinTracks: Awaited<ReturnType<typeof import('livekit-client').createLocalTracks>> | undefined;
+        if (needsTracks) {
+          const { createLocalTracks } = await import('livekit-client');
+          joinTracks = await createLocalTracks({
+            audio: audioEnabled
+              ? {
+                  deviceId: selectedAudioId || undefined,
+                  noiseSuppression: noiseCancellationEnabled,
+                  echoCancellation: true,
+                  autoGainControl: true,
+                }
+              : false,
+            video: videoEnabled
+              ? {
+                  deviceId: selectedVideoId || undefined,
+                  resolution: { width: 1280, height: 720 },
+                }
+              : false,
+          });
+        }
+        onSubmit({
+          username: cleanName,
+          videoEnabled,
+          audioEnabled,
+          videoDeviceId: selectedVideoId || '',
+          audioDeviceId: selectedAudioId || '',
+          speakerDeviceId: selectedSpeakerId || '',
+          joinTracks,
+        } as unknown as LocalUserChoices);
+      } catch (err) {
+        setLeaving(false);
+        const e = err instanceof Error ? err : new Error(String(err));
+        console.error('Failed to start camera/mic on join:', e);
+        toast.error(
+          e.name === 'NotAllowedError'
+            ? 'Camera and microphone access was blocked. Allow access in the browser prompt, then try again.'
+            : `Could not start camera and microphone: ${e.message}`,
+        );
+      }
+    })();
   };
 
   const handlePresentJoin = () => {
@@ -394,6 +474,7 @@ export function GoogleMeetGreenRoom({
     if (typeof window !== 'undefined') {
       localStorage.setItem('hx_meet_username', cleanName);
     }
+    setLeaving(true);
     onSubmit({
       username: cleanName,
       videoEnabled: false,
@@ -440,7 +521,12 @@ export function GoogleMeetGreenRoom({
         {/* LEFT: Spacious 16:9 Video Preview */}
         <div className="gm-preview-col">
           <div className="gm-preview-card">
-            {videoEnabled && videoTrack ? (
+            {leaving ? (
+              <div className="gm-preview-camera-off" role="status" aria-live="polite">
+                <span className="ail-spinner" aria-hidden="true" />
+                <span className="gm-preview-off-text">Starting camera &amp; mic…</span>
+              </div>
+            ) : videoEnabled && videoTrack ? (
               <video
                 ref={setVideoRef}
                 className="gm-preview-video"
