@@ -30,6 +30,24 @@ export function isLowPowerDevice() {
 }
 
 /**
+ * Safely decodes metadata from a signed LiveKit JWT token.
+ */
+export function decodeTokenMetadata(token?: string): { museTalkEnabled?: boolean; recording?: boolean } | null {
+  if (!token) return null;
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const payload = JSON.parse(atob(padded));
+    const meta = typeof payload.metadata === 'string' ? JSON.parse(payload.metadata) : payload.metadata;
+    return meta || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Message the meet popup posts to its opener (the main web app) when an AI
  * interview finishes and the report should be shown in the main window instead
  * of the popup. The receiver validates the URL against its own origin.

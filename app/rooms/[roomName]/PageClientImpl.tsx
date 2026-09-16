@@ -9,6 +9,7 @@ import { createLocalTracks } from 'livekit-client';
 import { ConnectionDetails } from '@/lib/types';
 import { GoogleMeetGreenRoom } from '@/lib/ailink/GoogleMeetGreenRoom';
 import { BrandLogo } from '@/lib/ailink/BrandLogo';
+import { decodeTokenMetadata } from '@/lib/client-utils';
 
 const CONN_DETAILS_ENDPOINT =
   process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT ?? '/api/connection-details';
@@ -142,6 +143,7 @@ React.useEffect(() => {
 
   // Joined: hand off to the shared shell (same component custom uses).
   if (connectionDetails && preJoinChoices) {
+    const meta = decodeTokenMetadata(connectionDetails.participantToken);
     return (
       <main style={{ height: '100%', position: 'relative' }}>
         <ConferenceShell
@@ -152,6 +154,8 @@ React.useEffect(() => {
           hq={props.hq}
           codec={props.codec}
           singlePeerConnection={props.singlePeerConnection}
+          museTalkEnabled={meta?.museTalkEnabled === true}
+          recordingEnabled={meta?.recording === true}
           label="meeXt"
         />
       </main>

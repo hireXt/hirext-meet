@@ -1228,6 +1228,37 @@ export function AILinkRoom({
     return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
 
+  // When entering an AI meeting (museTalkEnabled or AI avatar session), automatically enter full screen
+  React.useEffect(() => {
+    if (!museTalkEnabled) return;
+
+    let attempted = false;
+    const requestAutoFullscreen = async () => {
+      if (document.fullscreenElement || attempted) return;
+      attempted = true;
+      try {
+        await rootRef.current?.requestFullscreen();
+      } catch (err) {
+        // Browser may require a direct user interaction/gesture; retry on first document click/tap
+        const onFirstInteraction = async () => {
+          document.removeEventListener('click', onFirstInteraction);
+          document.removeEventListener('touchend', onFirstInteraction);
+          if (!document.fullscreenElement) {
+            try {
+              await rootRef.current?.requestFullscreen();
+            } catch {}
+          }
+        };
+        document.addEventListener('click', onFirstInteraction, { once: true });
+        document.addEventListener('touchend', onFirstInteraction, { once: true });
+      }
+    };
+
+    // Trigger auto fullscreen immediately upon mounting the AI meeting room
+    const timer = setTimeout(requestAutoFullscreen, 100);
+    return () => clearTimeout(timer);
+  }, [museTalkEnabled]);
+
   const toggleFullscreen = React.useCallback(async () => {
     try {
       if (document.fullscreenElement) {
