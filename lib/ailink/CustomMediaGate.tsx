@@ -99,7 +99,10 @@ export function CustomMediaGate(props: {
             ? 'Camera and microphone access was blocked. Allow access in the browser prompt, then try again.'
             : `Could not start camera and microphone: ${err.message}`,
         );
-        props.onError?.(err);
+        // We already switched to 'joining' (which unmounts the lobby preview),
+        // so a plain return here would leave the user stuck on a spinner with no
+        // way back. fail() shows the retry card and notifies the parent.
+        fail(err);
         return;
       }
       props.onReady({ ...values, videoEnabled: true, audioEnabled: true, previewTracks: tracks });
