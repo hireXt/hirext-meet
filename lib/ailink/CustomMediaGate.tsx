@@ -90,7 +90,11 @@ export function CustomMediaGate(props: {
       try {
         tracks = await createLocalTracks({
           audio: { deviceId: values.audioDeviceId || undefined },
-          video: { deviceId: values.videoDeviceId || undefined },
+          video: {
+            ...(values.videoDeviceId
+              ? { deviceId: values.videoDeviceId }
+              : { facingMode: 'user' as const }),
+          },
         });
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));

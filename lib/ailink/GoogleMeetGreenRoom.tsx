@@ -208,7 +208,9 @@ export function GoogleMeetGreenRoom({
             autoGainControl: true,
           }
         : false,
-      video: videoEnabled ? (selectedVideoId ? { deviceId: selectedVideoId } : true) : false,
+      video: videoEnabled
+        ? (selectedVideoId ? { deviceId: selectedVideoId } : { facingMode: 'user' as const })
+        : false,
     };
   }, [audioEnabled, videoEnabled, selectedAudioId, selectedVideoId, noiseCancellationEnabled, leaving]);
 
@@ -437,7 +439,9 @@ export function GoogleMeetGreenRoom({
               : false,
             video: videoEnabled
               ? {
-                  deviceId: selectedVideoId || undefined,
+                  ...(selectedVideoId
+                    ? { deviceId: selectedVideoId }
+                    : { facingMode: 'user' as const }),
                   resolution: { width: 1280, height: 720 },
                 }
               : false,
