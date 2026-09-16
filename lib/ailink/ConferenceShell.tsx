@@ -17,6 +17,7 @@ import {
   RoomConnectOptions,
   RoomEvent,
   RoomOptions,
+  Track,
   TrackPublishDefaults,
   VideoCaptureOptions,
   VideoCodec,
@@ -36,6 +37,23 @@ import { useSetupE2EE } from '@/lib/useSetupE2EE';
 import { useLowCPUOptimizer } from '@/lib/usePerformanceOptimizer';
 
 const SHOW_SETTINGS_MENU = process.env.NEXT_PUBLIC_SHOW_SETTINGS_MENU == 'true';
+
+/**
+ * Is the local camera actually publishing live frames?
+ *
+ * A publication can exist while being useless: the lobby acquired its preview
+ * tracks via usePreviewTracks and unmounts as we connect, and on some
+ * browsers/drivers stopping that stream ends the *new* one too — the hardware
+ * camera light stays on, the publication looks unmuted, but no frames ever
+ * reach the room, so the self-view renders black/empty.
+ */
+function isLocalCameraLive(room: Room): boolean {
+  const pub = room.localParticipant.getTrackPublication(Track.Source.Camera);
+  const mst = (pub?.track as unknown as { mediaStreamTrack?: MediaStreamTrack } | undefined)
+    ?.mediaStreamTrack;
+  if (!pub?.track || pub.isMuted) return false;
+  return !mst || mst.readyState === 'live';
+}
 
 /** Deep link to the post-interview report page in the main app (room name == interview sessionId). */
 const buildResultUrl = (resultBase: string | undefined, roomName: string | undefined) =>
@@ -185,6 +203,32 @@ export function ConferenceShell(props: ConferenceShellProps) {  const keyProvide
               await room.localParticipant.publishTrack(track);
             } catch (publishErr) {
               console.warn('Could not publish pre-acquired track:', publishErr);
+            }
+          }
+          // Release-and-catch. Those tracks were acquired while the lobby's own
+          // preview still held the device, and the lobby unmounts as we connect.
+          // If that teardown left the published track dead (camera light on, no
+          // frames) drop it and re-acquire straight from the device.
+          if (!cancelled && props.userChoices.videoEnabled && !isLocalCameraLive(room)) {
+            console.warn(
+              'Pre-acquired camera track is not live after publish (lobby teardown) — re-acquiring from the device.',
+            );
+            props.preAcquiredTracks.forEach((t) => {
+              if (t.kind === Track.Kind.Video) {
+                try {
+                  t.stop();
+                } catch {
+                  /* already stopped */
+                }
+              }
+            });
+            try {
+              await room.localParticipant.setCameraEnabled(true, {
+                deviceId: props.userChoices.videoDeviceId,
+              });
+            } catch (camErr) {
+              console.warn('Camera re-acquire failed (device may still be in use):', camErr);
+              toast('Camera not detected. Joined with audio only.');
             }
           }
         } else {

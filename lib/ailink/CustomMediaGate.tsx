@@ -28,7 +28,7 @@ export function CustomMediaGate(props: {
   onReady: (result: MediaGateResult) => void;
   onError?: (error: Error) => void;
 }) {
-  const [phase, setPhase] = React.useState<'checking' | 'ready' | 'failed'>('checking');
+  const [phase, setPhase] = React.useState<'checking' | 'ready' | 'joining' | 'failed'>('checking');
   const [fatal, setFatal] = React.useState<Error | null>(null);
 
   const fail = React.useCallback(
@@ -77,6 +77,15 @@ export function CustomMediaGate(props: {
   // inside the click gesture, so getUserMedia is allowed.
   const handleSubmit = React.useCallback(
     async (values: LocalUserChoices) => {
+      // Release the lobby preview BEFORE acquiring our own tracks. The preview
+      // holds the very same camera through usePreviewTracks, and requesting a
+      // second stream while it is still open makes some browsers/drivers hand
+      // back a stream that stops producing frames as soon as the first one
+      // closes — the classic "camera light on, self-view black" in the meeting.
+      // Switching phase unmounts the preview, which frees the device.
+      setPhase('joining');
+      await new Promise((resolve) => setTimeout(resolve, 60));
+
       let tracks: MediaGateResult['previewTracks'] | undefined;
       try {
         tracks = await createLocalTracks({
@@ -105,6 +114,18 @@ export function CustomMediaGate(props: {
           <span className="ail-spinner" aria-hidden="true" />
           <h1 className="ail-gate-title">Checking your devices…</h1>
           <p className="ail-gate-sub">Looking for your camera and microphone.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'joining') {
+    return (
+      <div className="ail-gate" role="status" aria-live="polite">
+        <div className="ail-gate-card">
+          <span className="ail-spinner" aria-hidden="true" />
+          <h1 className="ail-gate-title">Joining the interview…</h1>
+          <p className="ail-gate-sub">Starting your camera and microphone.</p>
         </div>
       </div>
     );
