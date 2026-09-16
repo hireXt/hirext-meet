@@ -303,7 +303,7 @@ function HomeLandingContent() {
             </div>
 
             {e2ee && (
-              <div style={{ marginTop: '12px', maxWidth: '460px' }}>
+              <div style={{ marginTop: '12px', width: '100%', maxWidth: '460px' }}>
                 <input
                   type="text"
                   placeholder="Optional custom passphrase (auto-generated if blank)"
@@ -311,10 +311,11 @@ function HomeLandingContent() {
                   onChange={(e) => setSharedPassphrase(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '8px 14px',
+                    padding: '10px 14px',
                     borderRadius: '8px',
                     border: '1px solid #dadce0',
-                    fontSize: '0.9rem',
+                    fontSize: '1rem',
+                    boxSizing: 'border-box',
                     outline: 'none',
                   }}
                 />

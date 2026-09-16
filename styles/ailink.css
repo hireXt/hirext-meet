@@ -569,8 +569,9 @@
 
 .ail-tile--speaking {
   box-shadow:
-    0 0 0 2px rgba(124, 92, 252, 0.65),
-    0 0 24px -6px rgba(124, 92, 252, 0.45);
+    0 0 0 3px #8ab4f8 !important,
+    0 0 16px -2px rgba(138, 180, 248, 0.5) !important;
+  border-color: #8ab4f8 !important;
 }
 
 .ail-tile-video {
@@ -815,9 +816,8 @@
   justify-content: center;
   gap: 6px;
   padding: 0 16px;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid var(--ail-border);
+  background: #202124;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 30;
 }
 
@@ -833,7 +833,7 @@
   border: 1px solid transparent;
   border-radius: var(--ail-radius-md);
   background: transparent;
-  color: var(--ail-fg-2);
+  color: #e8eaed;
   cursor: pointer;
   transition:
     background-color 0.15s ease,
@@ -843,8 +843,8 @@
 }
 
 .ail-dock-btn:hover:not(:disabled) {
-  background: rgba(18, 20, 43, 0.05);
-  color: var(--ail-fg);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 
 .ail-dock-btn:active:not(:disabled) {
@@ -943,17 +943,18 @@
 
 .ail-panel {
   position: absolute;
-  top: calc(var(--ail-nav-h) + 10px);
-  bottom: calc(var(--ail-dock-h) + 10px);
-  right: 12px;
-  width: min(384px, calc(100vw - 24px));
+  top: 16px;
+  bottom: calc(var(--ail-dock-h, 80px) + 16px);
+  right: 16px;
+  width: min(360px, calc(100vw - 24px));
   display: flex;
   flex-direction: column;
-  background: var(--ail-surface);
-  border: 1px solid var(--ail-border);
-  border-radius: var(--ail-radius-lg);
-  box-shadow: var(--ail-shadow-md);
-  z-index: 40;
+  background: #ffffff;
+  border: 1px solid #dadce0;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  z-index: 50;
+  overflow: hidden;
   opacity: 0;
   transform: translateX(10px);
   pointer-events: none;
@@ -977,11 +978,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 10px 10px 10px 18px;
-  border-bottom: 1px solid var(--ail-border);
-  font-size: 13.5px;
-  font-weight: 650;
-  color: var(--ail-fg);
+  padding: 16px 20px;
+  border-bottom: 1px solid #e8eaed;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #202124;
 }
 
 .ail-panel-count {
@@ -1146,6 +1147,28 @@
   border-radius: 12px;
   color: var(--ail-fg);
   font-size: 13px;
+}
+
+/* Fix chat theme inside dark in-call stage (.ail-root) */
+.ail-root .ail-chat .lk-chat-form-input {
+  background: #3c4043;
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #e8eaed;
+}
+
+.ail-root .ail-chat .lk-chat-form-input:focus {
+  border-color: #8ab4f8;
+  box-shadow: 0 0 0 3px rgba(138, 180, 248, 0.25);
+}
+
+.ail-root .ail-chat .lk-chat-entry-metadata {
+  color: #9aa0a6;
+}
+
+.ail-root .ail-chat .lk-chat-entry-content {
+  background: #3c4043;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #e8eaed;
 }
 
 /* ---------- settings menu overrides ---------- */
@@ -2846,34 +2869,7 @@
   box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
 }
 
-/* 4. Side Panels Google Meet Styling */
-.ail-panel {
-  position: absolute;
-  top: 16px;
-  bottom: calc(80px + 16px);
-  right: 16px;
-  width: 360px;
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  border: 1px solid #dadce0;
-  z-index: 50;
-  overflow: hidden;
-}
-
-.ail-panel-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #e8eaed;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: #202124;
-}
-
-.ail-panel-count {
-  background: #e8f0fe;
-  color: #1a73e8;
-  font-weight: 700;
-}
+/* 4. Side Panels Google Meet Styling (canonical definition maintained in side panels section) */
 
 /* 5. Meeting Ended Screen Google Meet Styling */
 .ail-ended-actions {
@@ -3147,8 +3143,8 @@
 
 .gm-greenroom-grid {
   display: grid;
-  grid-template-columns: minmax(380px, 1.35fr) minmax(320px, 0.9fr);
-  gap: clamp(28px, 4vw, 64px);
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.9fr);
+  gap: clamp(24px, 4vw, 64px);
   width: 100%;
   align-items: center;
 }
@@ -3607,11 +3603,24 @@
   }
 
   .gm-action-heading {
-    font-size: 1.85rem;
+    font-size: clamp(1.45rem, 4vw, 1.85rem);
   }
 }
 
 @media (max-width: 768px) {
+  .gm-action-buttons-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .gm-join-btn,
+  .gm-present-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
   .ail-prejoin-nav {
     padding: 0 16px;
     height: 56px;
@@ -3625,15 +3634,81 @@
     display: none !important;
   }
 
-  .gm-action-buttons-row {
-    flex-direction: column;
-    gap: 10px;
+  .gm-preview-device-status {
+    white-space: normal;
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
   }
 
-  .gm-join-btn,
-  .gm-present-btn {
-    width: 100%;
-    justify-content: center;
+  .gm-preview-device-status > span {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .gm-preview-card {
+    border-radius: 14px;
+    aspect-ratio: 16 / 10;
+  }
+
+  .gm-preview-dock {
+    bottom: 12px;
+    gap: 8px;
+    padding: 5px 8px;
+    max-width: calc(100% - 20px);
+  }
+
+  .gm-split-btn,
+  .ail-split-btn {
+    height: 42px;
+  }
+
+  .gm-split-btn-action,
+  .ail-split-btn-action {
+    width: 38px;
+    height: 42px;
+  }
+
+  .gm-split-btn-chevron,
+  .ail-split-btn-chevron {
+    width: 20px;
+    height: 42px;
+  }
+
+  .gm-dock-btn {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+@media (max-width: 380px) {
+  .gm-preview-dock {
+    gap: 5px;
+    padding: 4px 6px;
+  }
+
+  .gm-split-btn-action,
+  .ail-split-btn-action {
+    width: 34px;
+  }
+
+  .gm-split-btn-chevron,
+  .ail-split-btn-chevron {
+    width: 18px;
+  }
+
+  .gm-dock-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .ail-prejoin-code-pill {
+    padding: 4px 8px;
+    font-size: 11px;
   }
 }
 
@@ -4131,6 +4206,52 @@
 
 .gm-modal-btn-primary:hover {
   background: #1b66c9;
+}
+
+/* Modal mobile bottom sheet responsiveness */
+@media (max-width: 640px) {
+  .gm-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .gm-modal-card {
+    width: 100%;
+    max-width: 100%;
+    max-height: 85dvh;
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+  }
+
+  .gm-modal-body {
+    max-height: calc(85dvh - 140px);
+    padding: 16px;
+  }
+
+  .gm-modal-header {
+    padding: 16px 16px 0;
+  }
+
+  .gm-modal-tabs {
+    gap: 16px;
+  }
+
+  .gm-modal-footer {
+    padding: 12px 16px max(12px, env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Accessibility: prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 
