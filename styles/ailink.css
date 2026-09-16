@@ -435,6 +435,16 @@
   flex: none;
 }
 
+/* Mobile-only dock overflow menu items: hidden on desktop, surfaced inside
+   the "…" (More) button popover on phones. */
+.ail-menu-item--mobile {
+  display: none;
+}
+
+.ail-mobile-menu-divider {
+  display: none;
+}
+
 .ail-check {
   margin-left: auto;
 }
@@ -1625,10 +1635,11 @@
 @media (max-width: 640px) {
   /* nav: keep logo + room code + participants + Leave. The layout switch and
      the overflow ("…") menu are desktop affordances and just crowd the bar;
-     fullscreen lives on the stage, copy-invite is rarely used on phones. */
+     fullscreen lives on the stage, copy-invite is rarely used on phones.
+     NOTE: only the NAV menu is hidden — the dock's "…" (ail-menu) overflow
+     button is the mobile overflow container and must stay interactive. */
   .ail-v-divider,
-  .ail-nav-layout-menu,
-  .ail-menu {
+  .ail-nav-layout-menu {
     display: none;
   }
 
@@ -3000,6 +3011,122 @@
     width: 100%;
     height: 70vh;
     border-radius: 20px 20px 0 0;
+  }
+}
+
+/* 6b. Portrait-first mobile meeting layout (phones ≤ 640px).
+   The desktop grid is landscape minded; on a portrait phone we:
+   - let a single self-view fill the whole stage instead of a small 16:9 slab,
+   - swap the wide 3-col grids for 2-col portrait-friendly stacks,
+   - condense the bottom dock and surface the "…" (More) overflow so the
+     controls that are hidden inline (hand / present / noise) live behind it. */
+@media (max-width: 640px) {
+  .ail-dock-more-btn {
+    display: none;
+  }
+
+  .ail-menu-item--mobile {
+    display: flex;
+  }
+
+  .ail-mobile-menu-divider {
+    display: block;
+    height: 1px;
+    margin: 5px 0;
+    background: rgba(255, 255, 255, 0.1);
+    flex: none;
+  }
+
+  .ail-gm-dock {
+    padding: 0 10px calc(env(safe-area-inset-bottom, 0px) * 0.6);
+  }
+
+  .ail-dock-center {
+    gap: 6px;
+  }
+
+  .ail-dock-right {
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .ail-dock-action-btn {
+    width: 42px;
+    height: 42px;
+  }
+
+  /* single participant: fill the stage, don't shrink to a landscape slab */
+  .ail-grid-container {
+    gap: 8px;
+    padding: 0;
+  }
+
+  .ail-grid-container[data-count="1"] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    max-width: 100%;
+    max-height: none;
+    aspect-ratio: auto;
+    margin: 0;
+    padding: 0 8px;
+  }
+
+  .ail-grid-container[data-count="3"],
+  .ail-grid-container[data-count="4"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    max-width: 100%;
+    margin: 0;
+  }
+
+  .ail-grid-container[data-count="5"],
+  .ail-grid-container[data-count="6"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    max-width: 100%;
+    margin: 0;
+  }
+
+  .ail-grid-container[data-count="7"],
+  .ail-grid-container[data-count="8"],
+  .ail-grid-container[data-count="9"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    max-width: 100%;
+    margin: 0;
+  }
+
+  .ail-grid-cell .ail-tile {
+    border-radius: 12px;
+  }
+
+  .ail-dock-center {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 400px) {
+  .ail-dock-center {
+    gap: 4px;
+  }
+
+  .ail-dock-action-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .ail-circle-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .ail-split-btn-action {
+    width: 38px;
+  }
+
+  .ail-split-btn-chevron {
+    width: 20px;
   }
 }
 

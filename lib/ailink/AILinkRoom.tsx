@@ -197,7 +197,10 @@ function Tile({
   const micMuted = useIsTrackMuted(participant, Track.Source.Microphone);
   const isSpeaking = useIsSpeaking(participant);
   const hasVideo =
-    isTrackReference(trackRef) && !!trackRef.publication && !trackRef.publication.isMuted;
+    isTrackReference(trackRef) &&
+    !!trackRef.publication &&
+    !!trackRef.publication.track &&
+    !trackRef.publication.isMuted;
   const showVideo = isScreen ? hasVideo : hasVideo && !camMuted;
   const name = displayName(participant);
 
@@ -732,10 +735,14 @@ function GoogleMeetDock({
           )}
         </div>
 
-        {/* Raise hand toggle */}
+        {/* Raise hand toggle (folded into More on mobile) */}
         <button
           type="button"
-          className={cx('ail-circle-btn', handRaised && 'ail-circle-btn--active')}
+          className={cx(
+            'ail-circle-btn',
+            'ail-dock-more-btn',
+            handRaised && 'ail-circle-btn--active',
+          )}
           onClick={() => {
             setHandRaised((v) => !v);
             toast(handRaised ? 'Lowered hand' : 'You raised your hand');
@@ -746,10 +753,14 @@ function GoogleMeetDock({
           <HandIcon size={20} />
         </button>
 
-        {/* Screen share toggle */}
+        {/* Screen share toggle (folded into More on mobile) */}
         <button
           type="button"
-          className={cx('ail-circle-btn', screenShare.enabled && 'ail-circle-btn--active')}
+          className={cx(
+            'ail-circle-btn',
+            'ail-dock-more-btn',
+            screenShare.enabled && 'ail-circle-btn--active',
+          )}
           onClick={() => screenShare.toggle()}
           disabled={screenShare.pending}
           title={screenShare.enabled ? 'Stop presenting' : 'Present now (share screen)'}
@@ -758,10 +769,14 @@ function GoogleMeetDock({
           <ScreenShareIcon size={20} />
         </button>
 
-        {/* AI Noise Cancellation (Krisp) Toggle — always visible in dock */}
+        {/* AI Noise Cancellation (Krisp) Toggle — folded into More on mobile */}
         <button
           type="button"
-          className={cx('ail-circle-btn', noiseCancellation.enabled && 'ail-circle-btn--active')}
+          className={cx(
+            'ail-circle-btn',
+            'ail-dock-more-btn',
+            noiseCancellation.enabled && 'ail-circle-btn--active',
+          )}
           onClick={noiseCancellation.toggle}
           disabled={noiseCancellation.pending}
           title={noiseCancellation.enabled ? 'Noise Suppression: ON (click to disable)' : 'Noise Suppression: OFF (click to enable)'}
@@ -784,6 +799,45 @@ function GoogleMeetDock({
           </button>
           {moreOpen && (
             <div className="ail-menu-popover ail-menu-popover--up" role="menu">
+              {/* Mobile-only overflow controls (hidden on desktop inline) */}
+              <button
+                type="button"
+                className="ail-menu-item ail-menu-item--mobile"
+                onClick={() => {
+                  setHandRaised((v) => !v);
+                  setMoreOpen(false);
+                  toast(handRaised ? 'Lowered hand' : 'You raised your hand');
+                }}
+              >
+                <HandIcon size={16} />
+                {handRaised ? 'Lower hand' : 'Raise hand'}
+              </button>
+              <button
+                type="button"
+                className="ail-menu-item ail-menu-item--mobile"
+                onClick={() => {
+                  screenShare.toggle();
+                  setMoreOpen(false);
+                }}
+              >
+                <ScreenShareIcon size={16} />
+                {screenShare.enabled ? 'Stop presenting' : 'Present now'}
+              </button>
+              <button
+                type="button"
+                className="ail-menu-item ail-menu-item--mobile"
+                onClick={() => {
+                  noiseCancellation.toggle();
+                  setMoreOpen(false);
+                }}
+              >
+                <ShieldCheckIcon size={16} />
+                <span>Noise Suppression</span>
+                <span className="ail-check">
+                  {noiseCancellation.enabled && <CheckIcon size={14} />}
+                </span>
+              </button>
+              <div className="ail-mobile-menu-divider" />
               {!recordingEnforced && (
               <button
                 type="button"
@@ -1383,7 +1437,31 @@ function VideoStage({
   const cameraTracks = tracks.filter((t) => t.source === Track.Source.Camera);
   const screenTracks = tracks.filter((t) => t.source === Track.Source.ScreenShare);
 
-  const avatarTrack = cameraTracks.find((t) =>
+  // useTracks with a placeholder can briefly (and sometimes fully) miss the
+  // LOCAL camera right after joining — the hardware light comes on before
+  // LiveKit exposes the publication. Rebuild the local camera TrackReference
+  // directly from the local participant so the self video shows up in the grid
+  // as soon as the camera is live instead of rendering an avatar/empty viewport.
+  const { localParticipant } = useLocalParticipant();
+  const localHasRealCamera = cameraTracks.some(
+    (t) => t.participant.isLocal && t.source === Track.Source.Camera && isTrackReference(t),
+  );
+  const cameraTracksResolved = React.useMemo(() => {
+    const localCameraPub = localParticipant?.getTrackPublication(Track.Source.Camera);
+    if (!localHasRealCamera && localCameraPub) {
+      return [
+        {
+          participant: localParticipant,
+          source: Track.Source.Camera,
+          publication: localCameraPub,
+        },
+        ...cameraTracks.filter((t) => !(t.participant.isLocal && t.source === Track.Source.Camera)),
+      ];
+    }
+    return cameraTracks;
+  }, [cameraTracks, localParticipant, localHasRealCamera]);
+
+  const avatarTrack = cameraTracksResolved.find((t) =>
     ['monika-avatar', 'rosie', 'avatar'].some(
       (k) =>
         t.participant.identity.toLowerCase().includes(k) ||
@@ -1400,15 +1478,15 @@ function VideoStage({
       {museTalkEnabled ? (
         <MuseTalkStage
           avatarTrack={avatarTrack}
-          candidateTracks={cameraTracks.filter((t) => t !== avatarTrack)}
+          candidateTracks={cameraTracksResolved.filter((t) => t !== avatarTrack)}
         />
       ) : screenTracks.length > 0 || layout === 'spotlight' ? (
         <SpotlightStage
           screenTracks={screenTracks}
-          cameraTracks={cameraTracks}
+          cameraTracks={cameraTracksResolved}
         />
       ) : (
-        <GoogleGridStage tracks={cameraTracks} />
+        <GoogleGridStage tracks={cameraTracksResolved} />
       )}
     </div>
   );
