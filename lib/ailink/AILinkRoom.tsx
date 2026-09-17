@@ -1237,6 +1237,8 @@ export function AILinkRoom({
     );
   }, [participants]);
 
+  const isAIMeeting = museTalkEnabled || hasAIAvatar;
+
   // When entering an AI meeting (museTalkEnabled or AI avatar session), attempt full screen safely
   React.useEffect(() => {
     if (!isAIMeeting) return;
