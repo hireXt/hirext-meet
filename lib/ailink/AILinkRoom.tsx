@@ -154,12 +154,22 @@ function trackKey(ref: TrackReferenceOrPlaceholder): string {
  */
 function LocalSelfView({ mst, name }: { mst: MediaStreamTrack; name: string }) {
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const [aspect, setAspect] = React.useState<string>('16 / 9');
+
   React.useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
     const stream = new MediaStream([mst]);
     el.srcObject = stream;
     el.play().catch(() => undefined);
+
+    const s = mst.getSettings?.();
+    if (s?.width && s?.height) {
+      setAspect(`${s.width} / ${s.height}`);
+    } else if (s?.aspectRatio) {
+      setAspect(`${s.aspectRatio}`);
+    }
+
     return () => {
       try {
         el.pause();
@@ -167,9 +177,29 @@ function LocalSelfView({ mst, name }: { mst: MediaStreamTrack; name: string }) {
       el.srcObject = null;
     };
   }, [mst]);
+
+  const handleMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const v = e.currentTarget;
+    if (v.videoWidth && v.videoHeight) {
+      setAspect(`${v.videoWidth} / ${v.videoHeight}`);
+    }
+  };
+
   return (
-    <div className="ail-tile ail-tile--self" data-testid="local-selfview-tile">
-      <video ref={videoRef} className="ail-tile-video" autoPlay playsInline muted />
+    <div
+      className="ail-tile ail-tile--self"
+      data-testid="local-selfview-tile"
+      style={{ aspectRatio: aspect, ['--cam-aspect-ratio' as any]: aspect }}
+    >
+      <video
+        ref={videoRef}
+        className="ail-tile-video"
+        autoPlay
+        playsInline
+        muted
+        onLoadedMetadata={handleMetadata}
+        style={{ objectFit: 'contain' }}
+      />
       <div className="ail-chip ail-name-pill">
         <span>{`${name} (You)`}</span>
       </div>
@@ -238,14 +268,45 @@ function Tile({
   isSpotlight = false,
   onRescueCamera,
   camRescuePending = false,
+  isSelfPip = false,
+  onVideoMetadata,
 }: {
   trackRef: TrackReferenceOrPlaceholder;
   isSpotlight?: boolean;
   onRescueCamera?: () => void;
   camRescuePending?: boolean;
+  isSelfPip?: boolean;
+  onVideoMetadata?: (width: number, height: number) => void;
 }) {
   const { participant, source } = trackRef;
   const isScreen = source === Track.Source.ScreenShare;
+  const isSelf = participant.isLocal || isSelfPip;
+  const tileRef = React.useRef<HTMLDivElement | null>(null);
+
+  // When self camera renders, detect native feed resolution so container doesn't crop
+  React.useEffect(() => {
+    if (!isSelf || !onVideoMetadata) return;
+    const el = tileRef.current;
+    if (!el) return;
+    const vid = el.querySelector('video');
+    if (!vid) return;
+
+    const reportSize = () => {
+      if (vid.videoWidth && vid.videoHeight) {
+        onVideoMetadata(vid.videoWidth, vid.videoHeight);
+      }
+    };
+
+    vid.addEventListener('loadedmetadata', reportSize);
+    vid.addEventListener('resize', reportSize);
+    reportSize();
+
+    return () => {
+      vid.removeEventListener('loadedmetadata', reportSize);
+      vid.removeEventListener('resize', reportSize);
+    };
+  });
+
   const camMuted = useIsTrackMuted(participant, Track.Source.Camera);
   const micMuted = useIsTrackMuted(participant, Track.Source.Microphone);
   const isSpeaking = useIsSpeaking(participant);
@@ -270,6 +331,7 @@ function Tile({
 
   return (
     <div
+      ref={tileRef}
       className={cx(
         'ail-tile',
         isSpeaking && !micMuted && 'ail-tile--speaking',
@@ -282,7 +344,7 @@ function Tile({
         <VideoTrack
           trackRef={trackRef as any}
           className="ail-tile-video"
-          style={{ objectFit: isScreen ? 'contain' : 'cover' }}
+          style={{ objectFit: (isScreen || isSelf) ? 'contain' : 'cover' }}
         />
       ) : (
         <div className="ail-tile-avatar">
@@ -1758,6 +1820,25 @@ function MuseTalkStage({
   }
   const localTracks = mergedCandidateTracks.filter((t) => t.participant.isLocal && t.source === Track.Source.Camera);
 
+  const [candidateAspect, setCandidateAspect] = React.useState<string>('16 / 9');
+
+  React.useEffect(() => {
+    const mst = (localCameraPub?.track as any)?.mediaStreamTrack as MediaStreamTrack | undefined;
+    if (!mst) return;
+    const s = mst.getSettings?.();
+    if (s?.width && s?.height) {
+      setCandidateAspect(`${s.width} / ${s.height}`);
+    } else if (s?.aspectRatio) {
+      setCandidateAspect(`${s.aspectRatio}`);
+    }
+  }, [localCameraPub]);
+
+  const handleSelfMetadata = React.useCallback((w: number, h: number) => {
+    if (w > 0 && h > 0) {
+      setCandidateAspect(`${w} / ${h}`);
+    }
+  }, []);
+
   return (
     <>
       <div
@@ -1787,9 +1868,22 @@ function MuseTalkStage({
         )}
       </div>
       {localTracks.length > 0 && (
-        <div className="ail-candidate-pip">
+        <div
+          className="ail-candidate-pip"
+          style={{
+            aspectRatio: candidateAspect,
+            ['--cam-aspect-ratio' as any]: candidateAspect,
+          }}
+        >
           {localTracks.map((ref) => (
-            <Tile key={trackKey(ref)} trackRef={ref} onRescueCamera={onRescueCamera} camRescuePending={camRescuePending} />
+            <Tile
+              key={trackKey(ref)}
+              trackRef={ref}
+              onRescueCamera={onRescueCamera}
+              camRescuePending={camRescuePending}
+              isSelfPip={true}
+              onVideoMetadata={handleSelfMetadata}
+            />
           ))}
         </div>
       )}
