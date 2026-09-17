@@ -25,6 +25,7 @@ import { AudioVideoTestModal } from './AudioVideoTestModal';
 export interface GoogleMeetGreenRoomProps {
   roomName: string;
   defaultUsername?: string;
+  isNameFixed?: boolean;
   defaultVideoEnabled?: boolean;
   defaultAudioEnabled?: boolean;
   onSubmit: (choices: LocalUserChoices) => void;
@@ -111,6 +112,7 @@ function AudioWaveIndicator({
 export function GoogleMeetGreenRoom({
   roomName,
   defaultUsername = '',
+  isNameFixed = false,
   defaultVideoEnabled = true,
   defaultAudioEnabled = true,
   onSubmit,
@@ -140,8 +142,12 @@ export function GoogleMeetGreenRoom({
 
   // Restore persisted state from localStorage after mount (avoids SSR/client hydration mismatch)
   React.useEffect(() => {
-    const savedUsername = !defaultUsername ? (localStorage.getItem('hx_meet_username') || '') : defaultUsername;
-    if (savedUsername) setUsername(savedUsername);
+    if (isNameFixed && defaultUsername) {
+      setUsername(defaultUsername);
+    } else {
+      const savedUsername = !defaultUsername ? (localStorage.getItem('hx_meet_username') || '') : defaultUsername;
+      if (savedUsername) setUsername(savedUsername);
+    }
 
     const savedSpeaker = localStorage.getItem('hx_meet_speaker_id');
     if (savedSpeaker) setSelectedSpeakerId(savedSpeaker);
@@ -150,7 +156,7 @@ export function GoogleMeetGreenRoom({
     // Default to true (noise cancellation on) when no saved preference
     setNoiseCancellationEnabled(savedKrisp !== null ? savedKrisp === 'true' : true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [defaultUsername, isNameFixed]);
 
   const videoEl = React.useRef<HTMLVideoElement | null>(null);
   const settingsRef = React.useRef<HTMLDivElement>(null);
@@ -826,9 +832,11 @@ export function GoogleMeetGreenRoom({
                   required
                   placeholder="Enter your name"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="gm-join-input"
-                  autoFocus
+                  onChange={(e) => !isNameFixed && setUsername(e.target.value)}
+                  readOnly={isNameFixed}
+                  disabled={isNameFixed}
+                  className={`gm-join-input ${isNameFixed ? 'gm-join-input--disabled' : ''}`}
+                  autoFocus={!isNameFixed}
                 />
               </div>
 

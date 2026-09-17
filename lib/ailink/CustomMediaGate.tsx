@@ -25,6 +25,8 @@ export interface MediaGateResult extends LocalUserChoices {
  * "Check devices & join". No continue-without-media path: cam+mic mandatory.
  */
 export function CustomMediaGate(props: {
+  defaultUsername?: string;
+  isNameFixed?: boolean;
   onReady: (result: MediaGateResult) => void;
   onError?: (error: Error) => void;
 }) {
@@ -177,7 +179,8 @@ export function CustomMediaGate(props: {
       <main className="ail-prejoin-main">
         <GoogleMeetGreenRoom
           roomName="meeXt AI Interview"
-          defaultUsername=""
+          defaultUsername={props.defaultUsername || ''}
+          isNameFixed={props.isNameFixed}
           defaultVideoEnabled={true}
           defaultAudioEnabled={true}
           onSubmit={handleSubmit}
