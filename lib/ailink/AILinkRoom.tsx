@@ -1237,9 +1237,7 @@ export function AILinkRoom({
     );
   }, [participants]);
 
-  const isAIMeeting = museTalkEnabled || hasAIAvatar;
-
-  // When entering an AI meeting (museTalkEnabled or AI avatar session), automatically enter full screen
+  // When entering an AI meeting (museTalkEnabled or AI avatar session), attempt full screen safely
   React.useEffect(() => {
     if (!isAIMeeting) return;
 
@@ -1248,26 +1246,13 @@ export function AILinkRoom({
       if (document.fullscreenElement || attempted) return;
       attempted = true;
       try {
-        await rootRef.current?.requestFullscreen();
-      } catch (err) {
-        // Browser may require a direct user interaction/gesture; retry on first document click/tap
-        const onFirstInteraction = async () => {
-          document.removeEventListener('click', onFirstInteraction);
-          document.removeEventListener('touchend', onFirstInteraction);
-          if (!document.fullscreenElement) {
-            try {
-              await rootRef.current?.requestFullscreen();
-            } catch {}
-          }
-        };
-        document.addEventListener('click', onFirstInteraction, { once: true });
-        document.addEventListener('touchend', onFirstInteraction, { once: true });
+        await rootRef.current?.requestFullscreen?.();
+      } catch (_) {
+        // Browsers block non-user-gesture fullscreen requests silently
       }
     };
 
-    // Trigger auto fullscreen immediately upon mounting the AI meeting room
-    const timer = setTimeout(requestAutoFullscreen, 100);
-    return () => clearTimeout(timer);
+    requestAutoFullscreen();
   }, [isAIMeeting]);
 
   const toggleFullscreen = React.useCallback(async () => {
@@ -1308,11 +1293,10 @@ export function AILinkRoom({
       />
 
       <main className="ail-stage-wrap">
-        {/* Self-view, Google-Meet style: the LIVE local track attached
-            directly — no mute-flag gating. This is how livekit's own meet app
-            renders it (their ParticipantTile attaches the track object). If the
-            track is alive the user sees themselves, period. */}
-        {localVideoLive && localVideoMst && (
+        {/* Self-view: render top-right floating tile for standard meetings only.
+            In AI interviews (MuseTalk/avatar), the candidate tile is rendered
+            inside the stage (ail-candidate-pip), preventing dual/ghost self-view. */}
+        {!isAIMeeting && localVideoLive && localVideoMst && (
           <div className="ail-selfview" data-testid="local-selfview">
             <LocalSelfView mst={localVideoMst} name={displayName(localParticipant)} />
           </div>

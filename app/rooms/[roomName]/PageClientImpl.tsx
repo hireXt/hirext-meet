@@ -20,6 +20,7 @@ export function PageClientImpl(props: {
   hq: boolean;
   codec: import('livekit-client').VideoCodec;
   singlePeerConnection: boolean;
+  resultBase?: string;
 }) {
   const [preJoinChoices, setPreJoinChoices] = React.useState<LocalUserChoices | undefined>(
     undefined,
@@ -156,6 +157,7 @@ React.useEffect(() => {
           singlePeerConnection={props.singlePeerConnection}
           museTalkEnabled={meta?.museTalkEnabled === true}
           recordingEnabled={meta?.recording === true}
+          resultBase={props.resultBase}
           label="meeXt"
         />
       </main>

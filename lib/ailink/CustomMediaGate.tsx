@@ -73,17 +73,19 @@ export function CustomMediaGate(props: {
   }, [fail]);
 
   // STEP 2 — live preview via PreJoin (camera tile + mic + device pickers),
-  // then on Join acquire real publishable tracks with createLocalTracks —
-  // inside the click gesture, so getUserMedia is allowed.
+  // then on Join reuse publishable tracks acquired in the click gesture
+  // (or acquire if not provided).
   const handleSubmit = React.useCallback(
     async (values: LocalUserChoices) => {
-      // Release the lobby preview BEFORE acquiring our own tracks. The preview
-      // holds the very same camera through usePreviewTracks, and requesting a
-      // second stream while it is still open makes some browsers/drivers hand
-      // back a stream that stops producing frames as soon as the first one
-      // closes — the classic "camera light on, self-view black" in the meeting.
-      // Switching phase unmounts the preview, which frees the device.
       setPhase('joining');
+
+      // GoogleMeetGreenRoom already cleanly teardown the preview and acquired joinTracks
+      const preTracks = (values as unknown as { joinTracks?: MediaGateResult['previewTracks'] }).joinTracks;
+      if (preTracks && preTracks.length > 0) {
+        props.onReady({ ...values, videoEnabled: true, audioEnabled: true, previewTracks: preTracks });
+        return;
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 60));
 
       let tracks: MediaGateResult['previewTracks'] | undefined;
@@ -103,15 +105,12 @@ export function CustomMediaGate(props: {
             ? 'Camera and microphone access was blocked. Allow access in the browser prompt, then try again.'
             : `Could not start camera and microphone: ${err.message}`,
         );
-        // We already switched to 'joining' (which unmounts the lobby preview),
-        // so a plain return here would leave the user stuck on a spinner with no
-        // way back. fail() shows the retry card and notifies the parent.
         fail(err);
         return;
       }
       props.onReady({ ...values, videoEnabled: true, audioEnabled: true, previewTracks: tracks });
     },
-    [props],
+    [props, fail],
   );
 
   if (phase === 'checking') {
