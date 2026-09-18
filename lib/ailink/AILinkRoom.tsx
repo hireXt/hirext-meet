@@ -1839,6 +1839,26 @@ function MuseTalkStage({
     }
   }, []);
 
+  // Detect remote participants who have an active (unmuted) microphone track —
+  // used to show an audio-only tile when the AI avatar video isn't ready yet.
+  const micTracks = useTracks([{ source: Track.Source.Microphone, withPlaceholder: false }], {
+    onlySubscribed: true,
+  });
+  const activeRemoteMicParticipants = React.useMemo(
+    () =>
+      micTracks
+        .filter(
+          (t) =>
+            !t.participant.isLocal &&
+            isTrackReference(t) &&
+            t.publication &&
+            !t.publication.isMuted &&
+            t.publication.track,
+        )
+        .map((t) => t.participant),
+    [micTracks],
+  );
+
   return (
     <>
       <div
@@ -1855,6 +1875,13 @@ function MuseTalkStage({
         ) : ended ? (
           <div className="ail-muse-connecting">
             <p>You have left the interview.</p>
+          </div>
+        ) : activeRemoteMicParticipants.length > 0 ? (
+          /* Remote participant is audio-active but no video yet — show audio-only tile */
+          <div className="ail-muse-connecting ail-muse-audio-tiles">
+            {activeRemoteMicParticipants.map((p) => (
+              <AudioOnlyTile key={p.identity} participant={p} />
+            ))}
           </div>
         ) : (
           <div className="ail-muse-connecting">
@@ -1888,5 +1915,25 @@ function MuseTalkStage({
         </div>
       )}
     </>
+  );
+}
+
+/** Audio-only tile shown when a remote participant is speaking but has no video. */
+function AudioOnlyTile({ participant }: { participant: Participant }) {
+  const isSpeaking = useIsSpeaking(participant);
+  const name = displayName(participant);
+
+  return (
+    <div className={cx('ail-audio-only-tile', isSpeaking && 'ail-audio-only-tile--speaking')}>
+      <div className="ail-audio-only-avatar">
+        <Avatar name={name} size={72} />
+        {isSpeaking && <span className="ail-audio-only-ring" aria-hidden="true" />}
+      </div>
+      <span className="ail-audio-only-name">{name}</span>
+      <span className="ail-audio-only-badge">
+        <MicIcon size={13} />
+        Audio only
+      </span>
+    </div>
   );
 }

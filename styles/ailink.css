@@ -653,6 +653,77 @@
   letter-spacing: 0.005em;
 }
 
+/* Audio-only tile layout when multiple audio-only participants are shown */
+.ail-muse-audio-tiles {
+  gap: 24px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Single audio-only participant tile (no video, mic active) */
+.ail-audio-only-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 28px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  transition: border-color 0.2s ease, background 0.2s ease;
+  min-width: 160px;
+}
+
+.ail-audio-only-tile--speaking {
+  border-color: rgba(52, 168, 83, 0.55);
+  background: rgba(52, 168, 83, 0.08);
+}
+
+.ail-audio-only-avatar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Pulsing ring around avatar when speaking */
+.ail-audio-only-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(52, 168, 83, 0.7);
+  animation: ail-audio-ring-pulse 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes ail-audio-ring-pulse {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50%       { opacity: 0.35; transform: scale(1.08); }
+}
+
+.ail-audio-only-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ail-audio-only-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.03em;
+}
+
 /* candidate self-view, bottom-right pip over the avatar */
 
 .ail-candidate-pip {
