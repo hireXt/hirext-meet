@@ -1844,20 +1844,24 @@ function MuseTalkStage({
   const micTracks = useTracks([{ source: Track.Source.Microphone, withPlaceholder: false }], {
     onlySubscribed: true,
   });
-  const activeRemoteMicParticipants = React.useMemo(
-    () =>
-      micTracks
-        .filter(
-          (t) =>
-            !t.participant.isLocal &&
-            isTrackReference(t) &&
-            t.publication &&
-            !t.publication.isMuted &&
-            t.publication.track,
-        )
-        .map((t) => t.participant),
-    [micTracks],
-  );
+  const activeRemoteMicParticipants = React.useMemo(() => {
+    const seen = new Set<string>();
+    const result: Participant[] = [];
+    for (const t of micTracks) {
+      if (
+        !t.participant.isLocal &&
+        isTrackReference(t) &&
+        t.publication &&
+        !t.publication.isMuted &&
+        t.publication.track &&
+        !seen.has(t.participant.identity)
+      ) {
+        seen.add(t.participant.identity);
+        result.push(t.participant);
+      }
+    }
+    return result;
+  }, [micTracks]);
 
   return (
     <>
