@@ -44,6 +44,23 @@ function decodeRecordingFlag(token: string): boolean {
   }
 }
 
+/**
+ * Decode the candidate name from the signed JWT token's payload or metadata.
+ */
+function decodeCandidateName(token: string): string | undefined {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return undefined;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const payload = JSON.parse(atob(padded));
+    const meta = typeof payload.metadata === 'string' ? JSON.parse(payload.metadata) : payload.metadata;
+    return meta?.candidateName || payload?.name || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export default async function CustomRoomConnection(props: {
   searchParams: Promise<{
     liveKitUrl?: string;
@@ -51,9 +68,10 @@ export default async function CustomRoomConnection(props: {
     codec?: string;
     singlePC?: string;
     resultBase?: string;
+    name?: string;
   }>;
 }) {
-  const { liveKitUrl, token, codec, singlePC, resultBase } = await props.searchParams;
+  const { liveKitUrl, token, codec, singlePC, resultBase, name } = await props.searchParams;
   if (typeof liveKitUrl !== 'string') {
     return <h2>Missing server URL</h2>;
   }
@@ -66,6 +84,9 @@ export default async function CustomRoomConnection(props: {
 
   const museTalkEnabled = decodeMuseTalkFlag(token);
   const recordingEnabled = decodeRecordingFlag(token);
+  const tokenCandidateName = decodeCandidateName(token);
+  const candidateName = (name && name.trim()) || tokenCandidateName;
+  const isNameFixed = Boolean(candidateName);
 
   return (
     <main style={{ height: '100%', position: 'relative' }}>
@@ -77,6 +98,8 @@ export default async function CustomRoomConnection(props: {
         museTalkEnabled={museTalkEnabled}
         recordingEnabled={recordingEnabled}
         resultBase={resultBase}
+        candidateName={candidateName}
+        isNameFixed={isNameFixed}
       />
     </main>
   );

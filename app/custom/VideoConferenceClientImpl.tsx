@@ -13,6 +13,8 @@ export function VideoConferenceClientImpl(props: {
   museTalkEnabled?: boolean;
   recordingEnabled?: boolean;
   resultBase?: string;
+  candidateName?: string;
+  isNameFixed?: boolean;
 }) {
   // Gate: nothing connects until the user passes the mandatory device check.
   // `gate` holds the user's name + device ids + tracks acquired in the click.
@@ -24,6 +26,8 @@ export function VideoConferenceClientImpl(props: {
     return (
       <main style={{ height: '100%', position: 'relative' }}>
         <CustomMediaGate
+          defaultUsername={props.candidateName}
+          isNameFixed={props.isNameFixed}
           onReady={(result) => {
             setGateError(null);
             setGate(result);
