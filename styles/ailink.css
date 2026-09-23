@@ -464,6 +464,19 @@
   box-shadow: var(--ail-shadow-sm);
 }
 
+button.ail-rec-pill {
+  cursor: pointer;
+  user-select: none;
+  font-family: inherit;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button.ail-rec-pill:active {
+  transform: scale(0.96);
+}
+
 .ail-rec-dot {
   width: 8px;
   height: 8px;
@@ -1713,6 +1726,13 @@
     display: none;
   }
 
+  .ail-rec-pill.ail-rec-pill--show-time .ail-rec-time,
+  .ail-rec-pill[data-show-time="true"] .ail-rec-time,
+  .ail-rec-pill:active .ail-rec-time,
+  .ail-rec-pill:focus-visible .ail-rec-time {
+    display: inline-block !important;
+  }
+
   /* floating CTAs clear the shorter dock */
   .ail-start-audio,
   .ail-rec-float {
@@ -2162,7 +2182,13 @@
   gap: 12px;
   color: #e8eaed;
   font-size: 14px;
-  min-width: 200px;
+  min-width: 100px;
+  max-width: 25%;
+  flex: 1 1 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  z-index: 1;
 }
 
 .ail-dock-time {
@@ -2191,6 +2217,9 @@
   border-radius: 6px;
   transition: background-color 0.15s ease;
   font-family: inherit;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ail-dock-code:hover {
@@ -2199,6 +2228,9 @@
 
 .ail-dock-code span:first-child {
   text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ail-dock-center {
@@ -2206,6 +2238,8 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
+  flex: 2 1 auto;
+  z-index: 2;
 }
 
 .ail-circle-btn {
@@ -2570,7 +2604,10 @@
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  min-width: 200px;
+  min-width: 100px;
+  max-width: 25%;
+  flex: 1 1 0;
+  z-index: 1;
 }
 
 .ail-dock-action-btn {

@@ -425,6 +425,7 @@ function TopNav(props: TopNavProps) {
   const room = useRoomContext();
   const [roomMenuOpen, setRoomMenuOpen] = React.useState(false);
   const [layoutMenuOpen, setLayoutMenuOpen] = React.useState(false);
+  const [showRecTimeMobile, setShowRecTimeMobile] = React.useState(false);
   const roomMenuRef = React.useRef<HTMLDivElement>(null);
   useClickOutside(roomMenuRef, roomMenuOpen, () => setRoomMenuOpen(false));
 
@@ -486,11 +487,23 @@ function TopNav(props: TopNavProps) {
 
       <div className="ail-nav-right">
         {props.recording.isRecording && (
-          <div className="ail-rec-pill" title={`Recording — ${props.recording.durationLabel}`}>
+          <button
+            type="button"
+            className={cx('ail-rec-pill', showRecTimeMobile && 'ail-rec-pill--show-time')}
+            data-show-time={showRecTimeMobile ? 'true' : 'false'}
+            onClick={() => {
+              setShowRecTimeMobile((v) => !v);
+              if (!showRecTimeMobile && props.recording.durationLabel) {
+                toast(`Recording time: ${props.recording.durationLabel}`, { duration: 2500 });
+              }
+            }}
+            title={`Recording — ${props.recording.durationLabel} (Tap to show time)`}
+            aria-label={`Recording: ${props.recording.durationLabel}`}
+          >
             <span className="ail-rec-dot" />
             <span className="ail-rec-label">REC</span>
             <span className="ail-rec-time">{props.recording.durationLabel}</span>
-          </div>
+          </button>
         )}
 
         <div className="ail-nav-layout-menu">
@@ -633,14 +646,108 @@ function GoogleMeetDock({
     }
   }, [refreshDevices]);
 
+  const [micActionPending, setMicActionPending] = React.useState(false);
+  const [cameraActionPending, setCameraActionPending] = React.useState(false);
+
+  const handleToggleMic = async () => {
+    if (micActionPending) return;
+    setMicActionPending(true);
+    try {
+      const lp = room.localParticipant;
+      if (!mic.enabled) {
+        // Turning ON microphone: ensure track is enabled and unmuted
+        if (lp && !lp.isMicrophoneEnabled) {
+          await lp.setMicrophoneEnabled(true, activeAudioId ? { deviceId: activeAudioId } : undefined).catch(() => undefined);
+        }
+        mic.toggle();
+        const pub = lp?.getTrackPublication(Track.Source.Microphone);
+        const track = pub?.track as import('livekit-client').LocalAudioTrack | undefined;
+        if (track && track.isMuted) {
+          await track.unmute().catch(() => undefined);
+        }
+      } else {
+        // Turning OFF microphone
+        if (lp && lp.isMicrophoneEnabled) {
+          await lp.setMicrophoneEnabled(false).catch(() => undefined);
+        }
+        mic.toggle();
+      }
+    } catch (e) {
+      console.warn('Mic toggle error', e);
+      try {
+        mic.toggle();
+      } catch (innerErr) {
+        console.warn('Fallback mic.toggle() failed', innerErr);
+      }
+    } finally {
+      setTimeout(() => setMicActionPending(false), 250);
+    }
+  };
+
+  const handleToggleCamera = async () => {
+    if (cameraActionPending) return;
+    setCameraActionPending(true);
+    try {
+      const lp = room.localParticipant;
+      if (!camera.enabled) {
+        if (lp && !lp.isCameraEnabled) {
+          await lp.setCameraEnabled(true, activeVideoId ? { deviceId: activeVideoId } : undefined).catch(() => undefined);
+        }
+        camera.toggle();
+        const pub = lp?.getTrackPublication(Track.Source.Camera);
+        const track = pub?.track as import('livekit-client').LocalVideoTrack | undefined;
+        if (track && track.isMuted) {
+          await track.unmute().catch(() => undefined);
+        }
+      } else {
+        if (lp && lp.isCameraEnabled) {
+          await lp.setCameraEnabled(false).catch(() => undefined);
+        }
+        camera.toggle();
+      }
+    } catch (e) {
+      console.warn('Camera toggle error', e);
+      try {
+        camera.toggle();
+      } catch (innerErr) {
+        console.warn('Fallback camera.toggle() failed', innerErr);
+      }
+    } finally {
+      setTimeout(() => setCameraActionPending(false), 250);
+    }
+  };
+
   const handleSwitchAudio = async (deviceId: string, label: string) => {
     try {
-      await room.switchActiveDevice('audioinput', deviceId);
       setActiveAudioId(deviceId);
+      await room.switchActiveDevice('audioinput', deviceId);
+      const lp = room.localParticipant;
+      if (lp) {
+        // Actively unmute/enable the mic with the selected device if muted
+        if (!lp.isMicrophoneEnabled) {
+          await lp.setMicrophoneEnabled(true, { deviceId }).catch(() => undefined);
+        }
+        const pub = lp.getTrackPublication(Track.Source.Microphone);
+        const track = pub?.track as import('livekit-client').LocalAudioTrack | undefined;
+        if (track && track.isMuted) {
+          await track.unmute().catch(() => undefined);
+        }
+      }
       toast.success(`Microphone: ${label}`);
     } catch (err) {
-      toast.error('Could not switch microphone');
-      console.warn('Switch audio error', err);
+      try {
+        const lp = room.localParticipant;
+        if (lp) {
+          await lp.setMicrophoneEnabled(true, { deviceId });
+          setActiveAudioId(deviceId);
+          toast.success(`Microphone: ${label}`);
+        } else {
+          throw err;
+        }
+      } catch (fallbackErr) {
+        toast.error('Could not switch microphone');
+        console.warn('Switch audio error', err, fallbackErr);
+      }
     }
     setMicMenuOpen(false);
   };
@@ -662,12 +769,34 @@ function GoogleMeetDock({
 
   const handleSwitchVideo = async (deviceId: string, label: string) => {
     try {
-      await room.switchActiveDevice('videoinput', deviceId);
       setActiveVideoId(deviceId);
+      await room.switchActiveDevice('videoinput', deviceId);
+      const lp = room.localParticipant;
+      if (lp) {
+        if (!lp.isCameraEnabled) {
+          await lp.setCameraEnabled(true, { deviceId }).catch(() => undefined);
+        }
+        const pub = lp.getTrackPublication(Track.Source.Camera);
+        const track = pub?.track as import('livekit-client').LocalVideoTrack | undefined;
+        if (track && track.isMuted) {
+          await track.unmute().catch(() => undefined);
+        }
+      }
       toast.success(`Camera: ${label}`);
     } catch (err) {
-      toast.error('Could not switch camera');
-      console.warn('Switch camera error', err);
+      try {
+        const lp = room.localParticipant;
+        if (lp) {
+          await lp.setCameraEnabled(true, { deviceId });
+          setActiveVideoId(deviceId);
+          toast.success(`Camera: ${label}`);
+        } else {
+          throw err;
+        }
+      } catch (fallbackErr) {
+        toast.error('Could not switch camera');
+        console.warn('Switch camera error', err, fallbackErr);
+      }
     }
     setCameraMenuOpen(false);
   };
@@ -697,19 +826,9 @@ function GoogleMeetDock({
 
   return (
     <footer className="ail-gm-dock">
-      {/* Left section: Time and Room Name */}
+      {/* Left section: Time */}
       <div className="ail-dock-left">
         {clockTime && <span className="ail-dock-time">{clockTime}</span>}
-        <span className="ail-dock-divider">|</span>
-        <button
-          type="button"
-          className="ail-dock-code"
-          onClick={copyInvite}
-          title="Click to copy meeting link"
-        >
-          <span>{roomName.toUpperCase()}</span>
-          <CopyIcon size={13} />
-        </button>
       </div>
 
       {/* Center section: Circular controls + Red End Call Pill */}
@@ -720,8 +839,8 @@ function GoogleMeetDock({
             <button
               type="button"
               className="ail-split-btn-action"
-              onClick={() => mic.toggle()}
-              disabled={mic.pending}
+              onClick={handleToggleMic}
+              disabled={micActionPending || (mic.pending && micActionPending)}
               title={mic.enabled ? 'Turn off microphone' : 'Turn on microphone'}
               aria-label={mic.enabled ? 'Turn off microphone' : 'Turn on microphone'}
             >
@@ -818,8 +937,8 @@ function GoogleMeetDock({
             <button
               type="button"
               className="ail-split-btn-action"
-              onClick={() => camera.toggle()}
-              disabled={camera.pending}
+              onClick={handleToggleCamera}
+              disabled={cameraActionPending || (camera.pending && cameraActionPending)}
               title={camera.enabled ? 'Turn off camera' : 'Turn on camera'}
               aria-label={camera.enabled ? 'Turn off camera' : 'Turn on camera'}
             >
