@@ -7,13 +7,14 @@ import {
   useConnectionState,
   useLocalParticipant,
   useMultibandTrackVolume,
-  useTranscriptions,
-  useTracks,
   useRoomContext,
-  useVoiceAssistant,
+  useTracks,
+  useTranscriptions,
   VideoTrack,
+  type TrackReferenceOrPlaceholder,
 } from '@livekit/components-react';
 import { ConnectionState, Track } from 'livekit-client';
+import { AnimatePresence, motion } from 'framer-motion';
 import { CustomMediaGate, type MediaGateResult } from '@/lib/ailink/CustomMediaGate';
 import './eco.css';
 
@@ -25,7 +26,17 @@ type Props = {
   resultBase?: string;
 };
 
+// The avatar joins as its OWN participant (not the agents worker), so its audio
+// and the intro-clip video are found by identity, not via useVoiceAssistant().
 const ECO_IDENTITY = 'eco-avatar';
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+const fade = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -6 },
+  transition: { duration: 0.35, ease: EASE },
+};
 
 const I = {
   mic: <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-4 4.9V20h3v1H8v-1h3v-3.1A5 5 0 0 1 7 12h2a3 3 0 0 0 6 0h2Z" />,
@@ -41,10 +52,9 @@ function Icon({ d }: { d: React.ReactNode }) {
   return <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>{d}</svg>;
 }
 
-/** Green audio-reactive sphere (audio-only state). */
 function EcoOrb({ bands, speaking }: { bands: number[]; speaking: boolean }) {
   const ref = React.useRef<HTMLCanvasElement>(null);
-  const smooth = React.useRef<number[]>([0, 0, 0, 0]);
+  const smooth = React.useRef([0, 0, 0, 0]);
   const bandsRef = React.useRef(bands);
   bandsRef.current = bands;
 
@@ -61,11 +71,11 @@ function EcoOrb({ bands, speaking }: { bands: number[]; speaking: boolean }) {
       if (canvas.width !== size * dpr) { canvas.width = size * dpr; canvas.height = size * dpr; }
       const w = canvas.width, h = canvas.height, cx = w / 2, cy = h / 2;
       const b = bandsRef.current;
-      for (let i = 0; i < smooth.current.length; i++) smooth.current[i] += ((b[i] ?? 0) - smooth.current[i]) * 0.2;
+      for (let i = 0; i < smooth.current.length; i++) smooth.current[i] += ((b[i] ?? 0) - smooth.current[i]) * 0.18;
       const s = smooth.current;
       const energy = (s[0] + s[1] + s[2] + s[3]) / 4;
-      const base = Math.min(w, h) * 0.22;
-      const t2 = (t += speaking ? 0.05 : 0.022);
+      const base = Math.min(w, h) * 0.23;
+      const t2 = (t += speaking ? 0.045 : 0.02);
       ctx.clearRect(0, 0, w, h);
       const glow = ctx.createRadialGradient(cx, cy, base * 0.2, cx, cy, base * 2.4);
       glow.addColorStop(0, `rgba(46,230,166,${0.16 + energy * 0.3})`);
@@ -83,7 +93,7 @@ function EcoOrb({ bands, speaking }: { bands: number[]; speaking: boolean }) {
       }
       ctx.closePath();
       const fill = ctx.createLinearGradient(cx - base, cy - base, cx + base, cy + base);
-      fill.addColorStop(0, '#4ef2b6');
+      fill.addColorStop(0, '#5cf5bd');
       fill.addColorStop(0.55, '#22d3a0');
       fill.addColorStop(1, '#0ea5e9');
       ctx.fillStyle = fill;
@@ -100,7 +110,6 @@ function EcoOrb({ bands, speaking }: { bands: number[]; speaking: boolean }) {
   return <canvas ref={ref} className="eco-orb-canvas" aria-hidden />;
 }
 
-/** Teal dot-grid that reacts to the interviewer's voice. */
 function EcoDots({ bands, speaking }: { bands: number[]; speaking: boolean }) {
   const ref = React.useRef<HTMLCanvasElement>(null);
   const bandsRef = React.useRef(bands);
@@ -123,7 +132,7 @@ function EcoDots({ bands, speaking }: { bands: number[]; speaking: boolean }) {
       const energy = (b[0] + b[1] + b[2] + b[3]) / 4;
       t += 0.02 + energy * 0.05 + (speaking ? 0.02 : 0);
       ctx.clearRect(0, 0, w, h);
-      const gap = Math.max(16 * dpr, w / 20);
+      const gap = Math.max(16 * dpr, w / 18);
       const base = gap * 0.2;
       const cols = Math.floor(w / gap), rows = Math.floor(h / gap);
       const offX = (w - cols * gap) / 2 + gap / 2;
@@ -163,22 +172,30 @@ function EcoInterviewRoom({
   resultBase?: string;
   previewTracks: MediaGateResult['previewTracks'];
 }) {
-  const { state, audioTrack, videoTrack } = useVoiceAssistant();
-  const transcriptions = useTranscriptions();
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
   const room = useRoomContext();
   const connection = useConnectionState();
-  const camTracks = useTracks([Track.Source.Camera], { onlySubscribed: false });
-  const localCam = camTracks.find((t) => t.participant?.isLocal);
+  const transcriptions = useTranscriptions();
   const publishedRef = React.useRef(false);
+
+  // All local + remote mic/camera tracks; pick the avatar's by identity.
+  const tracks = useTracks(
+    [Track.Source.Microphone, Track.Source.Camera],
+    { onlySubscribed: false },
+  );
+  const env = (t: TrackReferenceOrPlaceholder) => t.participant?.identity === ECO_IDENTITY;
+  const ecoAudio = tracks.find((t) => env(t) && t.source === Track.Source.Microphone);
+  const ecoVideo = tracks.find((t) => env(t) && t.source === Track.Source.Camera);
+  const localCam = tracks.find((t) => t.participant?.isLocal && t.source === Track.Source.Camera);
+
+  const bands = useMultibandTrackVolume(ecoAudio, { bands: 4, updateInterval: 60 });
+  const energy = bands.reduce((a, b) => a + b, 0) / 4;
 
   React.useEffect(() => {
     if (connection !== ConnectionState.Connected || publishedRef.current) return;
     publishedRef.current = true;
     previewTracks.forEach((t) => { room.localParticipant.publishTrack(t).catch(() => {}); });
   }, [connection, previewTracks, room]);
-
-  const bands = useMultibandTrackVolume(audioTrack, { bands: 4, updateInterval: 60 });
 
   const [seconds, setSeconds] = React.useState(0);
   const [sharing, setSharing] = React.useState(false);
@@ -195,8 +212,9 @@ function EcoInterviewRoom({
     else if (connection === ConnectionState.Disconnected && hasConnected.current) setEnded(true);
   }, [connection]);
 
-  const speaking = state === 'speaking';
-  const statusWord = state === 'speaking' ? 'Speaking' : state === 'thinking' ? 'Thinking' : state === 'initializing' ? 'Connecting' : 'Listening';
+  const showVideo = !!ecoVideo;
+  const speaking = energy > 0.04;
+  const statusWord = speaking ? 'Speaking' : connection === ConnectionState.Connected ? 'Listening' : 'Connecting';
 
   const lines = (transcriptions as any[])
     .map((t) => ({
@@ -217,13 +235,13 @@ function EcoInterviewRoom({
   if (ended) {
     return (
       <div className="eco-root">
-        <div style={{ flex: 1, display: 'grid', placeItems: 'center' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+        <div className="eco-ended-wrap">
+          <motion.div className="eco-ended" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }}>
             <div className="eco-brand" style={{ fontSize: 20 }}><span className="eco-dot" /> Eco</div>
-            <h2 style={{ margin: 0, fontSize: 22 }}>Interview complete</h2>
-            <p style={{ color: 'var(--eco-muted)', margin: 0 }}>Thanks, {candidateName}. You can close this tab.</p>
+            <h2>Interview complete</h2>
+            <p>Thanks, {candidateName}. You can close this tab.</p>
             {resultBase && <a className="eco-btn" href={resultBase} target="_blank" rel="noreferrer">View your report</a>}
-          </div>
+          </motion.div>
         </div>
       </div>
     );
@@ -242,55 +260,81 @@ function EcoInterviewRoom({
         <div className="eco-main">
           <div className="eco-tiles">
             <div className="eco-tile eco-ai">
-              {videoTrack ? <VideoTrack trackRef={videoTrack} /> : <EcoOrb bands={bands} speaking={speaking} />}
+              <AnimatePresence mode="wait" initial={false}>
+                {showVideo ? (
+                  <motion.div key="video" className="eco-tile-fill"
+                    initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }}
+                    transition={{ duration: 0.5, ease: EASE }}>
+                    <VideoTrack trackRef={ecoVideo!} />
+                  </motion.div>
+                ) : (
+                  <motion.div key="orb" className="eco-tile-fill eco-tile-orb"
+                    initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
+                    transition={{ duration: 0.5, ease: EASE }}>
+                    <EcoOrb bands={bands} speaking={speaking} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <span className="eco-tile-label">Eco</span>
             </div>
+
             <div className="eco-tile eco-you">
-              {localCam ? <VideoTrack trackRef={localCam} /> : <div className="eco-tile-off">Camera off</div>}
+              <AnimatePresence mode="wait" initial={false}>
+                {localCam ? (
+                  <motion.div key="you" className="eco-tile-fill" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
+                    <VideoTrack trackRef={localCam} />
+                  </motion.div>
+                ) : (
+                  <motion.div key="off" className="eco-tile-off" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}>Camera off</motion.div>
+                )}
+              </AnimatePresence>
               <span className="eco-tile-label">You</span>
             </div>
           </div>
 
           <div className="eco-convo">
             {lines.length === 0 && <div className="eco-convo-empty">The conversation will appear here as you speak.</div>}
-            {lines.map((l, i) =>
-              isEco(l.identity) ? (
-                <div key={i} className="eco-msg eco-ai">
-                  <span className="eco-spark"><Icon d={I.spark} /></span>
+            <AnimatePresence initial={false}>
+              {lines.map((l, i) => (
+                <motion.div key={`${l.identity}-${i}`} layout
+                  className={`eco-msg ${isEco(l.identity) ? 'eco-ai' : 'eco-you'}`}
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: EASE, delay: 0.02 }}>
+                  {isEco(l.identity) && <span className="eco-spark"><Icon d={I.spark} /></span>}
                   <p>{l.text}</p>
-                </div>
-              ) : (
-                <div key={i} className="eco-msg eco-you"><p>{l.text}</p></div>
-              ),
-            )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         </div>
 
-        <aside className="eco-visual">
-          <EcoDots bands={bands} speaking={speaking} />
-        </aside>
+        <div className="eco-visual"><EcoDots bands={bands} speaking={speaking} /></div>
       </div>
 
-      {!sharing && (
-        <div className="eco-share-hint">
-          <Icon d={I.share} />
-          <span><b>Share your screen when you&rsquo;re ready.</b> <small>Whole screen or a single window — you can start any time.</small></span>
-        </div>
-      )}
+      <AnimatePresence>
+        {!sharing && (
+          <motion.div className="eco-share-hint"
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.3, ease: EASE }}>
+            <Icon d={I.share} />
+            <span><b>Share your screen when you&rsquo;re ready.</b> <small>Whole screen or a single window — you can start any time.</small></span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="eco-controls">
-        <button className={`eco-btn ${isMicrophoneEnabled ? '' : 'eco-off'}`} onClick={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}>
+        <motion.button whileTap={{ scale: 0.96 }} className={`eco-btn ${isMicrophoneEnabled ? '' : 'eco-off'}`} onClick={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}>
           <Icon d={isMicrophoneEnabled ? I.mic : I.micOff} /> {isMicrophoneEnabled ? 'Mic on' : 'Mic off'}
-        </button>
-        <button className={`eco-btn ${isCameraEnabled ? '' : 'eco-off'}`} onClick={() => localParticipant.setCameraEnabled(!isCameraEnabled)}>
+        </motion.button>
+        <motion.button whileTap={{ scale: 0.96 }} className={`eco-btn ${isCameraEnabled ? '' : 'eco-off'}`} onClick={() => localParticipant.setCameraEnabled(!isCameraEnabled)}>
           <Icon d={isCameraEnabled ? I.cam : I.camOff} /> {isCameraEnabled ? 'Camera on' : 'Camera off'}
-        </button>
-        <button className={`eco-btn ${sharing ? 'eco-primary' : ''}`} onClick={toggleShare}>
+        </motion.button>
+        <motion.button whileTap={{ scale: 0.96 }} className={`eco-btn ${sharing ? 'eco-primary' : ''}`} onClick={toggleShare}>
           <Icon d={I.share} /> {sharing ? 'Sharing screen' : 'Share screen'}
-        </button>
-        <button className="eco-btn eco-danger" onClick={() => room.disconnect()}>
+        </motion.button>
+        <motion.button whileTap={{ scale: 0.96 }} className="eco-btn eco-danger" onClick={() => room.disconnect()}>
           <Icon d={I.leave} /> Leave
-        </button>
+        </motion.button>
       </div>
     </div>
   );
