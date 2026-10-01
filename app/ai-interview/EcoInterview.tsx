@@ -16,7 +16,11 @@ import {
 import { ConnectionState, Track } from 'livekit-client';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CustomMediaGate, type MediaGateResult } from '@/lib/ailink/CustomMediaGate';
-import './eco.css';
+import { BackgroundBeams } from '@/components/ui/background-beams';
+import { WavyBackground } from '@/components/ui/wavy-background';
+import { SparklesCore } from '@/components/ui/sparkles';
+import { TextGenerateEffect } from '@/components/ui/text-generate-effect';
+import './tailwind.css';
 
 type Props = {
   liveKitUrl: string;
@@ -31,12 +35,6 @@ type Props = {
 const ECO_IDENTITY = 'eco-avatar';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-const fade = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -6 },
-  transition: { duration: 0.35, ease: EASE },
-};
 
 const I = {
   mic: <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-4 4.9V20h3v1H8v-1h3v-3.1A5 5 0 0 1 7 12h2a3 3 0 0 0 6 0h2Z" />,
@@ -45,116 +43,14 @@ const I = {
   camOff: <path d="M3.3 2.3 2 3.6l2.4 2.4H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10c.5 0 1-.2 1.4-.5l3.3 3.3 1.3-1.3L3.3 2.3ZM14 10.5l4-2.5v7l-2.5-1.6L14 12v-1.5Zm-2 5.1L6 9.6V15c0 .6.4 1 1 1h5Z" />,
   share: <path d="M12 3 7 8h3v4h4V8h3l-5-5ZM5 14h14a2 2 0 0 1 2 2v3H3v-3a2 2 0 0 1 2-2Z" />,
   leave: <path d="M2 4h9v16H2V4Zm12.6 3.4L13.2 8.8 15.4 11H8v2h7.4l-2.2 2.2 1.4 1.4L20 12l-5.4-4.6Z" />,
-  spark: <path d="M12 2c.5 3.4 2.1 5 5.5 5.5-3.4.5-5 2.1-5.5 5.5-.5-3.4-2.1-5-5.5-5.5C9.9 7 11.5 5.4 12 2Zm6.5 11c.25 1.7 1.05 2.5 2.75 2.75-1.7.25-2.5 1.05-2.75 2.75-.25-1.7-1.05-2.5-2.75-2.75 1.7-.25 2.5-1.05 2.75-2.75Z" />,
 };
 
 function Icon({ d }: { d: React.ReactNode }) {
-  return <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>{d}</svg>;
-}
-
-function EcoOrb({ bands, speaking }: { bands: number[]; speaking: boolean }) {
-  const ref = React.useRef<HTMLCanvasElement>(null);
-  const smooth = React.useRef([0, 0, 0, 0]);
-  const bandsRef = React.useRef(bands);
-  bandsRef.current = bands;
-
-  React.useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    let raf = 0;
-    let t = 0;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const render = () => {
-      const size = canvas.clientWidth || 320;
-      if (canvas.width !== size * dpr) { canvas.width = size * dpr; canvas.height = size * dpr; }
-      const w = canvas.width, h = canvas.height, cx = w / 2, cy = h / 2;
-      const b = bandsRef.current;
-      for (let i = 0; i < smooth.current.length; i++) smooth.current[i] += ((b[i] ?? 0) - smooth.current[i]) * 0.18;
-      const s = smooth.current;
-      const energy = (s[0] + s[1] + s[2] + s[3]) / 4;
-      const base = Math.min(w, h) * 0.23;
-      const t2 = (t += speaking ? 0.045 : 0.02);
-      ctx.clearRect(0, 0, w, h);
-      const glow = ctx.createRadialGradient(cx, cy, base * 0.2, cx, cy, base * 2.4);
-      glow.addColorStop(0, `rgba(46,230,166,${0.16 + energy * 0.3})`);
-      glow.addColorStop(1, 'rgba(5,6,7,0)');
-      ctx.fillStyle = glow; ctx.fillRect(0, 0, w, h);
-      const pts = 160;
-      ctx.beginPath();
-      for (let i = 0; i <= pts; i++) {
-        const a = (i / pts) * Math.PI * 2;
-        const wob = s[0]*0.5*Math.sin(3*a + t2*1.1) + s[1]*0.42*Math.sin(5*a - t2*1.4) + s[2]*0.34*Math.sin(8*a + t2*1.9) + s[3]*0.28*Math.sin(12*a - t2*2.3);
-        const r = base * (1 + wob * 0.45 + energy * 0.12);
-        const x = cx + Math.cos(a) * r * 1.06;
-        const y = cy + Math.sin(a) * r;
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      const fill = ctx.createLinearGradient(cx - base, cy - base, cx + base, cy + base);
-      fill.addColorStop(0, '#5cf5bd');
-      fill.addColorStop(0.55, '#22d3a0');
-      fill.addColorStop(1, '#0ea5e9');
-      ctx.fillStyle = fill;
-      ctx.shadowColor = 'rgba(46,230,166,0.5)';
-      ctx.shadowBlur = 30 + energy * 70;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      raf = requestAnimationFrame(render);
-    };
-    render();
-    return () => cancelAnimationFrame(raf);
-  }, [speaking]);
-
-  return <canvas ref={ref} className="eco-orb-canvas" aria-hidden />;
-}
-
-function EcoDots({ bands, speaking }: { bands: number[]; speaking: boolean }) {
-  const ref = React.useRef<HTMLCanvasElement>(null);
-  const bandsRef = React.useRef(bands);
-  bandsRef.current = bands;
-
-  React.useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    let raf = 0;
-    let t = 0;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const render = () => {
-      const w0 = canvas.clientWidth, h0 = canvas.clientHeight;
-      if (!w0 || !h0) { raf = requestAnimationFrame(render); return; }
-      if (canvas.width !== w0 * dpr) { canvas.width = w0 * dpr; canvas.height = h0 * dpr; }
-      const w = canvas.width, h = canvas.height;
-      const b = bandsRef.current;
-      const energy = (b[0] + b[1] + b[2] + b[3]) / 4;
-      t += 0.02 + energy * 0.05 + (speaking ? 0.02 : 0);
-      ctx.clearRect(0, 0, w, h);
-      const gap = Math.max(16 * dpr, w / 18);
-      const base = gap * 0.2;
-      const cols = Math.floor(w / gap), rows = Math.floor(h / gap);
-      const offX = (w - cols * gap) / 2 + gap / 2;
-      const offY = (h - rows * gap) / 2 + gap / 2;
-      for (let i = 0; i < cols; i++) {
-        for (let j = 0; j < rows; j++) {
-          const x = offX + i * gap, y = offY + j * gap;
-          const wave = 0.5 + 0.5 * Math.sin(i * 0.55 + t) * Math.cos(j * 0.45 - t * 0.8);
-          const r = base * (0.5 + wave * 0.9 + energy * 1.1);
-          ctx.beginPath();
-          ctx.arc(x, y, Math.max(0.6 * dpr, r), 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(15,181,154,${0.22 + wave * 0.5})`;
-          ctx.fill();
-        }
-      }
-      raf = requestAnimationFrame(render);
-    };
-    render();
-    return () => cancelAnimationFrame(raf);
-  }, [speaking]);
-
-  return <canvas ref={ref} aria-hidden />;
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="h-[18px] w-[18px] shrink-0">
+      {d}
+    </svg>
+  );
 }
 
 function fmt(secs: number) {
@@ -234,13 +130,31 @@ function EcoInterviewRoom({
 
   if (ended) {
     return (
-      <div className="eco-root">
-        <div className="eco-ended-wrap">
-          <motion.div className="eco-ended" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }}>
-            <div className="eco-brand" style={{ fontSize: 20 }}><span className="eco-dot" /> Eco</div>
-            <h2>Interview complete</h2>
-            <p>Thanks, {candidateName}. You can close this tab.</p>
-            {resultBase && <a className="eco-btn" href={resultBase} target="_blank" rel="noreferrer">View your report</a>}
+      <div className="relative isolate flex h-[100dvh] flex-col overflow-hidden bg-black text-eco-fg">
+        <BackgroundBeams />
+        <div className="relative z-10 flex flex-1 items-center justify-center">
+          <motion.div
+            className="flex flex-col items-center gap-4 text-center"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: EASE }}
+          >
+            <div className="flex items-center gap-2.5 text-xl font-semibold">
+              <span className="h-2.5 w-2.5 rounded-full bg-eco-accent shadow-[0_0_0_4px_rgba(46,230,166,0.14),0_0_18px_rgba(46,230,166,0.6)]" />
+              Eco
+            </div>
+            <h2 className="m-0 text-[22px]">Interview complete</h2>
+            <p className="m-0 text-eco-muted">Thanks, {candidateName}. You can close this tab.</p>
+            {resultBase && (
+              <a
+                className="inline-flex items-center gap-2 rounded-xl border border-eco-border bg-eco-surface px-4 py-2.5 text-sm font-medium text-eco-fg transition-colors hover:bg-eco-surface-2"
+                href={resultBase}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View your report
+              </a>
+            )}
           </motion.div>
         </div>
       </div>
@@ -248,92 +162,204 @@ function EcoInterviewRoom({
   }
 
   return (
-    <div className="eco-root">
-      <header className="eco-top">
-        <div className="eco-brand"><span className="eco-dot" /> Eco <small>· AI Interview</small></div>
-        <div className="eco-spacer" />
-        <div className="eco-state"><span className="eco-pulse" /> <b>{statusWord}</b></div>
-        <div className="eco-timer">{fmt(seconds)}</div>
+    <div className="relative isolate flex h-[100dvh] flex-col overflow-hidden bg-black font-sans text-eco-fg antialiased">
+      {/* Ambient beams sit behind the whole screen */}
+      <BackgroundBeams />
+
+      <header className="relative z-10 flex shrink-0 items-center gap-3.5 px-6 py-3.5">
+        <div className="flex items-center gap-2.5 font-semibold tracking-tight">
+          <span className="h-2.5 w-2.5 rounded-full bg-eco-accent shadow-[0_0_0_4px_rgba(46,230,166,0.14),0_0_18px_rgba(46,230,166,0.6)]" />
+          Eco <span className="font-medium text-eco-muted">· AI Interview</span>
+        </div>
+        <div className="flex-1" />
+        <div className="inline-flex items-center gap-2 rounded-full border border-eco-border bg-eco-surface px-3 py-1.5 text-[12.5px] text-eco-muted">
+          <span className="h-[7px] w-[7px] animate-pulse rounded-full bg-eco-accent" />
+          <b className="font-semibold text-eco-fg">{statusWord}</b>
+        </div>
+        <div className="rounded-full border border-eco-border bg-eco-surface px-3 py-1.5 text-[13px] tabular-nums text-eco-muted">
+          {fmt(seconds)}
+        </div>
       </header>
 
-      <div className="eco-body">
-        <div className="eco-main">
-          <div className="eco-tiles">
-            <div className="eco-tile eco-ai">
+      <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 px-6 pt-2">
+        <div className="flex min-h-0 flex-col gap-4">
+          <div className="grid shrink-0 grid-cols-2 gap-4">
+            <div className="relative flex aspect-video w-full max-h-[42vh] items-center justify-center overflow-hidden rounded-[28px] border border-eco-border bg-[#05070a]">
               <AnimatePresence mode="wait" initial={false}>
                 {showVideo ? (
-                  <motion.div key="video" className="eco-tile-fill"
-                    initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }}
-                    transition={{ duration: 0.5, ease: EASE }}>
+                  <motion.div
+                    key="video"
+                    className="absolute inset-0 flex items-center justify-center"
+                    initial={{ opacity: 0, scale: 1.03 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.02 }}
+                    transition={{ duration: 0.5, ease: EASE }}
+                  >
                     <VideoTrack trackRef={ecoVideo!} />
                   </motion.div>
                 ) : (
-                  <motion.div key="orb" className="eco-tile-fill eco-tile-orb"
-                    initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
-                    transition={{ duration: 0.5, ease: EASE }}>
-                    <EcoOrb bands={bands} speaking={speaking} />
+                  /* Wavy background stands in for the blob while video is off */
+                  <motion.div
+                    key="wave"
+                    className="absolute inset-0 flex items-center justify-center"
+                    initial={{ opacity: 0, scale: 1.04 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.02 }}
+                    transition={{ duration: 0.6, ease: EASE }}
+                  >
+                    <WavyBackground
+                      blur={14}
+                      waveWidth={40}
+                      waveOpacity={0.34}
+                      speed="fast"
+                      backgroundFill="#05070a"
+                    />
                   </motion.div>
                 )}
               </AnimatePresence>
-              <span className="eco-tile-label">Eco</span>
+              <span className="absolute bottom-3 left-3 z-20 rounded-full border border-eco-border bg-black/55 px-3 py-1.5 text-xs text-[#dfe5ec] backdrop-blur-md">
+                Eco
+              </span>
             </div>
 
-            <div className="eco-tile eco-you">
+            <div className="relative flex aspect-video w-full max-h-[42vh] items-center justify-center overflow-hidden rounded-[28px] border border-eco-border bg-[#0b0e11]">
               <AnimatePresence mode="wait" initial={false}>
                 {localCam ? (
-                  <motion.div key="you" className="eco-tile-fill" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
+                  <motion.div
+                    key="you"
+                    className="absolute inset-0 flex items-center justify-center"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.35 }}
+                  >
                     <VideoTrack trackRef={localCam} />
                   </motion.div>
                 ) : (
-                  <motion.div key="off" className="eco-tile-off" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}>Camera off</motion.div>
+                  <motion.div
+                    key="off"
+                    className="absolute inset-0 flex items-center justify-center"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.35 }}
+                  >
+                    <span className="text-[13px] text-eco-faint">Camera off</span>
+                  </motion.div>
                 )}
               </AnimatePresence>
-              <span className="eco-tile-label">You</span>
+              <span className="absolute bottom-3 left-3 z-20 rounded-full border border-eco-border bg-black/55 px-3 py-1.5 text-xs text-[#dfe5ec] backdrop-blur-md">
+                You
+              </span>
             </div>
           </div>
 
-          <div className="eco-convo">
-            {lines.length === 0 && <div className="eco-convo-empty">The conversation will appear here as you speak.</div>}
-            <AnimatePresence initial={false}>
-              {lines.map((l, i) => (
-                <motion.div key={`${l.identity}-${i}`} layout
-                  className={`eco-msg ${isEco(l.identity) ? 'eco-ai' : 'eco-you'}`}
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, ease: EASE, delay: 0.02 }}>
-                  {isEco(l.identity) && <span className="eco-spark"><Icon d={I.spark} /></span>}
-                  <p>{l.text}</p>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+          {/* Transcript — sparkles on each Eco turn, word-by-word reveal */}
+          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto py-1.5">
+            {lines.length === 0 ? (
+              <div className="text-sm text-eco-faint">The conversation will appear here as you speak.</div>
+            ) : (
+              <AnimatePresence initial={false}>
+                {lines.map((l, i) => (
+                  <motion.div
+                    key={`${l.identity}-${i}`}
+                    layout
+                    className={`flex max-w-[620px] gap-2.5 ${isEco(l.identity) ? '' : 'ml-14 max-w-[540px]'}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, ease: EASE }}
+                  >
+                    {isEco(l.identity) && (
+                      <span className="relative mt-0.5 h-6 w-6 shrink-0 overflow-visible">
+                        <SparklesCore
+                          background="transparent"
+                          minSize={0.6}
+                          maxSize={1.8}
+                          particleCount={14}
+                          particleColor="#5cf5bd"
+                          speed={4}
+                          className="h-full w-full"
+                        />
+                      </span>
+                    )}
+                    <TextGenerateEffect
+                      words={l.text}
+                      staggerDelay={0.04}
+                      className={
+                        isEco(l.identity)
+                          ? 'text-[15px] leading-relaxed text-[#e7ecf2]'
+                          : 'rounded-2xl border border-eco-border bg-eco-surface-2 px-3.5 py-2.5 text-[15px] leading-relaxed text-[#cfd6e0]'
+                      }
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            )}
           </div>
         </div>
-
-        <div className="eco-visual"><EcoDots bands={bands} speaking={speaking} /></div>
       </div>
 
       <AnimatePresence>
         {!sharing && (
-          <motion.div className="eco-share-hint"
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.3, ease: EASE }}>
+          <motion.div
+            className="relative z-10 mx-6 flex shrink-0 items-center gap-2.5 rounded-xl border border-eco-accent/30 bg-gradient-to-b from-eco-accent/10 to-eco-accent/[0.03] px-3.5 py-2.5 text-[13px] text-[#dfe6ee]"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.3, ease: EASE }}
+          >
             <Icon d={I.share} />
-            <span><b>Share your screen when you&rsquo;re ready.</b> <small>Whole screen or a single window — you can start any time.</small></span>
+            <span>
+              <b className="font-semibold text-eco-accent">Share your screen when you&rsquo;re ready.</b>{' '}
+              <span className="text-eco-muted">Whole screen or a single window — you can start any time.</span>
+            </span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="eco-controls">
-        <motion.button whileTap={{ scale: 0.96 }} className={`eco-btn ${isMicrophoneEnabled ? '' : 'eco-off'}`} onClick={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}>
-          <Icon d={isMicrophoneEnabled ? I.mic : I.micOff} /> {isMicrophoneEnabled ? 'Mic on' : 'Mic off'}
+      <div className="relative z-10 flex shrink-0 items-center justify-center gap-2.5 px-6 pb-5 pt-4">
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          onClick={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}
+          className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-[13.5px] font-medium transition-colors ${
+            isMicrophoneEnabled
+              ? 'border-eco-border bg-eco-surface text-eco-fg hover:bg-eco-surface-2'
+              : 'border-eco-danger/35 bg-eco-danger/10 text-eco-danger'
+          }`}
+        >
+          <Icon d={isMicrophoneEnabled ? I.mic : I.micOff} />
+          {isMicrophoneEnabled ? 'Mic on' : 'Mic off'}
         </motion.button>
-        <motion.button whileTap={{ scale: 0.96 }} className={`eco-btn ${isCameraEnabled ? '' : 'eco-off'}`} onClick={() => localParticipant.setCameraEnabled(!isCameraEnabled)}>
-          <Icon d={isCameraEnabled ? I.cam : I.camOff} /> {isCameraEnabled ? 'Camera on' : 'Camera off'}
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          onClick={() => localParticipant.setCameraEnabled(!isCameraEnabled)}
+          className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-[13.5px] font-medium transition-colors ${
+            isCameraEnabled
+              ? 'border-eco-border bg-eco-surface text-eco-fg hover:bg-eco-surface-2'
+              : 'border-eco-danger/35 bg-eco-danger/10 text-eco-danger'
+          }`}
+        >
+          <Icon d={isCameraEnabled ? I.cam : I.camOff} />
+          {isCameraEnabled ? 'Camera on' : 'Camera off'}
         </motion.button>
-        <motion.button whileTap={{ scale: 0.96 }} className={`eco-btn ${sharing ? 'eco-primary' : ''}`} onClick={toggleShare}>
-          <Icon d={I.share} /> {sharing ? 'Sharing screen' : 'Share screen'}
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          onClick={toggleShare}
+          className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-[13.5px] font-semibold transition-colors ${
+            sharing
+              ? 'border-transparent bg-gradient-to-b from-eco-accent to-[#17c98d] text-[#04120c]'
+              : 'border-eco-border bg-eco-surface text-eco-fg hover:bg-eco-surface-2'
+          }`}
+        >
+          <Icon d={I.share} />
+          {sharing ? 'Sharing screen' : 'Share screen'}
         </motion.button>
-        <motion.button whileTap={{ scale: 0.96 }} className="eco-btn eco-danger" onClick={() => room.disconnect()}>
-          <Icon d={I.leave} /> Leave
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          onClick={() => room.disconnect()}
+          className="inline-flex items-center gap-2 rounded-xl border border-eco-danger/40 bg-eco-danger/10 px-4 py-2.5 text-[13.5px] font-medium text-[#ffb4b4] transition-colors hover:bg-eco-danger/20"
+        >
+          <Icon d={I.leave} />
+          Leave
         </motion.button>
       </div>
     </div>
@@ -346,14 +372,17 @@ export function EcoInterview(props: Props) {
 
   if (!gate) {
     return (
-      <div className="eco-root">
-        <CustomMediaGate
-          defaultUsername={props.candidateName}
-          isNameFixed={props.isNameFixed}
-          onReady={(r) => { setError(null); setGate(r); }}
-          onError={setError}
-        />
-        {error && <div style={{ padding: 20, color: 'var(--eco-muted)' }}>Camera & microphone are required to start.</div>}
+      <div className="relative isolate flex h-[100dvh] flex-col overflow-hidden bg-black text-eco-fg">
+        <BackgroundBeams />
+        <div className="relative z-10 flex flex-1 flex-col">
+          <CustomMediaGate
+            defaultUsername={props.candidateName}
+            isNameFixed={props.isNameFixed}
+            onReady={(r) => { setError(null); setGate(r); }}
+            onError={setError}
+          />
+          {error && <div className="px-5 text-eco-muted">Camera & microphone are required to start.</div>}
+        </div>
       </div>
     );
   }

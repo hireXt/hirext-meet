@@ -1,0 +1,34 @@
+/* ============================================================================
+   Tailwind entry for /ai-interview ONLY.
+
+   Two deliberate choices, both to protect /rooms and /custom:
+
+   1. Preflight is NOT imported. Those routes ship hand-written CSS plus
+      @livekit/components-styles; a global reset would restyle them.
+
+   2. `source(none)` disables Tailwind's automatic content detection, and the
+      explicit @source below scopes generation to this folder. So a utility
+      class is only ever emitted because an ai-interview file uses it — there
+      is no way for this stylesheet to start defining `.flex` / `.hidden` for
+      the rest of the app.
+   ========================================================================== */
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+
+@source './**/*.{ts,tsx}';
+
+/* Design tokens for the eco screen. Declared on :root so the effect components
+   can be mounted anywhere; only referenced from ai-interview. */
+@theme {
+  --color-eco-bg: #000000;
+  --color-eco-surface: rgb(255 255 255 / 0.05);
+  --color-eco-surface-2: rgb(255 255 255 / 0.09);
+  --color-eco-fg: #eef1f5;
+  --color-eco-muted: #9aa3b2;
+  --color-eco-faint: #626b7b;
+  --color-eco-border: rgb(255 255 255 / 0.09);
+  --color-eco-accent: #2ee6a6;
+  --color-eco-teal: #0fb59a;
+  --color-eco-danger: #f05252;
+}
