@@ -1,10 +1,8 @@
 'use client';
 
-import dynamic from 'next/dynamic';
+import * as React from 'react';
+import EcoDevPreview from './EcoDevPreview';
 import '../tailwind.css';
-
-// The preview renders canvas/WebGL effects, so it is client-only.
-const EcoDevPreview = dynamic(() => import('./EcoDevPreview'), { ssr: false });
 
 export default function Page() {
   // Off unless explicitly enabled, so production candidates can't reach it.
