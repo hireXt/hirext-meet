@@ -16,7 +16,6 @@ import * as React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BackgroundBeams } from '@/components/ui/background-beams';
 import { WavyBackground } from '@/components/ui/wavy-background';
-import { SparklesCore } from '@/components/ui/sparkles';
 import { TextGenerateEffect } from '@/components/ui/text-generate-effect';
 import {
   CameraIcon,
@@ -42,15 +41,19 @@ import {
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-const MOCK_DIALOGUE = [
-  { eco: true, text: 'Hi Veer, good morning. Thanks for joining the interview today. Are you ready to begin our technical assessment?' },
-  { eco: false, text: 'Good morning! Yes, absolutely ready.' },
-  {
-    eco: true,
-    text: 'Great. Let us start with system design. Tell me about a time you had to diagnose and resolve a severe production outage.',
-  },
-  { eco: false, text: 'We had an incident where an asynchronous queue backed up due to a database deadlock. I isolated the worker pool and deployed a migration within ten minutes.' },
-  { eco: true, text: 'Walk me through the deadlock diagnosis. What telemetry or metrics led you to pinpoint the contention?' },
+export const MOCK_DIALOGUE_POOL = [
+  { id: 't-1', eco: true, text: 'Hi Veer, good morning. Thanks for joining the interview today. Are you ready to begin our technical assessment?' },
+  { id: 't-2', eco: false, text: 'Good morning! Yes, absolutely ready.' },
+  { id: 't-3', eco: true, text: 'Great. Let us start with system design. Tell me about a time you had to diagnose and resolve a severe production outage.' },
+  { id: 't-4', eco: false, text: 'We had an incident where an asynchronous queue backed up due to a database deadlock. I isolated the worker pool and deployed a migration within ten minutes.' },
+  { id: 't-5', eco: true, text: 'Walk me through the deadlock diagnosis. What telemetry or metrics led you to pinpoint the contention?' },
+  { id: 't-6', eco: false, text: 'We analyzed PostgreSQL lock tables and pg_stat_activity, correlating latency spikes with slow RPC timeouts in Datadog.' },
+  { id: 't-7', eco: true, text: 'Good catch. How did you restructure the transaction boundaries to prevent future deadlocks under peak traffic?' },
+  { id: 't-8', eco: false, text: 'We enforced strict resource acquisition ordering across transactions and moved non-critical side effects outside the atomic commit.' },
+  { id: 't-9', eco: true, text: 'Excellent architectural decision. Now let us touch on distributed consistency and cache invalidation strategies.' },
+  { id: 't-10', eco: false, text: 'We utilize cache-aside with write-through invalidation via Kafka change data capture streams, avoiding stale reads.' },
+  { id: 't-11', eco: true, text: 'How do you handle partition rebalancing during heavy consumer skew without dropping SLA promises?' },
+  { id: 't-12', eco: false, text: 'We tuned cooperative sticky partition assignment and backpressured batch consumption with bounded thread pools.' },
 ];
 
 const YOU_CLIP = '/mock/eco-candidate-video.mp4';
@@ -125,7 +128,15 @@ function useMockEnergy(active: boolean) {
   return energy;
 }
 
-function Screen({ showVideo }: { showVideo: boolean }) {
+function Screen({
+  showVideo,
+  mode,
+  onModeChange,
+}: {
+  showVideo: boolean;
+  mode?: 'video' | 'audio' | 'both';
+  onModeChange?: (m: 'video' | 'audio' | 'both') => void;
+}) {
   const energy = useMockEnergy(true);
   const speaking = energy > 0.05;
   const [seconds, setSeconds] = React.useState(74);
@@ -151,8 +162,52 @@ function Screen({ showVideo }: { showVideo: boolean }) {
     return () => clearInterval(id);
   }, []);
 
+  const transcriptContainerRef = React.useRef<HTMLDivElement>(null);
+  const transcriptEndRef = React.useRef<HTMLDivElement>(null);
+
+  // Progressive live mock transcript stream
+  const [transcriptLines, setTranscriptLines] = React.useState(() => MOCK_DIALOGUE_POOL.slice(0, 3));
+  const [streamActive, setStreamActive] = React.useState(true);
+
+  // Advance transcript incrementally to simulate live conversational speech
+  React.useEffect(() => {
+    if (!streamActive) return;
+    const interval = setInterval(() => {
+      setTranscriptLines((prev) => {
+        const nextIdx = prev.length;
+        if (nextIdx < MOCK_DIALOGUE_POOL.length) {
+          return [...prev, MOCK_DIALOGUE_POOL[nextIdx]];
+        }
+        // Continuous loop with fresh keys
+        const loopItem = {
+          ...MOCK_DIALOGUE_POOL[nextIdx % MOCK_DIALOGUE_POOL.length],
+          id: `t-${Date.now()}-${nextIdx}`,
+        };
+        return [...prev, loopItem];
+      });
+    }, 4500);
+
+    return () => clearInterval(interval);
+  }, [streamActive]);
+
+  React.useEffect(() => {
+    if (transcriptEndRef.current) {
+      transcriptEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [transcriptLines.length]);
+
+  const handleNextExchange = () => {
+    setTranscriptLines((prev) => {
+      const nextIdx = prev.length;
+      const item = nextIdx < MOCK_DIALOGUE_POOL.length
+        ? MOCK_DIALOGUE_POOL[nextIdx]
+        : { ...MOCK_DIALOGUE_POOL[nextIdx % MOCK_DIALOGUE_POOL.length], id: `t-${Date.now()}-${nextIdx}` };
+      return [...prev, item];
+    });
+  };
+
   return (
-    <div className="relative isolate flex h-[820px] flex-col overflow-hidden rounded-[2rem] border border-white/[0.08] bg-black font-sans text-[#eef1f5] antialiased shadow-2xl">
+    <div className="relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-black font-sans text-[#eef1f5] antialiased select-none">
       <BackgroundBeams />
 
       {/* ── Top Header ── */}
@@ -160,8 +215,8 @@ function Screen({ showVideo }: { showVideo: boolean }) {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5 items-center justify-center">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#2ee6a6] opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#2ee6a6] shadow-[0_0_8px_#2ee6a6]" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#20C8F5] opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#20C8F5] shadow-[0_0_8px_#20C8F5]" />
             </span>
             <span className="text-sm font-semibold tracking-tight text-white">Eco</span>
           </div>
@@ -178,20 +233,66 @@ function Screen({ showVideo }: { showVideo: boolean }) {
           </div>
         </div>
 
+        {/* Dev Mode Switcher Pills */}
+        <div className="hidden lg:flex items-center gap-2">
+          {onModeChange && (
+            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
+              {(['video', 'audio', 'both'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onModeChange(s)}
+                  className={`rounded-full px-2.5 py-1 font-medium transition-all ${
+                    mode === s
+                      ? 'bg-gradient-to-r from-[#245BFF] to-[#20C8F5] text-white font-bold shadow-[0_0_12px_rgba(32,200,245,0.35)]'
+                      : 'text-white/60 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {s === 'video' ? 'Avatar Video' : s === 'audio' ? 'Audio DP' : 'Compare'}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Quick simulation controls */}
+          <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
+            <button
+              type="button"
+              onClick={() => setStreamActive(!streamActive)}
+              className={`rounded-full px-2.5 py-1 font-medium transition-all ${
+                streamActive
+                  ? 'bg-[#20C8F5]/15 text-[#53E0EC] border border-[#20C8F5]/30 shadow-[0_0_8px_rgba(32,200,245,0.2)]'
+                  : 'text-white/50 hover:text-white'
+              }`}
+              title={streamActive ? 'Pause live mock stream' : 'Resume live mock stream'}
+            >
+              {streamActive ? 'Live Mocking' : 'Paused'}
+            </button>
+            <button
+              type="button"
+              onClick={handleNextExchange}
+              className="rounded-full px-2 py-1 font-medium text-white/70 hover:text-white hover:bg-white/10 transition-all"
+              title="Push next exchange immediately"
+            >
+              + Next Line
+            </button>
+          </div>
+        </div>
+
         <div className="flex items-center gap-2.5">
           {/* Status badge */}
           <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/80">
             <span
               className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
-                speaking ? 'bg-[#2ee6a6] shadow-[0_0_6px_#2ee6a6]' : 'bg-white/30'
+                speaking ? 'bg-[#F34BB5] shadow-[0_0_8px_#F34BB5]' : 'bg-[#20C8F5] shadow-[0_0_6px_#20C8F5]'
               }`}
             />
             <span>Eco is {speaking ? 'speaking' : 'listening'}</span>
           </div>
 
           {/* Recording & Timer */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-[11px] font-semibold text-red-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#F52D45]/30 bg-[#F52D45]/15 px-3 py-1.5 text-[11px] font-semibold text-[#F52D45]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#F52D45] animate-pulse" />
             <span className="font-mono tabular-nums">{fmt(seconds)}</span>
           </div>
 
@@ -199,7 +300,7 @@ function Screen({ showVideo }: { showVideo: boolean }) {
           <button
             type="button"
             onClick={() => setLayoutMode((m) => (m === 'split' ? 'spotlight' : 'split'))}
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-white/70 hover:bg-white/10 hover:text-white transition-all"
+            className="hidden md:inline-flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-medium text-white/80 hover:bg-white/10 hover:text-white transition-all active:scale-95"
             title={`Switch to ${layoutMode === 'split' ? 'Spotlight View' : 'Split View'}`}
           >
             {layoutMode === 'split' ? <SpotlightIcon size={14} /> : <LayoutGridIcon size={14} />}
@@ -209,99 +310,100 @@ function Screen({ showVideo }: { showVideo: boolean }) {
       </header>
 
       {/* ── Main Content Area ── */}
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col gap-3 px-6 py-3 w-full">
-        {layoutMode === 'spotlight' ? (
-          /* Spotlight View */
-          <div className="relative flex flex-1 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.03] p-1.5 shadow-2xl">
-            <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[calc(2rem-0.375rem)] bg-neutral-950/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
-              {showVideo ? (
-                <video
-                  src={ECO_CLIP}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="relative flex h-full w-full items-center justify-center">
-                  <div className="absolute inset-0 flex items-center justify-center [mask-image:radial-gradient(ellipse_at_center,black_50%,transparent_85%)] pointer-events-none">
-                    <WavyBackground
-                      blur={10}
-                      waveWidth={45}
-                      waveOpacity={0.4}
-                      speed="fast"
-                      backgroundFill="transparent"
-                      audioEnergy={energy}
-                      isSpeaking={speaking}
-                    />
-                  </div>
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col gap-2.5 px-3 sm:px-6 py-2 container mx-auto w-full">
+        <div className="grid flex-1 grid-cols-1 lg:grid-cols-12 gap-5 min-h-0 w-full h-full items-stretch">
+          {/* ── Left Side: Flowing Live Transcript Area (No Box, Auto-flowing, 4 Recent) ── */}
+          <div className="lg:col-span-7 xl:col-span-8 flex flex-col justify-between min-h-0 h-full relative py-2 px-1 sm:px-3 order-2 lg:order-1">
+            {/* Transcript Stream Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] mb-auto">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2 items-center justify-center">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#20C8F5] opacity-75" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#20C8F5] shadow-[0_0_8px_#20C8F5]" />
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-white/80">Live AI Transcript</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#53E0EC] bg-[#20C8F5]/10 px-2 py-0.5 rounded-full border border-[#20C8F5]/25">
+                  Live Mock Stream
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-white/40 hidden sm:inline">Streaming last 4 exchanges</span>
+                <button
+                  type="button"
+                  onClick={() => alert('Transcript exported')}
+                  className="flex items-center gap-1 text-[11px] font-medium text-white/60 hover:text-white transition-colors"
+                  title="Export transcript as text"
+                >
+                  <DownloadIcon size={13} />
+                  <span>Export</span>
+                </button>
+              </div>
+            </div>
 
-                  <div className="relative z-10 flex flex-col items-center gap-4">
-                    <div className="relative flex items-center justify-center">
-                      <div
-                        className="absolute h-36 w-36 rounded-full border border-[#2ee6a6]/30 transition-all duration-300"
-                        style={{
-                          transform: `scale(${1 + energy * 1.5})`,
-                          opacity: speaking ? 0.7 : 0.2,
-                          boxShadow: speaking ? '0 0 40px rgba(46,230,166,0.3)' : 'none',
-                        }}
-                      />
-                      <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-tr from-[#0fb59a] via-[#2ee6a6] to-emerald-300 shadow-[0_0_30px_#2ee6a6]">
-                        <SparklesCore
-                          background="transparent"
-                          minSize={0.4}
-                          maxSize={1.5}
-                          particleCount={12}
-                          particleColor="#ffffff"
-                          speed={5}
-                          className="h-full w-full"
-                        />
-                      </div>
-                    </div>
+            {/* Flowing Transcript Dialogue Stream */}
+            <div
+              ref={transcriptContainerRef}
+              className="relative flex flex-col justify-end gap-5 overflow-hidden flex-1 py-4"
+            >
+              {/* Ambient top dissolution gradient */}
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black to-transparent z-10" />
 
-                    <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-4 py-1.5 text-xs font-medium text-white/90 backdrop-blur-md shadow-lg">
-                      <span className={`h-2 w-2 rounded-full ${speaking ? 'bg-[#2ee6a6] animate-pulse shadow-[0_0_8px_#2ee6a6]' : 'bg-white/30'}`} />
-                      <span>Eco (AI Interviewer)</span>
-                      <span className="text-[10px] uppercase tracking-wider text-white/40">
-                        {speaking ? 'Speaking' : 'Listening'}
+              <div className="flex flex-col gap-4 justify-end">
+                {transcriptLines.slice(-4).map((line) => (
+                  <motion.div
+                    key={line.id}
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, ease: EASE }}
+                    className="flex flex-col gap-1.5"
+                  >
+                    {/* Speaker Badge */}
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                          line.eco
+                            ? 'bg-gradient-to-r from-[#F34BB5]/20 via-[#245BFF]/20 to-[#20C8F5]/20 text-[#A8B9FF] border border-[#F34BB5]/40 shadow-[0_0_12px_rgba(243,75,181,0.2)]'
+                            : 'bg-[#20C8F5]/15 text-[#53E0EC] border border-[#20C8F5]/35 shadow-[0_0_12px_rgba(32,200,245,0.15)]'
+                        }`}
+                      >
+                        {line.eco ? (
+                          <>
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#F34BB5] shadow-[0_0_6px_#F34BB5]" />
+                            <span>Eco (AI Interviewer)</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#20C8F5] shadow-[0_0_6px_#20C8F5]" />
+                            <span>Veer (You)</span>
+                          </>
+                        )}
                       </span>
                     </div>
-                  </div>
-                </div>
-              )}
 
-              {/* PiP Candidate Tile */}
-              <div className="absolute bottom-4 right-4 z-20 h-36 w-56 overflow-hidden rounded-2xl border border-white/20 bg-neutral-900/90 shadow-2xl backdrop-blur-xl">
-                {cameraEnabled ? (
-                  <video
-                    src={YOU_CLIP}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="h-full w-full scale-x-[-1] object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full flex-col items-center justify-center text-white/40">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 font-semibold text-white/80">
-                      V
+                    {/* Spoken dialogue text using Aceternity TextGenerateEffect */}
+                    <div
+                      className={`text-base sm:text-lg lg:text-xl font-medium leading-relaxed tracking-tight pl-1 ${
+                        line.eco ? 'text-white' : 'text-[#53E0EC]'
+                      }`}
+                    >
+                      <TextGenerateEffect
+                        words={line.text}
+                        duration={0.3}
+                        staggerDelay={0.025}
+                        className={line.eco ? 'text-white' : 'text-[#53E0EC]'}
+                      />
                     </div>
-                    <span className="text-[10px] mt-1">Camera off</span>
-                  </div>
-                )}
-                <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
-                  <span>Veer (You)</span>
-                  {!micEnabled && <MicOffIcon size={12} className="text-red-400" />}
-                </div>
+                  </motion.div>
+                ))}
+                <div ref={transcriptEndRef} />
               </div>
             </div>
           </div>
-        ) : (
-          /* Split Grid View */
-          <div className="grid flex-1 grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
-            {/* Eco Tile */}
-            <div className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.03] p-1.5 shadow-xl flex flex-col min-h-0">
+
+          {/* ── Right Side: AI & Candidate Stacked Vertically (Up and Down) ── */}
+          <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-3 min-h-0 h-full justify-center order-1 lg:order-2">
+            {/* Eco AI Interviewer Tile (Top) */}
+            <div className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.03] p-1.5 shadow-xl flex flex-col flex-1 min-h-0">
               <div className="relative flex flex-1 w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-neutral-950/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
                 {showVideo ? (
                   <video
@@ -314,45 +416,43 @@ function Screen({ showVideo }: { showVideo: boolean }) {
                   />
                 ) : (
                   <div className="relative flex h-full w-full items-center justify-center">
-                    <div className="absolute inset-0 flex items-center justify-center [mask-image:radial-gradient(ellipse_at_center,black_50%,transparent_85%)] pointer-events-none">
+                    {/* Bottom Wavy Audio Flow (Thin Sharp Lines) */}
+                    <div className="absolute inset-x-0 bottom-0 h-28 sm:h-32 overflow-hidden pointer-events-none [mask-image:linear-gradient(to_top,black_70%,transparent_100%)]">
                       <WavyBackground
-                        blur={10}
-                        waveWidth={45}
-                        waveOpacity={0.4}
+                        blur={0}
+                        waveWidth={1.8}
+                        waveOpacity={0.9}
                         speed="fast"
                         backgroundFill="transparent"
+                        colors={['#FFC45E', '#FF7049', '#F34BB5', '#245BFF', '#20C8F5']}
                         audioEnergy={energy}
                         isSpeaking={speaking}
+                        containerClassName="h-full w-full"
                       />
                     </div>
 
+                    {/* Central Normal User DP with simple circle around */}
                     <div className="relative z-10 flex flex-col items-center gap-3">
-                      <div className="relative flex items-center justify-center">
-                        <div
-                          className="absolute h-28 w-28 rounded-full border border-[#2ee6a6]/30 transition-all duration-300"
-                          style={{
-                            transform: `scale(${1 + energy * 1.4})`,
-                            opacity: speaking ? 0.7 : 0.2,
-                            boxShadow: speaking ? '0 0 30px rgba(46,230,166,0.3)' : 'none',
-                          }}
-                        />
-                        <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-tr from-[#0fb59a] via-[#2ee6a6] to-emerald-300 shadow-[0_0_24px_#2ee6a6]">
-                          <SparklesCore
-                            background="transparent"
-                            minSize={0.4}
-                            maxSize={1.4}
-                            particleCount={10}
-                            particleColor="#ffffff"
-                            speed={4}
-                            className="h-full w-full"
+                      <div
+                        className={`relative rounded-full p-1 transition-all duration-300 ${
+                          speaking
+                            ? 'ring-2 ring-[#20C8F5] ring-offset-2 ring-offset-neutral-950 shadow-[0_0_20px_rgba(32,200,245,0.35)]'
+                            : 'ring-1 ring-white/20 ring-offset-2 ring-offset-neutral-950'
+                        }`}
+                      >
+                        <div className="relative h-20 w-20 sm:h-24 sm:w-24 overflow-hidden rounded-full border border-white/10 bg-neutral-900 shadow-xl">
+                          <img
+                            src="/images/eco-avatar.jpg"
+                            alt="Eco AI Interviewer"
+                            className="h-full w-full object-cover"
                           />
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3.5 py-1.5 text-[11px] font-medium text-white/90 backdrop-blur-md shadow-md">
+                      <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3.5 py-1 text-[11px] font-medium text-white/90 backdrop-blur-md shadow-md">
                         <span
                           className={`h-2 w-2 rounded-full transition-all duration-300 ${
-                            speaking ? 'bg-[#2ee6a6] shadow-[0_0_8px_#2ee6a6]' : 'bg-white/30'
+                            speaking ? 'bg-[#F34BB5] shadow-[0_0_8px_#F34BB5]' : 'bg-[#20C8F5] shadow-[0_0_6px_#20C8F5]'
                           }`}
                         />
                         <span>Eco</span>
@@ -365,14 +465,14 @@ function Screen({ showVideo }: { showVideo: boolean }) {
                 )}
 
                 <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur-md border border-white/10">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#2ee6a6]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#20C8F5]" />
                   <span>Eco (AI Interviewer)</span>
                 </div>
               </div>
             </div>
 
-            {/* Candidate Tile */}
-            <div className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.03] p-1.5 shadow-xl flex flex-col min-h-0">
+            {/* Candidate Tile (Bottom) */}
+            <div className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.03] p-1.5 shadow-xl flex flex-col flex-1 min-h-0">
               <div className="relative flex flex-1 w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-neutral-950/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
                 {cameraEnabled ? (
                   <video
@@ -384,8 +484,8 @@ function Screen({ showVideo }: { showVideo: boolean }) {
                     className="h-full w-full scale-x-[-1] object-cover"
                   />
                 ) : (
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/15 bg-gradient-to-br from-neutral-800 to-neutral-900 text-xl font-bold text-white shadow-xl">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/15 bg-gradient-to-br from-neutral-800 to-neutral-900 text-lg font-bold text-white shadow-xl">
                       V
                     </div>
                     <span className="text-xs font-medium text-white/50">Camera turned off</span>
@@ -398,13 +498,13 @@ function Screen({ showVideo }: { showVideo: boolean }) {
 
                 <div className="absolute bottom-3 right-3 z-20">
                   {!micEnabled ? (
-                    <div className="flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/20 px-2.5 py-1 text-[10px] font-semibold text-red-300 backdrop-blur-md">
+                    <div className="flex items-center gap-1.5 rounded-full border border-[#F52D45]/40 bg-[#F52D45]/20 px-2.5 py-1 text-[10px] font-semibold text-[#F52D45] backdrop-blur-md">
                       <MicOffIcon size={12} />
                       <span>Muted</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-medium text-emerald-300 backdrop-blur-md">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <div className="flex items-center gap-1 rounded-full border border-[#20C8F5]/30 bg-[#20C8F5]/15 px-2.5 py-1 text-[10px] font-medium text-[#53E0EC] backdrop-blur-md">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#20C8F5] animate-pulse" />
                       <span>Mic On</span>
                     </div>
                   )}
@@ -412,73 +512,13 @@ function Screen({ showVideo }: { showVideo: boolean }) {
               </div>
             </div>
           </div>
-        )}
-
-        {/* ── Closed Captions & Live Transcription Drawer ── */}
-        <AnimatePresence>
-          {captionsOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: '170px' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.35, ease: EASE }}
-              className="relative flex shrink-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-neutral-950/60 shadow-xl backdrop-blur-xl"
-            >
-              <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-2 text-xs">
-                <div className="flex items-center gap-2">
-                  <ClosedCaptionsIcon size={15} className="text-[#2ee6a6]" />
-                  <span className="font-semibold text-white/80">Live AI Transcript</span>
-                  <span className="text-[10px] text-white/40">Real-time evaluation stream</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setCaptionsOpen(false)}
-                    className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                    title="Minimize captions"
-                  >
-                    <CloseIcon size={14} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-3">
-                {MOCK_DIALOGUE.map((line, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-start gap-2.5 ${line.eco ? '' : 'ml-auto justify-end max-w-[80%]'}`}
-                  >
-                    {line.eco && (
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#2ee6a6]/15 border border-[#2ee6a6]/30 text-[#2ee6a6] text-[10px] font-bold">
-                        AI
-                      </div>
-                    )}
-
-                    <div
-                      className={`rounded-2xl px-3.5 py-2 text-xs leading-relaxed ${
-                        line.eco
-                          ? 'border border-white/10 bg-white/[0.04] text-white/90'
-                          : 'border border-[#2ee6a6]/25 bg-[#2ee6a6]/[0.08] text-white font-medium'
-                      }`}
-                    >
-                      <div className="text-[10px] font-semibold text-white/40 mb-0.5">
-                        {line.eco ? 'Eco (Interviewer)' : 'Veer (Candidate)'}
-                      </div>
-                      <span>{line.text}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        </div>
       </main>
 
       {/* ── Control Bar Dock ── */}
-      <div className="relative z-20 flex shrink-0 justify-center px-4 pb-4 pt-1">
+      <div className="relative z-20 flex shrink-0 justify-center px-4 pb-3 sm:pb-4 pt-1">
         <motion.footer
-          className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-neutral-950/80 p-2 backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.6)]"
+          className="inline-flex items-center gap-2 rounded-full border border-white/[0.12] bg-neutral-950/85 p-2 backdrop-blur-2xl shadow-[0_16px_48px_rgba(0,0,0,0.7)]"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: EASE }}
@@ -486,121 +526,317 @@ function Screen({ showVideo }: { showVideo: boolean }) {
           {/* Split Mic Button */}
           <div className="relative">
             <div
-              className={`inline-flex h-10 items-center rounded-full border transition-all duration-300 ${
+              className={`inline-flex h-11 items-stretch rounded-full border transition-all duration-200 overflow-hidden ${
                 micEnabled
-                  ? 'border-white/10 bg-white/[0.06] text-white/90 hover:bg-white/[0.12]'
-                  : 'border-red-500/40 bg-red-500/20 text-red-300 hover:bg-red-500/30'
+                  ? 'border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.10]'
+                  : 'border-red-500/40 bg-red-500/20 text-red-200 hover:bg-red-500/25'
               }`}
             >
               <button
                 type="button"
                 onClick={() => setMicEnabled(!micEnabled)}
-                className="inline-flex h-full items-center gap-2 pl-3.5 pr-2 text-[12px] font-medium transition-transform active:scale-95"
+                className="inline-flex items-center gap-2 pl-3.5 pr-2.5 text-xs font-semibold hover:bg-white/10 transition-colors active:scale-95"
+                title={micEnabled ? 'Mute microphone' : 'Unmute microphone'}
               >
-                {micEnabled ? <MicIcon size={17} /> : <MicOffIcon size={17} />}
+                {micEnabled ? <MicIcon size={16} /> : <MicOffIcon size={16} />}
                 <span>{micEnabled ? 'Mic' : 'Muted'}</span>
               </button>
-              <div className="h-4 w-px bg-white/15" />
+              <div className="w-px self-stretch bg-white/15 my-2" />
               <button
                 type="button"
-                onClick={() => setMicMenuOpen((v) => !v)}
-                className="inline-flex h-full items-center px-2 text-white/60 hover:text-white"
+                onClick={() => {
+                  setMicMenuOpen((v) => !v);
+                  setCameraMenuOpen(false);
+                  setMoreMenuOpen(false);
+                }}
+                className="inline-flex items-center px-2.5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                title="Microphone & speaker settings"
               >
-                <ChevronUpIcon size={13} />
+                <ChevronUpIcon
+                  size={13}
+                  className={`transition-transform duration-200 ${micMenuOpen ? 'rotate-180' : ''}`}
+                />
               </button>
             </div>
+
+            {/* Audio Device Menu Popover */}
+            <AnimatePresence>
+              {micMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                  transition={{ duration: 0.18 }}
+                  className="absolute bottom-full left-0 mb-3 w-72 rounded-2xl border border-white/10 bg-neutral-950/95 p-3 shadow-2xl backdrop-blur-2xl z-30"
+                >
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-white/40 px-2 pb-1">
+                    Microphone
+                  </div>
+                  <div className="space-y-0.5">
+                    {['Default - Studio Microphone (HD)', 'External USB Mic', 'MacBook Air Microphone'].map((m) => {
+                      const isSelected = activeMic === m;
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => {
+                            setActiveMic(m);
+                            setMicMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors ${
+                            isSelected
+                              ? 'bg-eco-accent/15 text-eco-accent font-medium'
+                              : 'text-white/80 hover:bg-white/5 hover:text-white'
+                          }`}
+                        >
+                          <span className="truncate pr-2">{m}</span>
+                          {isSelected && <CheckIcon size={14} className="shrink-0 text-eco-accent" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="my-2 h-px bg-white/10" />
+
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-white/40 px-2 pb-1">
+                    Speaker
+                  </div>
+                  <div className="space-y-0.5">
+                    {['Studio Monitor Speakers', 'MacBook Air Speakers', 'Headphones (3.5mm)'].map((s) => {
+                      const isSelected = activeSpeaker === s;
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => {
+                            setActiveSpeaker(s);
+                            setMicMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors ${
+                            isSelected
+                              ? 'bg-eco-accent/15 text-eco-accent font-medium'
+                              : 'text-white/80 hover:bg-white/5 hover:text-white'
+                          }`}
+                        >
+                          <span className="truncate pr-2">{s}</span>
+                          {isSelected && <CheckIcon size={14} className="shrink-0 text-eco-accent" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Split Camera Button */}
           <div className="relative">
             <div
-              className={`inline-flex h-10 items-center rounded-full border transition-all duration-300 ${
+              className={`inline-flex h-11 items-stretch rounded-full border transition-all duration-200 overflow-hidden ${
                 cameraEnabled
-                  ? 'border-white/10 bg-white/[0.06] text-white/90 hover:bg-white/[0.12]'
-                  : 'border-red-500/40 bg-red-500/20 text-red-300 hover:bg-red-500/30'
+                  ? 'border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.10]'
+                  : 'border-red-500/40 bg-red-500/20 text-red-200 hover:bg-red-500/25'
               }`}
             >
               <button
                 type="button"
                 onClick={() => setCameraEnabled(!cameraEnabled)}
-                className="inline-flex h-full items-center gap-2 pl-3.5 pr-2 text-[12px] font-medium transition-transform active:scale-95"
+                className="inline-flex items-center gap-2 pl-3.5 pr-2.5 text-xs font-semibold hover:bg-white/10 transition-colors active:scale-95"
+                title={cameraEnabled ? 'Turn off camera' : 'Turn on camera'}
               >
-                {cameraEnabled ? <CameraIcon size={17} /> : <CameraOffIcon size={17} />}
+                {cameraEnabled ? <CameraIcon size={16} /> : <CameraOffIcon size={16} />}
                 <span>{cameraEnabled ? 'Camera' : 'Cam off'}</span>
               </button>
-              <div className="h-4 w-px bg-white/15" />
+              <div className="w-px self-stretch bg-white/15 my-2" />
               <button
                 type="button"
-                onClick={() => setCameraMenuOpen((v) => !v)}
-                className="inline-flex h-full items-center px-2 text-white/60 hover:text-white"
+                onClick={() => {
+                  setCameraMenuOpen((v) => !v);
+                  setMicMenuOpen(false);
+                  setMoreMenuOpen(false);
+                }}
+                className="inline-flex items-center px-2.5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                title="Camera device settings"
               >
-                <ChevronUpIcon size={13} />
+                <ChevronUpIcon
+                  size={13}
+                  className={`transition-transform duration-200 ${cameraMenuOpen ? 'rotate-180' : ''}`}
+                />
               </button>
             </div>
+
+            {/* Camera Device Menu Popover */}
+            <AnimatePresence>
+              {cameraMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                  transition={{ duration: 0.18 }}
+                  className="absolute bottom-full left-0 mb-3 w-64 rounded-2xl border border-white/10 bg-neutral-950/95 p-3 shadow-2xl backdrop-blur-2xl z-30"
+                >
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-white/40 px-2 pb-1">
+                    Select Camera
+                  </div>
+                  <div className="space-y-0.5">
+                    {['FaceTime HD Camera', 'External 4K Webcam', 'Virtual Studio Cam'].map((c) => {
+                      const isSelected = activeCam === c;
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => {
+                            setActiveCam(c);
+                            setCameraMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors ${
+                            isSelected
+                              ? 'bg-eco-accent/15 text-eco-accent font-medium'
+                              : 'text-white/80 hover:bg-white/5 hover:text-white'
+                          }`}
+                        >
+                          <span className="truncate pr-2">{c}</span>
+                          {isSelected && <CheckIcon size={14} className="shrink-0 text-eco-accent" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Screen Share */}
-          <button
-            type="button"
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={() => setSharing(!sharing)}
-            className={`inline-flex h-10 items-center gap-2 rounded-full border px-3.5 text-[12px] font-medium transition-all ${
+            className={`inline-flex h-11 items-center gap-2 rounded-full border px-4 text-xs font-semibold transition-all duration-200 ${
               sharing
-                ? 'border-[#2ee6a6] bg-[#2ee6a6] text-neutral-950 font-semibold'
-                : 'border-white/10 bg-white/[0.06] text-white/90 hover:bg-white/[0.12]'
+                ? 'border-[#245BFF] bg-gradient-to-r from-[#245BFF] to-[#20C8F5] text-white font-bold shadow-[0_0_16px_rgba(36,91,255,0.4)]'
+                : 'border-white/10 bg-white/[0.06] text-white/90 hover:bg-white/[0.12] hover:text-white'
             }`}
+            title={sharing ? 'Stop sharing screen' : 'Share your screen'}
           >
-            <ScreenShareIcon size={17} />
-            <span>{sharing ? 'Sharing' : 'Share'}</span>
-          </button>
+            <ScreenShareIcon size={16} />
+            <span className="hidden sm:inline">{sharing ? 'Sharing' : 'Share'}</span>
+          </motion.button>
 
           {/* Closed Captions Button */}
-          <button
-            type="button"
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={() => setCaptionsOpen((v) => !v)}
-            className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium transition-all ${
+            className={`inline-flex h-11 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold transition-all duration-200 ${
               captionsOpen
-                ? 'border-[#2ee6a6]/40 bg-[#2ee6a6]/15 text-[#2ee6a6]'
-                : 'border-white/10 bg-white/[0.06] text-white/60 hover:text-white'
+                ? 'border-[#20C8F5]/40 bg-[#20C8F5]/15 text-[#53E0EC] shadow-[0_0_12px_rgba(32,200,245,0.2)]'
+                : 'border-white/10 bg-white/[0.06] text-white/60 hover:text-white hover:bg-white/[0.12]'
             }`}
+            title="Toggle Live AI Transcript (Closed Captions)"
           >
             <ClosedCaptionsIcon size={16} />
-            <span>CC</span>
-          </button>
+            <span className="hidden sm:inline">Captions</span>
+          </motion.button>
 
           {/* Noise filter */}
-          <button
-            type="button"
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={() => setNoiseFilterEnabled(!noiseFilterEnabled)}
-            className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium transition-all ${
+            className={`hidden sm:inline-flex h-11 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold transition-all duration-200 ${
               noiseFilterEnabled
-                ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
-                : 'border-white/10 bg-white/[0.06] text-white/50'
+                ? 'border-[#A77BFF]/40 bg-[#A77BFF]/15 text-[#A8B9FF] shadow-[0_0_12px_rgba(167,123,255,0.2)]'
+                : 'border-white/10 bg-white/[0.06] text-white/60 hover:text-white hover:bg-white/[0.12]'
             }`}
+            title={noiseFilterEnabled ? 'Voice Isolation: Active' : 'Voice Isolation: Disabled'}
           >
             <ShieldCheckIcon size={16} />
-            <span>Filter</span>
-          </button>
+            <span className="hidden md:inline">Voice Filter</span>
+          </motion.button>
 
           {/* Settings */}
-          <button
-            type="button"
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={() => setSettingsOpen(true)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/80 hover:bg-white/[0.12]"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/80 hover:bg-white/[0.12] hover:text-white transition-all duration-200"
+            title="Audio & Video Settings"
           >
             <SettingsIcon size={17} />
-          </button>
+          </motion.button>
 
-          <div className="h-5 w-px bg-white/10 mx-1" />
+          {/* More Options */}
+          <div className="relative">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setMoreMenuOpen((v) => !v);
+                setMicMenuOpen(false);
+                setCameraMenuOpen(false);
+              }}
+              className={`inline-flex h-11 w-11 items-center justify-center rounded-full border transition-all duration-200 ${
+                moreMenuOpen
+                  ? 'border-white/20 bg-white/20 text-white'
+                  : 'border-white/10 bg-white/[0.06] text-white/80 hover:bg-white/[0.12] hover:text-white'
+              }`}
+              title="More options"
+            >
+              <MoreIcon size={17} />
+            </motion.button>
 
-          {/* Leave Button */}
-          <button
-            type="button"
+            <AnimatePresence>
+              {moreMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                  transition={{ duration: 0.18 }}
+                  className="absolute bottom-full right-0 mb-3 w-52 rounded-2xl border border-white/10 bg-neutral-950/95 p-2 shadow-2xl backdrop-blur-2xl z-30 space-y-0.5"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+                      else document.exitFullscreen().catch(() => {});
+                      setMoreMenuOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+                  >
+                    <ExpandIcon size={15} />
+                    <span>Full Screen</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+                  >
+                    <DownloadIcon size={15} />
+                    <span>Export Transcript</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettingsOpen(true);
+                      setMoreMenuOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+                  >
+                    <SettingsIcon size={15} />
+                    <span>Diagnostics &amp; Devices</span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className="h-6 w-px bg-white/10 mx-1" />
+
+          {/* End Interview Button */}
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={() => setConfirmLeaveOpen(true)}
-            className="inline-flex h-10 items-center gap-2 rounded-full border border-red-500/35 bg-red-500/15 px-4 text-[12px] font-medium text-red-300 hover:bg-red-500/25"
+            className="inline-flex h-11 items-center gap-2 rounded-full bg-[#F52D45] px-5 text-xs font-bold text-white transition-all duration-200 hover:bg-[#d92238] active:bg-[#b8182c] shadow-[0_2px_16px_rgba(245,45,69,0.45)] hover:shadow-[0_4px_24px_rgba(245,45,69,0.65)] cursor-pointer"
+            title="Conclude interview session"
           >
             <PhoneOffIcon size={16} />
-            <span>Leave</span>
-          </button>
+            <span>End Interview</span>
+          </motion.button>
         </motion.footer>
       </div>
 
@@ -615,7 +851,7 @@ function Screen({ showVideo }: { showVideo: boolean }) {
               className="w-full max-w-md rounded-[2rem] border border-white/10 bg-neutral-950 p-6 text-center text-white"
             >
               <div className="flex flex-col items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-red-500/30 bg-red-500/15 text-red-400">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#F52D45]/30 bg-[#F52D45]/15 text-[#F52D45]">
                   <PhoneOffIcon size={24} />
                 </div>
                 <h3 className="text-lg font-bold">Conclude Interview Session?</h3>
@@ -633,11 +869,92 @@ function Screen({ showVideo }: { showVideo: boolean }) {
                   <button
                     type="button"
                     onClick={() => setConfirmLeaveOpen(false)}
-                    className="flex-1 rounded-xl bg-red-500 py-2.5 text-xs font-semibold text-white"
+                    className="flex-1 rounded-xl bg-[#F52D45] py-2.5 text-xs font-semibold text-white shadow-[0_0_16px_rgba(245,45,69,0.4)] hover:bg-[#d92238]"
                   >
                     End &amp; Submit
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {settingsOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+            <motion.div
+              className="relative w-full max-w-lg rounded-3xl border border-white/10 bg-neutral-950/95 p-6 shadow-2xl backdrop-blur-2xl text-white"
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                <h3 className="text-base font-semibold tracking-tight text-white flex items-center gap-2">
+                  <SettingsIcon size={18} />
+                  Devices &amp; Diagnostics
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setSettingsOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                >
+                  <CloseIcon size={16} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[11px] font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+                    Camera
+                  </label>
+                  <div className="w-full rounded-xl border border-white/10 bg-neutral-900 px-3 py-2 text-xs text-white">
+                    {activeCam}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+                    Microphone
+                  </label>
+                  <div className="w-full rounded-xl border border-white/10 bg-neutral-900 px-3 py-2 text-xs text-white">
+                    {activeMic}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+                    Speaker &amp; Audio Output
+                  </label>
+                  <div className="w-full rounded-xl border border-white/10 bg-neutral-900 px-3 py-2 text-xs text-white">
+                    {activeSpeaker}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 text-xs space-y-2">
+                  <div className="flex items-center justify-between text-white/60">
+                    <span>AI Voice Isolation (Krisp)</span>
+                    <span className={noiseFilterEnabled ? 'text-eco-accent font-semibold' : 'text-white/40'}>
+                      {noiseFilterEnabled ? 'Active' : 'Disabled'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-white/60">
+                    <span>Network Stream Quality</span>
+                    <span className="text-eco-accent font-semibold">HD 1080p · 60fps Adaptive</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSettingsOpen(false)}
+                  className="rounded-xl bg-white/10 px-5 py-2 text-xs font-semibold text-white hover:bg-white/15 transition-colors"
+                >
+                  Done
+                </button>
               </div>
             </motion.div>
           </div>
@@ -648,29 +965,58 @@ function Screen({ showVideo }: { showVideo: boolean }) {
 }
 
 export default function EcoDevPreview() {
-  return (
-    <div className="min-h-screen bg-neutral-950 p-6">
-      <div className="mx-auto mb-5 flex max-w-[1500px] items-center gap-3">
-        <h1 className="text-lg font-semibold text-white">/ai-interview — dev preview</h1>
-        <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-300">
-          mock harness — no LiveKit required
-        </span>
-        <div className="flex-1" />
-        {(['both', 'video', 'audio'] as const).map((s) => (
-          <a
-            key={s}
-            href={`/ai-interview/preview?state=${s}`}
-            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-neutral-300 transition-colors hover:bg-white/10"
-          >
-            {s}
-          </a>
-        ))}
-      </div>
+  const [currentMode, setCurrentMode] = React.useState<'video' | 'audio' | 'both'>('video');
 
-      <div className="mx-auto grid max-w-[1500px] gap-6">
-        <PreviewFor state="video" />
-        <PreviewFor state="audio" />
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const stateParam = urlParams.get('state');
+      if (stateParam === 'audio' || stateParam === 'video' || stateParam === 'both') {
+        setCurrentMode(stateParam);
+      }
+    }
+  }, []);
+
+  if (currentMode === 'both') {
+    return (
+      <div className="min-h-screen bg-neutral-950 p-6">
+        <div className="mx-auto mb-5 flex max-w-[1500px] items-center gap-3">
+          <h1 className="text-lg font-semibold text-white">/ai-interview — dev preview</h1>
+          <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-300">
+            mock harness — side-by-side mode
+          </span>
+          <div className="flex-1" />
+          {(['video', 'audio', 'both'] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setCurrentMode(s)}
+              className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${
+                currentMode === s
+                  ? 'border-eco-accent bg-eco-accent text-neutral-950 font-bold'
+                  : 'border-white/15 text-neutral-300 hover:bg-white/10'
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+
+        <div className="mx-auto grid max-w-[1500px] gap-6">
+          <PreviewFor state="video" />
+          <PreviewFor state="audio" />
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-[100dvh] overflow-hidden bg-black">
+      <Screen
+        showVideo={currentMode === 'video'}
+        mode={currentMode}
+        onModeChange={setCurrentMode}
+      />
     </div>
   );
 }

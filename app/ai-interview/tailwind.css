@@ -15,7 +15,94 @@
   --color-eco-muted: #9aa3b2;
   --color-eco-faint: #626b7b;
   --color-eco-border: rgb(255 255 255 / 0.09);
-  --color-eco-accent: #2ee6a6;
-  --color-eco-teal: #0fb59a;
-  --color-eco-danger: #f05252;
+
+  /* User Specified Brand Palette */
+  --color-brand-yellow: #FFC45E;
+  --color-brand-orange: #FF7049;
+  --color-brand-red: #F52D45;
+  --color-brand-pink: #F34BB5;
+  --color-brand-lavender: #A77BFF;
+  --color-brand-electric: #245BFF;
+  --color-brand-cyan: #20C8F5;
+  --color-brand-aqua: #53E0EC;
+  --color-brand-periwinkle: #A8B9FF;
+
+  /* Semantic mappings using brand palette */
+  --color-eco-accent: #20C8F5;
+  --color-eco-teal: #53E0EC;
+  --color-eco-danger: #F52D45;
+}
+
+@utility bg-gradient-signature {
+  background-image: linear-gradient(135deg, #FFC45E 0%, #FF7049 25%, #F34BB5 50%, #245BFF 75%, #20C8F5 100%);
+}
+
+@utility bg-gradient-cool {
+  background-image: linear-gradient(135deg, #245BFF 0%, #20C8F5 50%, #A8B9FF 100%);
+}
+
+@utility bg-gradient-warm {
+  background-image: linear-gradient(135deg, #FFC45E 0%, #FF7049 33%, #F52D45 66%, #F34BB5 100%);
+}
+
+@utility text-gradient-signature {
+  background-image: linear-gradient(135deg, #FFC45E 0%, #FF7049 25%, #F34BB5 50%, #245BFF 75%, #20C8F5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@utility text-gradient-cool {
+  background-image: linear-gradient(135deg, #245BFF 0%, #20C8F5 50%, #A8B9FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@utility text-gradient-warm {
+  background-image: linear-gradient(135deg, #FFC45E 0%, #FF7049 33%, #F52D45 66%, #F34BB5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@utility container {
+  width: 100%;
+  margin-inline: auto;
+  @media (min-width: 640px) {
+    max-width: 640px;
+  }
+  @media (min-width: 768px) {
+    max-width: 768px;
+  }
+  @media (min-width: 1024px) {
+    max-width: 1024px;
+  }
+  @media (min-width: 1280px) {
+    max-width: 1280px;
+  }
+  @media (min-width: 1536px) {
+    max-width: 1536px;
+  }
+}
+
+/* Scoped base resets for AI Interview controls */
+button {
+  background-color: transparent;
+  background-image: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--color-eco-accent, #2ee6a6);
+  outline-offset: 2px;
+}
+
+input, select {
+  box-sizing: border-box;
+  font: inherit;
 }

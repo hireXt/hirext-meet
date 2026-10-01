@@ -95,7 +95,7 @@ export const WavyBackground = ({
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.filter = `blur(${cfg.current.blur}px)`;
+      ctx.filter = cfg.current.blur && cfg.current.blur > 0 ? `blur(${cfg.current.blur}px)` : 'none';
     };
 
     const paint = () => {
@@ -121,7 +121,7 @@ export const WavyBackground = ({
 
       // Smooth easing between active and still states
       smoothedEnergy += (targetActivity - smoothedEnergy) * 0.12;
-      const targetAmp = smoothedEnergy * 110;
+      const targetAmp = smoothedEnergy * 85;
       smoothedAmp += (targetAmp - smoothedAmp) * 0.12;
 
       ctx.globalAlpha = 1;
@@ -140,23 +140,25 @@ export const WavyBackground = ({
         nt += (cfg.current.speed === "fast" ? 0.0025 : 0.0012) * speedMultiplier;
       }
 
-      const baseOpacity = cfg.current.waveOpacity ?? 0.5;
+      const baseOpacity = cfg.current.waveOpacity ?? 0.85;
       const dynamicOpacity = isStill
-        ? baseOpacity * 0.22
-        : baseOpacity * (0.35 + smoothedEnergy * 0.65);
+        ? baseOpacity * 0.25
+        : baseOpacity * (0.4 + smoothedEnergy * 0.6);
 
       ctx.globalAlpha = Math.min(1, Math.max(0, dynamicOpacity));
-      ctx.lineWidth = cfg.current.waveWidth || 45;
+      ctx.lineWidth = cfg.current.waveWidth !== undefined ? cfg.current.waveWidth : 2;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
 
       const count = reduced ? 3 : 5;
       for (let n = 0; n < count; n++) {
-        const idx = reduced ? n : Math.floor(nt * 100) % palette.length;
+        const idx = n % palette.length;
         ctx.beginPath();
         ctx.strokeStyle = palette[idx];
-        for (let x = 0; x <= w; x += 5) {
+        for (let x = 0; x <= w; x += 2) {
           // Flatten to still line when silent; undulate when audio plays
-          const y = isStill ? 0 : noise(x / 800, 0.3 * n, nt) * smoothedAmp;
-          ctx.lineTo(x, y + h * 0.5);
+          const y = isStill ? 0 : noise(x / 600, 0.35 * n, nt) * smoothedAmp;
+          ctx.lineTo(x, y + h * 0.55);
         }
         ctx.stroke();
         ctx.closePath();
