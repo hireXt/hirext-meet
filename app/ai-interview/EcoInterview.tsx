@@ -175,6 +175,7 @@ function EcoInterviewRoom({
   const [seconds, setSeconds] = React.useState(0);
   const [sharing, setSharing] = React.useState(false);
   const [ended, setEnded] = React.useState(false);
+  const hasConnected = React.useRef(false);
 
   React.useEffect(() => {
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
@@ -182,7 +183,13 @@ function EcoInterviewRoom({
   }, []);
 
   React.useEffect(() => {
-    if (connection === ConnectionState.Disconnected) setEnded(true);
+    // useConnectionState() starts as 'disconnected' before connect() runs, so
+    // only treat a disconnect as "ended" after we were actually connected.
+    if (connection === ConnectionState.Connected) {
+      hasConnected.current = true;
+    } else if (connection === ConnectionState.Disconnected && hasConnected.current) {
+      setEnded(true);
+    }
   }, [connection]);
 
   const speaking = state === 'speaking';
