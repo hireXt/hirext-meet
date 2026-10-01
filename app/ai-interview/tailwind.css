@@ -17,6 +17,7 @@
 @import 'tailwindcss/utilities.css' layer(utilities) source(none);
 
 @source './**/*.{ts,tsx}';
+@source '../../components/**/*.{ts,tsx}';
 
 /* Design tokens for the eco screen. Declared on :root so the effect components
    can be mounted anywhere; only referenced from ai-interview. */

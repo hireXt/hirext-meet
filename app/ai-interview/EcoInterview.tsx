@@ -130,24 +130,27 @@ function EcoInterviewRoom({
 
   if (ended) {
     return (
-      <div className="relative isolate flex h-[100dvh] flex-col overflow-hidden bg-black text-eco-fg">
+      <div className="relative isolate flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden bg-black text-eco-fg p-6">
         <BackgroundBeams />
-        <div className="relative z-10 flex flex-1 items-center justify-center">
-          <motion.div
-            className="flex flex-col items-center gap-4 text-center"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: EASE }}
-          >
-            <div className="flex items-center gap-2.5 text-xl font-semibold">
-              <span className="h-2.5 w-2.5 rounded-full bg-eco-accent shadow-[0_0_0_4px_rgba(46,230,166,0.14),0_0_18px_rgba(46,230,166,0.6)]" />
+        <motion.div
+          className="relative z-10 flex flex-col items-center gap-6 rounded-[2rem] border border-white/[0.08] bg-white/[0.04] p-2 shadow-2xl backdrop-blur-xl max-w-md w-full"
+          initial={{ opacity: 0, y: 16, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.7, ease: EASE }}
+        >
+          {/* Double-bezel inner core */}
+          <div className="flex w-full flex-col items-center gap-5 rounded-[calc(2rem-0.5rem)] bg-black/60 px-8 py-10 text-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
+            <div className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-white">
+              <span className="h-2.5 w-2.5 rounded-full bg-eco-accent shadow-[0_0_12px_#2ee6a6]" />
               Eco
             </div>
-            <h2 className="m-0 text-[22px]">Interview complete</h2>
-            <p className="m-0 text-eco-muted">Thanks, {candidateName}. You can close this tab.</p>
+            <h2 className="m-0 text-2xl font-bold tracking-tight text-white">Interview complete</h2>
+            <p className="m-0 text-sm text-eco-muted leading-relaxed max-w-xs">
+              Thank you, {candidateName}. Your session has concluded and you may now close this tab.
+            </p>
             {resultBase && (
               <a
-                className="inline-flex items-center gap-2 rounded-xl border border-eco-border bg-eco-surface px-4 py-2.5 text-sm font-medium text-eco-fg transition-colors hover:bg-eco-surface-2"
+                className="mt-1 inline-flex h-11 items-center gap-2.5 rounded-full bg-eco-accent px-7 text-[13px] font-semibold text-neutral-950 shadow-[0_0_20px_rgba(46,230,166,0.3)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_32px_rgba(46,230,166,0.5)] active:scale-[0.97]"
                 href={resultBase}
                 target="_blank"
                 rel="noreferrer"
@@ -155,74 +158,82 @@ function EcoInterviewRoom({
                 View your report
               </a>
             )}
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="relative isolate flex h-[100dvh] flex-col overflow-hidden bg-black font-sans text-eco-fg antialiased">
+    <div className="relative isolate flex min-h-[100dvh] flex-col overflow-hidden bg-black font-sans text-eco-fg antialiased">
       {/* Ambient beams sit behind the whole screen */}
       <BackgroundBeams />
 
-      <header className="relative z-10 flex shrink-0 items-center gap-3.5 px-6 py-3.5">
-        <div className="flex items-center gap-2.5 font-semibold tracking-tight">
-          <span className="h-2.5 w-2.5 rounded-full bg-eco-accent shadow-[0_0_0_4px_rgba(46,230,166,0.14),0_0_18px_rgba(46,230,166,0.6)]" />
-          Eco <span className="font-medium text-eco-muted">· AI Interview</span>
+      {/* ── Header ── */}
+      <header className="relative z-10 flex shrink-0 items-center justify-between px-6 md:px-10 py-4">
+        <div className="flex items-center gap-3">
+          <span className="relative flex h-3 w-3 items-center justify-center">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-eco-accent opacity-60" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-eco-accent shadow-[0_0_10px_#2ee6a6]" />
+          </span>
+          <span className="text-[15px] font-semibold tracking-tight text-white">Eco</span>
+          <span className="text-[10px] font-medium text-white/40 tracking-[0.14em] uppercase px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06]">
+            AI Interview
+          </span>
         </div>
-        <div className="flex-1" />
-        <div className="inline-flex items-center gap-2 rounded-full border border-eco-border bg-eco-surface px-3 py-1.5 text-[12.5px] text-eco-muted">
-          <span className="h-[7px] w-[7px] animate-pulse rounded-full bg-eco-accent" />
-          <b className="font-semibold text-eco-fg">{statusWord}</b>
-        </div>
-        <div className="rounded-full border border-eco-border bg-eco-surface px-3 py-1.5 text-[13px] tabular-nums text-eco-muted">
-          {fmt(seconds)}
+
+        <div className="flex items-center gap-2.5">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/70">
+            <span className={`h-1.5 w-1.5 rounded-full transition-all duration-500 ${speaking ? 'bg-eco-accent shadow-[0_0_6px_#2ee6a6]' : 'bg-white/30'}`} />
+            {statusWord}
+          </div>
+          <div className="inline-flex items-center rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium tabular-nums text-white/50">
+            {fmt(seconds)}
+          </div>
         </div>
       </header>
 
-      <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 px-6 pt-2">
-        <div className="flex min-h-0 flex-col gap-4">
-          <div className="grid shrink-0 grid-cols-2 gap-4">
-            <div className="relative flex aspect-video w-full max-h-[42vh] items-center justify-center overflow-hidden rounded-[28px] border border-eco-border bg-[#05070a]">
-              <AnimatePresence mode="wait" initial={false}>
-                {showVideo ? (
-                  <motion.div
-                    key="video"
-                    className="absolute inset-0 flex items-center justify-center"
-                    initial={{ opacity: 0, scale: 1.03 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.02 }}
-                    transition={{ duration: 0.5, ease: EASE }}
-                  >
-                    <VideoTrack trackRef={ecoVideo!} />
-                  </motion.div>
-                ) : (
-                  /* Wavy background stands in for the blob while video is off */
-                  <motion.div
-                    key="wave"
-                    className="absolute inset-0 flex items-center justify-center"
-                    initial={{ opacity: 0, scale: 1.04 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.02 }}
-                    transition={{ duration: 0.6, ease: EASE }}
-                  >
+      {/* ── Main Content ── */}
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col gap-4 px-4 md:px-8 pb-2 max-w-7xl mx-auto w-full">
+        {/* Video / Avatar Stage */}
+        <div className="grid shrink-0 grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+          {/* Eco Tile — double-bezel wrapper for both states */}
+          <div className="rounded-[1.75rem] border border-white/[0.06] bg-white/[0.03] p-1.5">
+            <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-black/40 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
+              {showVideo ? (
+                <>
+                  <VideoTrack trackRef={ecoVideo!} />
+                </>
+              ) : (
+                <>
+                  {/* Wavy canvas inside the bezel — clipped, not bleeding */}
+                  <div className="absolute inset-0 flex items-center justify-center [mask-image:radial-gradient(ellipse_at_center,black_50%,transparent_85%)] pointer-events-none">
                     <WavyBackground
-                      blur={14}
-                      waveWidth={40}
-                      waveOpacity={0.34}
+                      blur={10}
+                      waveWidth={45}
+                      waveOpacity={0.5}
                       speed="fast"
-                      backgroundFill="#05070a"
+                      backgroundFill="transparent"
+                      audioEnergy={energy}
+                      isSpeaking={speaking}
                     />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <span className="absolute bottom-3 left-3 z-20 rounded-full border border-eco-border bg-black/55 px-3 py-1.5 text-xs text-[#dfe5ec] backdrop-blur-md">
+                  </div>
+                  <div className="relative z-10 flex items-center gap-2.5 rounded-full border border-white/[0.1] bg-black/40 px-4 py-2 text-[11px] font-medium text-white/80 backdrop-blur-md shadow-[0_2px_16px_rgba(0,0,0,0.5)]">
+                    <span className={`h-2 w-2 rounded-full transition-all duration-500 ${speaking ? 'bg-eco-accent shadow-[0_0_8px_#2ee6a6]' : 'bg-white/25'}`} />
+                    <span>Eco</span>
+                    <span className="text-[10px] uppercase tracking-[0.12em] text-white/35">{speaking ? 'Speaking' : 'Listening'}</span>
+                  </div>
+                </>
+              )}
+              <span className="absolute bottom-3 left-3 z-20 rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white/80 backdrop-blur-sm">
                 Eco
               </span>
             </div>
+          </div>
 
-            <div className="relative flex aspect-video w-full max-h-[42vh] items-center justify-center overflow-hidden rounded-[28px] border border-eco-border bg-[#0b0e11]">
+          {/* Candidate Tile — double-bezel */}
+          <div className="rounded-[1.75rem] border border-white/[0.06] bg-white/[0.03] p-1.5">
+            <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-black/40 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
               <AnimatePresence mode="wait" initial={false}>
                 {localCam ? (
                   <motion.div
@@ -231,50 +242,75 @@ function EcoInterviewRoom({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.35 }}
+                    transition={{ duration: 0.4, ease: EASE }}
                   >
                     <VideoTrack trackRef={localCam} />
                   </motion.div>
                 ) : (
                   <motion.div
                     key="off"
-                    className="absolute inset-0 flex items-center justify-center"
+                    className="flex flex-col items-center gap-3 text-white/30"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ duration: 0.35 }}
+                    transition={{ duration: 0.4 }}
                   >
-                    <span className="text-[13px] text-eco-faint">Camera off</span>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.04] border border-white/[0.06]">
+                      <Icon d={I.camOff} />
+                    </div>
+                    <span className="text-[11px] font-medium tracking-wide">Camera off</span>
                   </motion.div>
                 )}
               </AnimatePresence>
-              <span className="absolute bottom-3 left-3 z-20 rounded-full border border-eco-border bg-black/55 px-3 py-1.5 text-xs text-[#dfe5ec] backdrop-blur-md">
+              <span className="absolute bottom-3 left-3 z-20 rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white/80 backdrop-blur-sm">
                 You
               </span>
             </div>
           </div>
+        </div>
 
-          {/* Transcript — sparkles on each Eco turn, word-by-word reveal */}
-          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto py-1.5">
+        {/* ── Transcription Area — borderless, transparent, beams show through ── */}
+        <div className="relative flex min-h-[140px] flex-1 flex-col overflow-hidden rounded-[1.5rem]">
+          {/* Sparkles glow at top edge */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-24 overflow-hidden z-0">
+            <div className="absolute inset-x-16 top-0 mx-auto h-[2px] w-2/3 bg-gradient-to-r from-transparent via-eco-accent/80 to-transparent blur-sm" />
+            <div className="absolute inset-x-16 top-0 mx-auto h-px w-2/3 bg-gradient-to-r from-transparent via-eco-accent/60 to-transparent" />
+            <div className="absolute inset-x-32 top-0 mx-auto h-[3px] w-1/4 bg-gradient-to-r from-transparent via-eco-teal/70 to-transparent blur-sm" />
+
+            <SparklesCore
+              background="transparent"
+              minSize={0.3}
+              maxSize={1}
+              particleDensity={250}
+              className="h-full w-full"
+              particleColor="#5cf5bd"
+            />
+          </div>
+
+          {/* Scroll area */}
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-5 md:px-6 py-4">
             {lines.length === 0 ? (
-              <div className="text-sm text-eco-faint">The conversation will appear here as you speak.</div>
+              <div className="flex h-full flex-col items-center justify-center text-center gap-1">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-eco-muted/50 font-semibold">Live Transcription</span>
+                <p className="text-[11px] text-eco-faint/60">The conversation will appear here as you speak</p>
+              </div>
             ) : (
               <AnimatePresence initial={false}>
                 {lines.map((l, i) => (
                   <motion.div
                     key={`${l.identity}-${i}`}
                     layout
-                    className={`flex max-w-[620px] gap-2.5 ${isEco(l.identity) ? '' : 'ml-14 max-w-[540px]'}`}
-                    initial={{ opacity: 0, y: 10 }}
+                    className={`flex max-w-[620px] items-start gap-2.5 ${isEco(l.identity) ? '' : 'ml-auto justify-end'}`}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, ease: EASE }}
+                    transition={{ duration: 0.5, ease: EASE }}
                   >
                     {isEco(l.identity) && (
-                      <span className="relative mt-0.5 h-6 w-6 shrink-0 overflow-visible">
+                      <span className="relative mt-1 h-4 w-4 shrink-0 overflow-visible">
                         <SparklesCore
                           background="transparent"
-                          minSize={0.6}
-                          maxSize={1.8}
-                          particleCount={14}
+                          minSize={0.5}
+                          maxSize={1.6}
+                          particleCount={10}
                           particleColor="#5cf5bd"
                           speed={4}
                           className="h-full w-full"
@@ -283,11 +319,11 @@ function EcoInterviewRoom({
                     )}
                     <TextGenerateEffect
                       words={l.text}
-                      staggerDelay={0.04}
+                      staggerDelay={0.035}
                       className={
                         isEco(l.identity)
-                          ? 'text-[15px] leading-relaxed text-[#e7ecf2]'
-                          : 'rounded-2xl border border-eco-border bg-eco-surface-2 px-3.5 py-2.5 text-[15px] leading-relaxed text-[#cfd6e0]'
+                          ? 'text-[14px] leading-relaxed text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]'
+                          : 'rounded-2xl border border-white/[0.08] bg-white/[0.05] px-4 py-2.5 text-[14px] leading-relaxed text-white/80 backdrop-blur-sm'
                       }
                     />
                   </motion.div>
@@ -296,71 +332,87 @@ function EcoInterviewRoom({
             )}
           </div>
         </div>
-      </div>
+      </main>
 
+      {/* ── Screen Share Hint ── */}
       <AnimatePresence>
         {!sharing && (
           <motion.div
-            className="relative z-10 mx-6 flex shrink-0 items-center gap-2.5 rounded-xl border border-eco-accent/30 bg-gradient-to-b from-eco-accent/10 to-eco-accent/[0.03] px-3.5 py-2.5 text-[13px] text-[#dfe6ee]"
-            initial={{ opacity: 0, y: 8 }}
+            className="relative z-10 mx-auto max-w-lg w-full flex items-center gap-3 rounded-2xl border border-eco-accent/20 bg-eco-accent/[0.06] px-4 py-2.5 text-[11px] text-white/80 backdrop-blur-sm mb-3"
+            style={{ marginLeft: 'auto', marginRight: 'auto' }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.3, ease: EASE }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.35, ease: EASE }}
           >
-            <Icon d={I.share} />
-            <span>
-              <b className="font-semibold text-eco-accent">Share your screen when you&rsquo;re ready.</b>{' '}
-              <span className="text-eco-muted">Whole screen or a single window — you can start any time.</span>
+            <span className="text-eco-accent/80 shrink-0">
+              <Icon d={I.share} />
             </span>
+            <div className="flex-1">
+              <span className="font-semibold text-eco-accent/90">Share your screen when you&rsquo;re ready.</span>{' '}
+              <span className="text-white/45">Whole screen or a single window.</span>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="relative z-10 flex shrink-0 items-center justify-center gap-2.5 px-6 pb-5 pt-4">
-        <motion.button
-          whileTap={{ scale: 0.96 }}
-          onClick={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}
-          className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-[13.5px] font-medium transition-colors ${
-            isMicrophoneEnabled
-              ? 'border-eco-border bg-eco-surface text-eco-fg hover:bg-eco-surface-2'
-              : 'border-eco-danger/35 bg-eco-danger/10 text-eco-danger'
-          }`}
+      {/* ── Floating Island Control Bar ── */}
+      <div className="relative z-10 flex shrink-0 justify-center px-4 pb-5 pt-2">
+        <motion.footer
+          className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-2 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: EASE, delay: 0.15 }}
         >
-          <Icon d={isMicrophoneEnabled ? I.mic : I.micOff} />
-          {isMicrophoneEnabled ? 'Mic on' : 'Mic off'}
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.96 }}
-          onClick={() => localParticipant.setCameraEnabled(!isCameraEnabled)}
-          className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-[13.5px] font-medium transition-colors ${
-            isCameraEnabled
-              ? 'border-eco-border bg-eco-surface text-eco-fg hover:bg-eco-surface-2'
-              : 'border-eco-danger/35 bg-eco-danger/10 text-eco-danger'
-          }`}
-        >
-          <Icon d={isCameraEnabled ? I.cam : I.camOff} />
-          {isCameraEnabled ? 'Camera on' : 'Camera off'}
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.96 }}
-          onClick={toggleShare}
-          className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-[13.5px] font-semibold transition-colors ${
-            sharing
-              ? 'border-transparent bg-gradient-to-b from-eco-accent to-[#17c98d] text-[#04120c]'
-              : 'border-eco-border bg-eco-surface text-eco-fg hover:bg-eco-surface-2'
-          }`}
-        >
-          <Icon d={I.share} />
-          {sharing ? 'Sharing screen' : 'Share screen'}
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.96 }}
-          onClick={() => room.disconnect()}
-          className="inline-flex items-center gap-2 rounded-xl border border-eco-danger/40 bg-eco-danger/10 px-4 py-2.5 text-[13.5px] font-medium text-[#ffb4b4] transition-colors hover:bg-eco-danger/20"
-        >
-          <Icon d={I.leave} />
-          Leave
-        </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}
+            className={`inline-flex h-10 items-center gap-2 rounded-full px-4 text-[12px] font-medium transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+              isMicrophoneEnabled
+                ? 'bg-white/[0.06] text-white/90 hover:bg-white/[0.12]'
+                : 'bg-eco-danger/15 text-red-300 hover:bg-eco-danger/25'
+            }`}
+          >
+            <Icon d={isMicrophoneEnabled ? I.mic : I.micOff} />
+            <span>{isMicrophoneEnabled ? 'Mic' : 'Muted'}</span>
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => localParticipant.setCameraEnabled(!isCameraEnabled)}
+            className={`inline-flex h-10 items-center gap-2 rounded-full px-4 text-[12px] font-medium transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+              isCameraEnabled
+                ? 'bg-white/[0.06] text-white/90 hover:bg-white/[0.12]'
+                : 'bg-eco-danger/15 text-red-300 hover:bg-eco-danger/25'
+            }`}
+          >
+            <Icon d={isCameraEnabled ? I.cam : I.camOff} />
+            <span>{isCameraEnabled ? 'Camera' : 'Cam off'}</span>
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={toggleShare}
+            className={`inline-flex h-10 items-center gap-2 rounded-full px-4 text-[12px] font-medium transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+              sharing
+                ? 'bg-eco-accent text-neutral-950 font-semibold shadow-[0_0_14px_rgba(46,230,166,0.3)]'
+                : 'bg-white/[0.06] text-white/90 hover:bg-white/[0.12]'
+            }`}
+          >
+            <Icon d={I.share} />
+            <span>{sharing ? 'Sharing' : 'Share'}</span>
+          </motion.button>
+
+          {/* Divider */}
+          <div className="h-5 w-px bg-white/[0.08] mx-0.5" />
+
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => room.disconnect()}
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-red-500/15 px-5 text-[12px] font-medium text-red-300 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-red-500/25"
+          >
+            <Icon d={I.leave} />
+            <span>Leave</span>
+          </motion.button>
+        </motion.footer>
       </div>
     </div>
   );

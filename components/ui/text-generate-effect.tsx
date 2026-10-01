@@ -42,7 +42,7 @@ export const TextGenerateEffect = ({
   }, [words, scope, animate, filter, duration, staggerDelay]);
 
   return (
-    <div className={cn("inline", className)}>
+    <div className={cn("inline-block", className)}>
       <motion.div ref={scope} className="inline">
         {wordsArray.map((word, idx) => (
           <motion.span

@@ -28,6 +28,8 @@ export const WavyBackground = ({
   blur = 10,
   speed = "fast",
   waveOpacity = 0.5,
+  audioEnergy,
+  isSpeaking,
   ...props
 }: {
   children?: any;
@@ -39,11 +41,31 @@ export const WavyBackground = ({
   blur?: number;
   speed?: "slow" | "fast";
   waveOpacity?: number;
+  audioEnergy?: number;
+  isSpeaking?: boolean;
   [key: string]: any;
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const cfg = useRef({ blur, speed, waveOpacity, waveWidth, backgroundFill, colors });
-  cfg.current = { blur, speed, waveOpacity, waveWidth, backgroundFill, colors };
+  const cfg = useRef({
+    blur,
+    speed,
+    waveOpacity,
+    waveWidth,
+    backgroundFill,
+    colors,
+    audioEnergy,
+    isSpeaking,
+  });
+  cfg.current = {
+    blur,
+    speed,
+    waveOpacity,
+    waveWidth,
+    backgroundFill,
+    colors,
+    audioEnergy,
+    isSpeaking,
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -55,6 +77,8 @@ export const WavyBackground = ({
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const size = { w: 0, h: 0 };
     let nt = 0;
+    let smoothedEnergy = 0;
+    let smoothedAmp = 0;
     let frame: number | null = null;
 
     const waveColors = () =>
@@ -78,21 +102,60 @@ export const WavyBackground = ({
       const { w, h } = size;
       if (!w || !h) return;
       const palette = waveColors();
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = cfg.current.backgroundFill || "#05070a";
-      ctx.fillRect(0, 0, w, h);
 
-      ctx.globalAlpha = Math.min(1, Math.max(0, cfg.current.waveOpacity));
-      ctx.lineWidth = cfg.current.waveWidth || 50;
+      // Audio-awareness:
+      // When AI doesn't speak, targetActivity is 0 (still).
+      // When audio plays, targetActivity scales with volume energy.
+      let targetActivity = 0;
+      if (cfg.current.isSpeaking !== undefined) {
+        if (!cfg.current.isSpeaking) {
+          targetActivity = 0;
+        } else {
+          targetActivity = Math.max(0.35, cfg.current.audioEnergy ?? 0.6);
+        }
+      } else if (cfg.current.audioEnergy !== undefined) {
+        targetActivity = cfg.current.audioEnergy > 0.03 ? cfg.current.audioEnergy : 0;
+      } else {
+        targetActivity = 0.5; // fallback default
+      }
+
+      // Smooth easing between active and still states
+      smoothedEnergy += (targetActivity - smoothedEnergy) * 0.12;
+      const targetAmp = smoothedEnergy * 110;
+      smoothedAmp += (targetAmp - smoothedAmp) * 0.12;
+
+      ctx.globalAlpha = 1;
+      if (!cfg.current.backgroundFill || cfg.current.backgroundFill === "transparent") {
+        ctx.clearRect(0, 0, w, h);
+      } else {
+        ctx.fillStyle = cfg.current.backgroundFill;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      const isStill = smoothedEnergy < 0.015;
+
+      // Only advance phase if speaking/audio plays; freeze when still
+      if (!reduced && !isStill) {
+        const speedMultiplier = Math.min(2.5, Math.max(0.4, smoothedEnergy * 2.8));
+        nt += (cfg.current.speed === "fast" ? 0.0025 : 0.0012) * speedMultiplier;
+      }
+
+      const baseOpacity = cfg.current.waveOpacity ?? 0.5;
+      const dynamicOpacity = isStill
+        ? baseOpacity * 0.22
+        : baseOpacity * (0.35 + smoothedEnergy * 0.65);
+
+      ctx.globalAlpha = Math.min(1, Math.max(0, dynamicOpacity));
+      ctx.lineWidth = cfg.current.waveWidth || 45;
 
       const count = reduced ? 3 : 5;
       for (let n = 0; n < count; n++) {
-        if (!reduced) nt += cfg.current.speed === "fast" ? 0.002 : 0.001;
         const idx = reduced ? n : Math.floor(nt * 100) % palette.length;
         ctx.beginPath();
         ctx.strokeStyle = palette[idx];
         for (let x = 0; x <= w; x += 5) {
-          const y = noise(x / 800, 0.3 * n, nt) * 100;
+          // Flatten to still line when silent; undulate when audio plays
+          const y = isStill ? 0 : noise(x / 800, 0.3 * n, nt) * smoothedAmp;
           ctx.lineTo(x, y + h * 0.5);
         }
         ctx.stroke();
