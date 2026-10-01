@@ -31,6 +31,9 @@
 }
 .eco-root * { box-sizing: border-box; }
 .eco-root button { font-family: inherit; cursor: pointer; }
+/* Every icon is an inline <svg viewBox>; without an explicit size the SVGs
+   expand to fill their container (that was the giant full-page arrow). */
+.eco-root svg { width: 18px; height: 18px; flex: none; display: block; }
 
 /* top bar */
 .eco-top { display: flex; align-items: center; gap: 14px; padding: 14px 24px; flex: none; }
@@ -52,7 +55,8 @@
 .eco-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; flex: none; }
 .eco-tile {
   position: relative; border-radius: 18px; overflow: hidden;
-  aspect-ratio: 16 / 9; background: #0b0e11;
+  aspect-ratio: 16 / 9; max-height: 42vh; width: 100%;
+  background: #0b0e11;
   border: 1px solid var(--eco-border);
   display: flex; align-items: center; justify-content: center;
 }
@@ -108,6 +112,7 @@
 
 /* share hint */
 .eco-share-hint { flex: none; margin: 0 24px; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: linear-gradient(180deg, rgba(46,230,166,.10), rgba(46,230,166,.03)); border: 1px solid rgba(46,230,166,.3); font-size: 13px; color: #dfe6ee; }
+.eco-share-hint svg { color: var(--eco-accent); width: 18px; height: 18px; }
 .eco-share-hint b { font-weight: 600; }
 .eco-share-hint small { color: var(--eco-muted); }
 
