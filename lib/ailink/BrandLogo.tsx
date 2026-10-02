@@ -6,6 +6,7 @@ export interface BrandLogoProps {
   size?: number;
   theme?: 'light' | 'dark' | 'auto';
   className?: string;
+  showText?: boolean;
 }
 
 /**
@@ -16,6 +17,7 @@ export function BrandLogo({
   size = 32,
   theme = 'auto',
   className = '',
+  showText = true,
 }: BrandLogoProps) {
   return (
     <span className={`ail-brand-container ail-brand-theme--${theme} ${className}`.trim()}>
@@ -25,9 +27,11 @@ export function BrandLogo({
         style={{ height: size, width: 'auto' }}
         className="object-contain select-none shrink-0"
       />
-      <span className="ail-brand-text">
-        mee<span className="ail-brand-highlight">X</span>t
-      </span>
+      {showText && (
+        <span className="ail-brand-text">
+          mee<span className="ail-brand-highlight">X</span>t
+        </span>
+      )}
     </span>
   );
 }

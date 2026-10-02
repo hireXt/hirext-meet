@@ -49,15 +49,11 @@ export default async function AiInterviewPage(props: {
           </p>
         </div>
 
-        <div className="absolute bottom-6 flex flex-col items-center space-y-1 text-sm text-neutral-400">
-          <BrandLogo theme="light" className="scale-50 text-white!" />
-          <p>
-            Made with <span className="text-eco-accent">❤</span>
-            in Bengaluru, India by{' '}
-            <a href="https://hirext.com" className="text-eco-accent hover:underline">
-              HireXt
-            </a>
-          </p>
+        <div className="absolute bottom-6 left-6 flex flex-col items-start space-y-1">
+          <BrandLogo theme="light" className="scale-50 text-white!" showText={false} />
+          <span className="text-xs text-neutral-500">
+            meeXt by HireXt &copy; {new Date().getFullYear()}
+          </span>
         </div>
       </main>
     );
