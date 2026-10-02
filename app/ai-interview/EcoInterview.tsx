@@ -745,7 +745,7 @@ function EcoInterviewRoom({
   );
 
   const participants = useParticipants();
-  const participantCount = Math.max(participants.length, 2);
+  const participantCount = participants.length;
 
   const env = (t: TrackReferenceOrPlaceholder) => t.participant?.identity === ECO_IDENTITY;
   const ecoAudio = tracks.find((t) => env(t) && t.source === Track.Source.Microphone);
@@ -1218,45 +1218,13 @@ function EcoInterviewRoom({
   const speaking = energy > 0.04;
   const statusWord = speaking ? 'Speaking' : connection === ConnectionState.Connected ? 'Listening' : 'Connecting';
 
-  const realLines = (transcriptions as any[])
+  const lines = (transcriptions as any[])
     .map((t, idx) => ({
       id: String(t?.id || `real-${idx}`),
       text: String(t?.text ?? '').trim(),
       identity: String(t?.participantInfo?.identity ?? t?.participantIdentity ?? ''),
     }))
     .filter((l) => l.text);
-
-  // Dynamic live transcript mock stream for simulated interviews and testing
-  const MOCK_DIALOGUE_POOL = React.useMemo(() => [
-    { id: 'm-1', identity: ECO_IDENTITY, text: `Hi ${candidateName || 'there'}, good morning. Thanks for joining the interview today. Are you ready to begin our technical assessment?` },
-    { id: 'm-2', identity: 'candidate', text: 'Good morning! Yes, absolutely ready.' },
-    { id: 'm-3', identity: ECO_IDENTITY, text: 'Great. Let us start with system design. Tell me about a time you had to diagnose and resolve a severe production outage.' },
-    { id: 'm-4', identity: 'candidate', text: 'We had an incident where an asynchronous queue backed up due to a database deadlock. I isolated the worker pool and deployed a migration within ten minutes.' },
-    { id: 'm-5', identity: ECO_IDENTITY, text: 'Walk me through the deadlock diagnosis. What telemetry or metrics led you to pinpoint the contention?' },
-    { id: 'm-6', identity: 'candidate', text: 'We analyzed PostgreSQL lock tables and pg_stat_activity, correlating latency spikes with slow RPC timeouts in Datadog.' },
-    { id: 'm-7', identity: ECO_IDENTITY, text: 'Good catch. How did you restructure the transaction boundaries to prevent future deadlocks under peak traffic?' },
-    { id: 'm-8', identity: 'candidate', text: 'We enforced strict resource acquisition ordering across transactions and moved non-critical side effects outside the atomic commit.' },
-    { id: 'm-9', identity: ECO_IDENTITY, text: 'Excellent architectural decision. Now let us touch on distributed consistency and cache invalidation strategies.' },
-    { id: 'm-10', identity: 'candidate', text: 'We utilize cache-aside with write-through invalidation via Kafka change data capture streams, avoiding stale reads.' },
-    { id: 'm-11', identity: ECO_IDENTITY, text: 'How do you handle partition rebalancing during heavy consumer skew without dropping SLA promises?' },
-    { id: 'm-12', identity: 'candidate', text: 'We tuned cooperative sticky partition assignment and backpressured batch consumption with bounded thread pools.' },
-  ], [candidateName]);
-
-  const [mockLinesCount, setMockLinesCount] = React.useState(3);
-
-  React.useEffect(() => {
-    if (realLines.length > 0) return;
-    const interval = setInterval(() => {
-      setMockLinesCount((c) => (c < MOCK_DIALOGUE_POOL.length ? c + 1 : c));
-    }, 4500);
-    return () => clearInterval(interval);
-  }, [realLines.length, MOCK_DIALOGUE_POOL.length]);
-
-  const lines = realLines.length > 0
-    ? realLines
-    : MOCK_DIALOGUE_POOL.slice(0, mockLinesCount);
-
-  const isMockActive = realLines.length === 0;
 
   const isEco = (id: string) => id === ECO_IDENTITY || id.startsWith('agent') || id === 'eco';
 
@@ -1492,7 +1460,7 @@ function EcoInterviewRoom({
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-white font-semibold text-xs border border-white/10">
                         {getInitials(candidateName)}
-                        <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-neutral-900 ${isMicrophoneEnabled ? 'bg-emerald-400' : 'bg-[#F52D45]'}`} />
+                        <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-neutral-900 ${isLocalMicLive ? 'bg-emerald-400' : 'bg-[#F52D45]'}`} />
                       </div>
                       <div className="min-w-0 flex flex-col">
                         <div className="flex items-center gap-1.5">
@@ -1504,17 +1472,17 @@ function EcoInterviewRoom({
                           </span>
                         </div>
                         <span className="text-[10px] text-white/50">
-                          {isMicrophoneEnabled ? 'Mic Active' : 'Muted'} • {isCameraEnabled ? 'Cam On' : 'Cam Off'}
+                          {isLocalMicLive ? 'Mic Active' : 'Muted'} • {isLocalVideoLive ? 'Cam On' : 'Cam Off'}
                         </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 text-white/60">
-                      {isMicrophoneEnabled ? (
+                      {isLocalMicLive ? (
                         <MicIcon size={13} className="text-emerald-400" />
                       ) : (
                         <MicOffIcon size={13} className="text-[#F52D45]" />
                       )}
-                      {isCameraEnabled ? (
+                      {isLocalVideoLive ? (
                         <CameraIcon size={13} className="text-emerald-400" />
                       ) : (
                         <CameraOffIcon size={13} className="text-[#F52D45]" />
