@@ -63,7 +63,65 @@ export interface EcoInterviewProps {
 }
 
 const ECO_IDENTITY = 'eco-avatar';
+
+/**
+ * Quick-pick reasons for the required suggestion box, shown only when the
+ * candidate rates below 5 stars. Picking one writes it into the box so a
+ * suggestion is
+ * always achievable in two taps, while the box stays free-text and mandatory —
+ * the API rejects an empty suggestion (min 1 char), so this is a shortcut, not
+ * a way around the requirement.
+ */
+const NEGATIVE_REASONS = [
+  'Audio kept cutting out or breaking',
+  "Interviewer didn't know the role or subject well",
+  'Questions were unclear or badly structured',
+  'Too easy / did not reflect the role',
+];
+
+
 const EASE = [0.22, 1, 0.36, 1] as const;
+
+/**
+ * Hand the candidate back to the window that opened MeeXt, then close this one.
+ *
+ * The interview always runs in a tab the web client opened, so `window.opener`
+ * is the app window they came from. Browsers only permit window.close() on a
+ * window the script opened, so it silently no-ops when the tab was opened by
+ * hand — hence the location fallback, which lands them on the same page either
+ * way. opener.focus() raises the original window on desktop, where focus()
+ * alone would not switch away from this tab.
+ */
+function returnToOpener(fallbackHref: string) {
+  if (typeof window === 'undefined') return;
+  const opener = window.opener as Window | null;
+  try {
+    if (opener && !opener.closed) {
+      opener.focus();
+      window.close();
+      // Still here? close() was a no-op — navigate ourselves so the candidate
+      // is not stranded on the concluded screen.
+      window.setTimeout(() => {
+        window.location.href = fallbackHref;
+      }, 60);
+      return;
+    }
+  } catch {
+    /* cross-origin opener: fall through to the redirect below */
+  }
+  window.location.href = fallbackHref;
+}
+
+/**
+ * Where to send the candidate: the web client's own result page, which renders
+ * the feedback form for any interview not answered here. Skipping in MeeXt
+ * therefore hands them back to the form they started from rather than losing it.
+ */
+function resultPageUrl(resultBase: string | undefined, sessionId: string) {
+  const base = (resultBase || '').replace(/\/$/, '');
+  if (!base || !sessionId) return '';
+  return `${base}/mock-interviews/result/${encodeURIComponent(sessionId)}`;
+}
 
 function fmt(secs: number) {
   const m = Math.floor(secs / 60)
@@ -1478,6 +1536,30 @@ function EcoInterviewRoom({
                 >
                   Thank you, <span className="text-white font-medium">{candidateName}</span>. Your interview responses have been submitted.
                 </motion.p>
+
+                {/* Session meta — sits under the thank-you on the left so the
+                    right column is dedicated to the feedback form. */}
+                <motion.dl
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, delay: 0.35, ease: EASE }}
+                  className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <dt className="text-white/40">Session</dt>
+                    <dd className="font-semibold text-white/90 truncate max-w-[16rem]">
+                      {interviewTitle && interviewTitle !== 'Assessment' ? interviewTitle : 'Technical Assessment'}
+                    </dd>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <dt className="text-white/40">Duration</dt>
+                    <dd className="font-mono font-bold text-sky-400">{fmt(finalDuration ?? seconds)}</dd>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <dt className="text-white/40">Status</dt>
+                    <dd className="text-emerald-400 font-medium">Submitted</dd>
+                  </div>
+                </motion.dl>
               </div>
 
               {/* Right Side: Telemetry Card */}
@@ -1488,24 +1570,6 @@ function EcoInterviewRoom({
                 className="flex w-full flex-col items-center lg:col-span-5 lg:items-end"
               >
                 <div className="w-full max-w-md rounded-3xl border border-white/[0.08] bg-white/[0.02] p-6 sm:p-7 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.85)] backdrop-blur-2xl space-y-4 text-left">
-                  {/* Session meta */}
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-white/40">Session</span>
-                    <span className="font-semibold text-white truncate max-w-[60%] text-right">
-                      {interviewTitle && interviewTitle !== 'Assessment' ? interviewTitle : 'Technical Assessment'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-white/40">Duration</span>
-                    <span className="font-mono font-bold text-sky-400">{fmt(finalDuration ?? seconds)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-white/40">Status</span>
-                    <span className="text-emerald-400 font-medium">Submitted</span>
-                  </div>
-
-                  <div className="h-px w-full bg-white/[0.06]" />
-
                   {/* Feedback form or done state */}
                   <AnimatePresence mode="wait">
                     {feedbackView === 'form' ? (
@@ -1570,12 +1634,35 @@ function EcoInterviewRoom({
                           </div>
                         ))}
 
+                        {/* Quick reasons — only when the rating is below 5.
+                            Chips are suggestions, not a substitute: the box
+                            below is still required before Submit enables. */}
+                        {fbOverall > 0 && fbOverall < 5 && (
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] text-white/50 uppercase tracking-wider">
+                              What went wrong?
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {NEGATIVE_REASONS.map((r) => (
+                                <button
+                                  key={r}
+                                  type="button"
+                                  onClick={() => setFbSuggestion(r)}
+                                  className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] text-white/60 transition-colors hover:border-white/20 hover:text-white/90 cursor-pointer"
+                                >
+                                  {r}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Suggestion */}
                         <textarea
                           rows={2}
                           value={fbSuggestion}
                           onChange={(e) => setFbSuggestion(e.target.value)}
-                          placeholder="Any suggestions? (optional)"
+                          placeholder="What went well, or what could be better?"
                           maxLength={2000}
                           className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-xs text-white/80 placeholder-white/25 focus:outline-none focus:border-white/20 transition-colors"
                         />
@@ -1592,19 +1679,29 @@ function EcoInterviewRoom({
                               if (fbOverall === 0) { setFbError('Please give an overall rating.'); return; }
                               const missing = (['knowledge','communication','professionalism','clarity','experience'] as const).find((k) => fbAspects[k] === 0);
                               if (missing) { setFbError('Please rate all five aspects.'); return; }
+                              if (!fbSuggestion.trim()) { setFbError('Please add a short suggestion.'); return; }
                               const sessionId = room.name;
-                              const apiBase = resultBase ? resultBase.replace(/\/$/, '') : '';
-                              if (!sessionId || !apiBase) { setFeedbackView('done'); return; }
+                              const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+                              const reportHref = resultPageUrl(resultBase, sessionId);
+                              if (!sessionId || !apiBase || !reportHref) {
+                                setFbError('Feedback is unavailable right now.');
+                                return;
+                              }
                               setFbSubmitting(true);
                               try {
-                                const res = await fetch(`${apiBase}/api/interview/session/${sessionId}/feedback`, {
+                                const res = await fetch(`${apiBase}/api/interview/session/${encodeURIComponent(sessionId)}/feedback`, {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   credentials: 'include',
-                                  body: JSON.stringify({ overall: fbOverall, aspects: fbAspects, suggestion: fbSuggestion.trim() || '—' }),
+                                  // suggestion is required by the API (min 1 char) and
+                                  // validated client-side above, so it is never empty and
+                                  // never a placeholder — a stored "—" would pollute the
+                                  // admin feedback data.
+                                  body: JSON.stringify({ overall: fbOverall, aspects: fbAspects, suggestion: fbSuggestion.trim() }),
                                 });
-                                if (res.ok || res.status === 409) {
-                                  setFeedbackView('done');
+                                if (res.ok) {
+                                  // Submitted: back to the app window, this tab closes.
+                                  returnToOpener(reportHref);
                                 } else {
                                   const body = await res.json().catch(() => ({}));
                                   setFbError(body?.message || 'Could not submit feedback.');
@@ -1621,10 +1718,18 @@ function EcoInterviewRoom({
                           </button>
                           <button
                             type="button"
-                            onClick={() => setFeedbackView('done')}
+                            onClick={() => {
+                              // Skip must NOT post anything — an empty submission
+                              // would be saved as if the candidate had answered.
+                              // Hand them back to the web client's result page,
+                              // where the same form is waiting for them.
+                              const href = resultPageUrl(resultBase, room.name);
+                              if (href) returnToOpener(href);
+                              else setFeedbackView('done');
+                            }}
                             className="text-[10px] text-white/30 hover:text-white/60 transition-colors cursor-pointer"
                           >
-                            Skip
+                            Skip — rate it later
                           </button>
                         </div>
                       </motion.div>
@@ -1636,24 +1741,17 @@ function EcoInterviewRoom({
                         transition={{ duration: 0.4 }}
                         className="space-y-3 pt-1"
                       >
-                        {resultBase ? (
-                          <a
-                            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#20C8F5] via-[#245BFF] to-[#F34BB5] px-6 text-sm font-bold text-white shadow-[0_0_28px_rgba(32,200,245,0.35)] transition-all hover:shadow-[0_0_40px_rgba(32,200,245,0.55)] active:scale-[0.98]"
-                            href={resultBase}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            View Scorecard &amp; Report
-                          </a>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => { if (typeof window !== 'undefined') { window.close(); } }}
-                            className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-white/10 hover:bg-white/[0.15] border border-white/[0.08] text-white px-6 text-xs font-semibold transition-all active:scale-[0.98] cursor-pointer"
-                          >
-                            Close Session
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const href = resultPageUrl(resultBase, room.name);
+                            if (href) returnToOpener(href);
+                            else if (typeof window !== 'undefined') window.close();
+                          }}
+                          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#20C8F5] via-[#245BFF] to-[#F34BB5] px-6 text-sm font-bold text-white shadow-[0_0_28px_rgba(32,200,245,0.35)] transition-all hover:shadow-[0_0_40px_rgba(32,200,245,0.55)] active:scale-[0.98] cursor-pointer"
+                        >
+                          View Scorecard &amp; Report
+                        </button>
                       </motion.div>
                     )}
                   </AnimatePresence>
