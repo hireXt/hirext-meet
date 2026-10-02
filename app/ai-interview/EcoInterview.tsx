@@ -2038,7 +2038,12 @@ function EcoInterviewRoom({
                   {showVideo ? (
                     <VideoTrack
                       trackRef={ecoVideo!}
-                      className="absolute inset-0 block h-full w-full object-cover"
+                      className="absolute inset-0 block h-full w-full"
+                      /* Inline objectFit, not just the class: LiveKit's VideoTrack
+                         renders its own <video> and sets object-fit inline, which
+                         a utility class cannot override — the clip stayed
+                         letterboxed inside the tile instead of filling it. */
+                      style={{ objectFit: 'cover' }}
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-black/70">
@@ -2170,7 +2175,12 @@ function EcoInterviewRoom({
                        resolve against the wrong box. */
                     <VideoTrack
                       trackRef={ecoVideo!}
-                      className="absolute inset-0 block h-full w-full object-cover"
+                      className="absolute inset-0 block h-full w-full"
+                      /* Inline objectFit, not just the class: LiveKit's VideoTrack
+                         renders its own <video> and sets object-fit inline, which
+                         a utility class cannot override — the clip stayed
+                         letterboxed inside the tile instead of filling it. */
+                      style={{ objectFit: 'cover' }}
                     />
                   ) : (
                     <div className="relative flex h-full w-full items-center justify-center">
