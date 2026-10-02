@@ -1081,62 +1081,60 @@ function PreJoinPreview({
       {/* Ambient background lighting */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_-15%,rgba(36,91,255,0.08),rgba(0,0,0,0))]" />
 
-      {/* Top Header Bar */}
-      <header className="relative z-10 w-full shrink-0 border-b border-white/[0.06] bg-neutral-950/60 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6 sm:px-8">
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="HireXt Logo" className="h-7 w-auto object-contain select-none" />
-            <span className="h-4 w-px bg-white/15" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-white">
-              Interview
-            </span>
-            <span className="hidden sm:inline text-white/20">·</span>
-            <span className="hidden sm:inline text-xs text-white/50 truncate max-w-xs">
-              Senior Software Engineer Assessment
-            </span>
-          </div>
+      {/* ── Top Header (Full Width matching Meeting Room) ── */}
+      <header className="relative z-20 flex w-full shrink-0 items-center justify-between border-b border-white/[0.06] bg-neutral-950/40 px-4 sm:px-8 py-3 backdrop-blur-xl">
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="HireXt Logo" className="h-7 w-auto object-contain select-none" />
+          <span className="h-4 w-px bg-white/15" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-white">
+            Interview
+          </span>
+          <span className="h-3.5 w-px bg-white/15" />
+          <span className="text-xs font-medium text-white/80 max-w-[160px] sm:max-w-none truncate">
+            Senior Software Engineer Assessment
+          </span>
+        </div>
 
-          <div className="flex items-center gap-3">
-            {/* Dev Mode Switcher */}
-            {onModeChange && (
-              <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
-                {(['video', 'audio', 'both', 'greenroom'] as const).map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => onModeChange(s)}
-                    className={`rounded-full px-2.5 py-1 font-medium transition-all ${
-                      mode === s
-                        ? 'bg-gradient-to-r from-[#245BFF] to-[#20C8F5] text-white font-bold shadow-[0_0_12px_rgba(32,200,245,0.35)]'
-                        : 'text-white/60 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    {s === 'video'
-                      ? 'Avatar Video'
-                      : s === 'audio'
-                        ? 'Audio DP'
-                        : s === 'both'
-                          ? 'Compare'
-                          : 'Green Room'}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="hidden sm:flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-xs text-white/60">
-              <span className="relative flex h-2 w-2 items-center justify-center">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              </span>
-              <span className="text-[11px] font-medium text-white/70">Ready to connect</span>
+        <div className="flex items-center gap-3">
+          {/* Dev Mode Switcher */}
+          {onModeChange && (
+            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
+              {(['video', 'audio', 'both', 'greenroom'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onModeChange(s)}
+                  className={`rounded-full px-2.5 py-1 font-medium transition-all ${
+                    mode === s
+                      ? 'bg-gradient-to-r from-[#245BFF] to-[#20C8F5] text-white font-bold shadow-[0_0_12px_rgba(32,200,245,0.35)]'
+                      : 'text-white/60 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {s === 'video'
+                    ? 'Avatar Video'
+                    : s === 'audio'
+                      ? 'Audio DP'
+                      : s === 'both'
+                        ? 'Compare'
+                        : 'Green Room'}
+                </button>
+              ))}
             </div>
+          )}
+
+          <div className="hidden sm:inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/80">
+            <span className="relative flex h-2 w-2 items-center justify-center">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            </span>
+            <span>Ready to connect</span>
           </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-6 py-6 sm:px-8 lg:py-10">
-        <div className="grid w-full grid-cols-1 items-center gap-8 lg:grid-cols-12">
+      {/* Main Content Area (Container matching Meeting Room) */}
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col justify-center px-4 sm:px-8 py-4 sm:py-6 container mx-auto w-full">
+        <div className="grid w-full grid-cols-1 items-center gap-6 lg:gap-10 lg:grid-cols-12 my-auto">
           {/* Left Column: Video Viewport & Direct Controls */}
           <div className="flex flex-col gap-3 lg:col-span-7">
             <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-neutral-950 border border-white/[0.08] shadow-[0_20px_50px_-15px_rgba(0,0,0,0.8)] ring-1 ring-white/[0.05]">
@@ -1382,9 +1380,9 @@ function PreJoinPreview({
         </div>
       </main>
 
-      {/* Subtle Footer Bar */}
-      <footer className="relative z-10 w-full shrink-0 border-t border-white/[0.06] bg-neutral-950/60 backdrop-blur-xl">
-        <div className="mx-auto flex h-11 max-w-6xl items-center justify-between px-6 sm:px-8 text-[11px] text-white/40">
+      {/* ── Footer Bar (Full Width matching Meeting Room) ── */}
+      <footer className="relative z-10 w-full shrink-0 border-t border-white/[0.06] bg-neutral-950/40 px-4 sm:px-8 py-2.5 backdrop-blur-xl">
+        <div className="container mx-auto flex items-center justify-between text-[11px] text-white/40">
           <span>HireXt Interview Platform</span>
           <span>End-to-End Encrypted</span>
         </div>
