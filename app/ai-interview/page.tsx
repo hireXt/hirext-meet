@@ -21,7 +21,7 @@ export default async function AiInterviewPage(props: {
   const liveKitUrl = pick('liveKitUrl');
   const token = pick('token');
   const candidateName = pick('name');
-  const interviewTitle = pick('title') || pick('role') || 'AI Technical Assessment';
+  const interviewTitle = pick('title') || pick('role') || 'Assessment';
   const companyName = pick('company') || 'HireXt';
   const resultBase = pick('resultBase');
 
