@@ -1077,301 +1077,317 @@ function PreJoinPreview({
   };
 
   return (
-    <div className="relative isolate flex h-[100dvh] w-full flex-col justify-between overflow-hidden bg-black font-sans text-white antialiased">
-      {/* Ambient background particles & glows */}
-      <BackgroundBeams />
-      <div className="pointer-events-none absolute -top-40 left-1/4 h-[500px] w-[500px] rounded-full bg-[#245BFF]/10 blur-[140px]" />
-      <div className="pointer-events-none absolute -bottom-40 right-1/4 h-[500px] w-[500px] rounded-full bg-[#20C8F5]/[0.08] blur-[140px]" />
+    <div className="relative isolate flex min-h-[100dvh] w-full flex-col justify-between overflow-x-hidden bg-[#0A0C10] font-sans text-white antialiased">
+      {/* Ambient background lighting */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_-15%,rgba(36,91,255,0.08),rgba(0,0,0,0))]" />
 
-      {/* Top Navbar */}
-      <header className="relative z-10 flex w-full shrink-0 items-center justify-between border-b border-white/[0.06] bg-neutral-950/60 px-6 py-3.5 backdrop-blur-xl md:px-12">
-        <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="HireXt Logo" className="h-7 w-auto object-contain select-none" />
-          <span className="h-4 w-px bg-white/15" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-white">
-            Interview
-          </span>
-        </div>
-
-        {/* Dev Mode Switcher */}
-        {onModeChange && (
-          <div className="hidden lg:flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
-            {(['video', 'audio', 'both', 'greenroom'] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => onModeChange(s)}
-                className={`rounded-full px-2.5 py-1 font-medium transition-all ${mode === s
-                    ? 'bg-gradient-to-r from-[#245BFF] to-[#20C8F5] text-white font-bold shadow-[0_0_12px_rgba(32,200,245,0.35)]'
-                    : 'text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
-              >
-                {s === 'video'
-                  ? 'Avatar Video'
-                  : s === 'audio'
-                    ? 'Audio DP'
-                    : s === 'both'
-                      ? 'Compare'
-                      : 'Green Room'}
-              </button>
-            ))}
+      {/* Top Header Bar */}
+      <header className="relative z-10 w-full shrink-0 border-b border-white/[0.06] bg-neutral-950/60 backdrop-blur-xl">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6 sm:px-8">
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="HireXt Logo" className="h-7 w-auto object-contain select-none" />
+            <span className="h-4 w-px bg-white/15" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-white">
+              Interview
+            </span>
+            <span className="hidden sm:inline text-white/20">·</span>
+            <span className="hidden sm:inline text-xs text-white/50 truncate max-w-xs">
+              Senior Software Engineer Assessment
+            </span>
           </div>
-        )}
 
+          <div className="flex items-center gap-3">
+            {/* Dev Mode Switcher */}
+            {onModeChange && (
+              <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
+                {(['video', 'audio', 'both', 'greenroom'] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => onModeChange(s)}
+                    className={`rounded-full px-2.5 py-1 font-medium transition-all ${
+                      mode === s
+                        ? 'bg-gradient-to-r from-[#245BFF] to-[#20C8F5] text-white font-bold shadow-[0_0_12px_rgba(32,200,245,0.35)]'
+                        : 'text-white/60 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {s === 'video'
+                      ? 'Avatar Video'
+                      : s === 'audio'
+                        ? 'Audio DP'
+                        : s === 'both'
+                          ? 'Compare'
+                          : 'Green Room'}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="hidden sm:flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-xs text-white/60">
+              <span className="relative flex h-2 w-2 items-center justify-center">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              </span>
+              <span className="text-[11px] font-medium text-white/70">Ready to connect</span>
+            </div>
+          </div>
+        </div>
       </header>
 
-      {/* Main PreJoin Stage */}
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 items-center justify-center p-4 sm:p-6 lg:p-8 min-h-0 overflow-y-auto">
-        <div className="grid w-full grid-cols-1 items-center gap-6 lg:grid-cols-12 lg:gap-8 my-auto">
-          {/* Left Column: Video Preview & Quick Controls */}
-          <div className="flex flex-col gap-3.5 lg:col-span-7">
-            <div className="rounded-[2rem] border border-white/[0.08] bg-white/[0.03] p-1.5 shadow-2xl backdrop-blur-2xl">
-              <div className="relative aspect-video w-full overflow-hidden rounded-[calc(2rem-0.375rem)] bg-neutral-950/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
-                {videoEnabled ? (
-                  <video
-                    src={YOU_CLIP}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="h-full w-full scale-x-[-1] object-cover"
-                  />
+      {/* Main Content Area */}
+      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-6 py-6 sm:px-8 lg:py-10">
+        <div className="grid w-full grid-cols-1 items-center gap-8 lg:grid-cols-12">
+          {/* Left Column: Video Viewport & Direct Controls */}
+          <div className="flex flex-col gap-3 lg:col-span-7">
+            <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-neutral-950 border border-white/[0.08] shadow-[0_20px_50px_-15px_rgba(0,0,0,0.8)] ring-1 ring-white/[0.05]">
+              {videoEnabled ? (
+                <video
+                  src={YOU_CLIP}
+                  autoPlay
+                  playsInline
+                  loop
+                  muted
+                  className="h-full w-full scale-x-[-1] object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-b from-neutral-900/60 to-neutral-950">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-neutral-900 text-xl font-semibold text-white/90 border border-white/10 shadow-lg">
+                    {username ? username[0]?.toUpperCase() : 'V'}
+                  </div>
+                  <span className="text-xs text-white/40">Camera is off</span>
+                </div>
+              )}
+
+              {/* Candidate Badge (Top-Left) */}
+              <div className="absolute top-3.5 left-3.5 z-20 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1 text-xs text-white/80 backdrop-blur-md border border-white/10">
+                <span className="font-medium">{username.trim() || 'Candidate'}</span>
+                <span className="text-white/40">(You)</span>
+              </div>
+
+              {/* Audio Status Pill (Top-Right) */}
+              <div className="absolute top-3.5 right-3.5 z-20">
+                {audioEnabled ? (
+                  <div className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-emerald-400 backdrop-blur-md border border-white/10">
+                    <span className="relative flex h-2 w-2 items-center justify-center">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    </span>
+                    <span className="text-[10px] font-medium text-emerald-300">
+                      Mic active
+                    </span>
+                  </div>
                 ) : (
-                  <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-white/50">
-                    <div className="relative rounded-full p-1 ring-1 ring-white/20 ring-offset-2 ring-offset-neutral-950">
-                      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-neutral-800 to-neutral-900 text-xl font-bold text-white shadow-xl">
-                        {username ? username[0]?.toUpperCase() : 'V'}
-                      </div>
-                    </div>
-                    <span className="text-xs font-medium">Camera is turned off</span>
+                  <div className="flex items-center gap-1.5 rounded-full bg-rose-500/20 px-2.5 py-1 text-[10px] font-medium text-rose-300 backdrop-blur-md border border-rose-500/30">
+                    <MicOffIcon size={11} />
+                    <span>Muted</span>
                   </div>
                 )}
+              </div>
 
-                {/* Candidate Badge (Top Left) */}
-                <div className="absolute top-3 left-3 z-20 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur-md border border-white/10">
-                  <span>{username || 'Candidate'} (You)</span>
-                </div>
+              {/* Floating Bottom Action Dock */}
+              <div className="absolute inset-x-0 bottom-4 z-20 flex items-center justify-center pointer-events-none">
+                <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/10 bg-neutral-950/80 px-3 py-1.5 shadow-2xl backdrop-blur-2xl">
+                  <button
+                    type="button"
+                    onClick={() => setAudioEnabled(!audioEnabled)}
+                    className={`flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-95 cursor-pointer ${
+                      audioEnabled
+                        ? 'bg-white/10 text-white hover:bg-white/20'
+                        : 'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30'
+                    }`}
+                    title={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
+                  >
+                    {audioEnabled ? <MicIcon size={16} /> : <MicOffIcon size={16} />}
+                  </button>
 
-                {/* Quality Badge (Top Right) */}
-                <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-[#20C8F5] backdrop-blur-md border border-white/10">
-                  <span>HD 1080p · Verified</span>
-                </div>
+                  <button
+                    type="button"
+                    onClick={() => setVideoEnabled(!videoEnabled)}
+                    className={`flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-95 cursor-pointer ${
+                      videoEnabled
+                        ? 'bg-white/10 text-white hover:bg-white/20'
+                        : 'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30'
+                    }`}
+                    title={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
+                  >
+                    {videoEnabled ? <CameraIcon size={16} /> : <CameraOffIcon size={16} />}
+                  </button>
 
-                {/* Floating Bottom Overlays */}
-                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/85 via-black/40 to-transparent p-3 sm:p-4">
-                  {/* Dynamic Audio Level Meter */}
-                  <div className="flex items-center gap-2.5 rounded-full border border-white/10 bg-black/60 px-3.5 py-1.5 backdrop-blur-md">
-                    <span
-                      className={`h-2 w-2 rounded-full transition-all duration-300 ${audioEnabled && micLevel > 15
-                          ? 'bg-[#20C8F5] shadow-[0_0_8px_#20C8F5]'
-                          : 'bg-white/30'
-                        }`}
+                  <div className="h-4 w-px bg-white/15 mx-1" />
+
+                  <button
+                    type="button"
+                    onClick={handleTestSpeaker}
+                    disabled={testPlaying}
+                    className="flex h-10 items-center gap-1.5 rounded-full px-3.5 text-xs font-medium text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                    title="Test speaker output"
+                  >
+                    <VolumeIcon
+                      size={14}
+                      className={testPlaying ? 'text-sky-400 animate-pulse' : 'text-white/60'}
                     />
-                    <span className="text-[11px] font-medium text-white/90">
-                      {audioEnabled
-                        ? micLevel > 15
-                          ? 'Microphone active'
-                          : 'Speak to test mic'
-                        : 'Microphone muted'}
-                    </span>
-                    {audioEnabled && (
-                      <div className="flex items-end gap-1 h-3.5 pl-1.5">
-                        <span
-                          className="w-1 bg-[#20C8F5] rounded-full transition-all duration-100"
-                          style={{ height: `${Math.max(3, micLevel * 0.16)}px` }}
-                        />
-                        <span
-                          className="w-1 bg-[#53E0EC] rounded-full transition-all duration-100"
-                          style={{ height: `${Math.max(4, micLevel * 0.28)}px` }}
-                        />
-                        <span
-                          className="w-1 bg-[#20C8F5] rounded-full transition-all duration-100"
-                          style={{ height: `${Math.max(3, micLevel * 0.22)}px` }}
-                        />
-                        <span
-                          className="w-1 bg-[#53E0EC] rounded-full transition-all duration-100"
-                          style={{ height: `${Math.max(2, micLevel * 0.14)}px` }}
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Cam / Mic Quick Toggles on Viewport */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setAudioEnabled(!audioEnabled)}
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border transition-all active:scale-95 ${audioEnabled
-                          ? 'border-white/10 bg-white/10 text-white hover:bg-white/20'
-                          : 'border-[#F52D45]/40 bg-[#F52D45]/20 text-[#F52D45] hover:bg-[#F52D45]/30'
-                        }`}
-                      title={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
-                    >
-                      {audioEnabled ? <MicIcon size={17} /> : <MicOffIcon size={17} />}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setVideoEnabled(!videoEnabled)}
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border transition-all active:scale-95 ${videoEnabled
-                          ? 'border-white/10 bg-white/10 text-white hover:bg-white/20'
-                          : 'border-[#F52D45]/40 bg-[#F52D45]/20 text-[#F52D45] hover:bg-[#F52D45]/30'
-                        }`}
-                      title={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
-                    >
-                      {videoEnabled ? <CameraIcon size={17} /> : <CameraOffIcon size={17} />}
-                    </button>
-                  </div>
+                    <span>{testPlaying ? 'Testing audio…' : 'Test speakers'}</span>
+                  </button>
                 </div>
-              </div>
-            </div>
-
-            {/* Diagnostic Badges Under Video */}
-            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-              <div className="flex items-center gap-1.5 rounded-full border border-[#A77BFF]/30 bg-[#A77BFF]/10 px-3 py-1 text-[11px] font-medium text-[#A8B9FF]">
-                <ShieldCheckIcon size={14} className="text-[#A77BFF]" />
-                <span>AI Voice Isolation (Krisp) Active</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[11px] text-white/50">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#20C8F5]" />
-                <span>WebRTC Low-Latency Engine Ready</span>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Candidate Info & Hardware Check */}
-          <div className="flex flex-col gap-4 lg:col-span-5">
-            <div className="rounded-[2rem] border border-white/[0.08] bg-white/[0.03] p-1.5 shadow-2xl backdrop-blur-2xl">
-              <div className="flex flex-col gap-4 sm:gap-5 rounded-[calc(2rem-0.375rem)] bg-neutral-950/80 p-5 sm:p-7 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
-                <div>
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-[#53E0EC]">
-                    HireXt Enterprise
-                  </div>
-                  <h1 className="mt-1 text-xl sm:text-2xl font-bold tracking-tight text-white">
-                    Senior Software Engineer Assessment
-                  </h1>
-                  <p className="mt-1 text-xs text-white/60 leading-relaxed">
-                    Check your camera and audio devices before entering your interactive evaluation session.
-                  </p>
+          {/* Right Column: Pre-Join Settings & Join Action */}
+          <div className="flex flex-col lg:col-span-5">
+            <div className="flex flex-col gap-6 rounded-2xl border border-white/[0.08] bg-neutral-900/40 p-6 sm:p-7 backdrop-blur-2xl shadow-xl">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-white">
+                  Ready to join?
+                </h1>
+                <p className="mt-1 text-xs text-white/50 leading-relaxed">
+                  Review your audio and video before starting your interview with Monica.
+                </p>
+              </div>
 
-                  {/* Highlights Checklist */}
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] font-medium text-white/70">
-                      ⚡ Evaluator: Monica
-                    </span>
-                    <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] font-medium text-white/70">
-                      📝 Live Transcript
-                    </span>
-                    <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] font-medium text-white/70">
-                      🖥️ Screen Sharing Enabled
-                    </span>
-                  </div>
+              <form onSubmit={handleEnter} className="flex flex-col gap-4">
+                {/* Full Name Input */}
+                <div>
+                  <label className="block text-[11px] font-medium text-white/60 mb-1.5">
+                    Your name
+                  </label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter your name"
+                    required
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-sm text-white placeholder-white/20 transition-all focus:border-sky-500/60 focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                  />
                 </div>
 
-                <form onSubmit={handleEnter} className="flex flex-col gap-3.5">
-                  {/* Candidate Name Input */}
+                {/* Device Configuration */}
+                <div className="space-y-3 pt-1">
+                  {/* Camera Row */}
                   <div>
-                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/50 mb-1.5">
-                      Your Full Name
+                    <label className="flex items-center justify-between text-[11px] text-white/60 mb-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <CameraIcon size={13} className="text-white/40" />
+                        <span>Camera</span>
+                      </span>
+                      <span className="text-[10px] text-white/40">
+                        {videoEnabled ? 'Active' : 'Off'}
+                      </span>
                     </label>
-                    <input
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="e.g. Alex Morgan"
-                      required
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm font-medium text-white placeholder-white/25 transition-all focus:border-[#20C8F5] focus:bg-white/[0.08] focus:ring-1 focus:ring-[#20C8F5] focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Device Selectors */}
-                  <div className="space-y-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 sm:p-3.5">
-                    <div>
-                      <div className="flex items-center justify-between text-[11px] text-white/50 mb-1">
-                        <span className="font-semibold uppercase tracking-wider">Camera</span>
-                        <span className="text-[10px] font-semibold text-[#20C8F5]">Verified</span>
-                      </div>
+                    <div className="relative">
                       <select
                         value={selectedCam}
                         onChange={(e) => setSelectedCam(e.target.value)}
-                        className="w-full rounded-lg border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-white/90 focus:outline-none focus:border-[#20C8F5]"
+                        className="w-full appearance-none rounded-xl border border-white/10 bg-neutral-900/80 px-3.5 py-2 text-xs text-white/90 focus:outline-none focus:border-sky-500/60 pr-8 cursor-pointer hover:bg-neutral-900 transition-colors"
                       >
                         <option value="FaceTime HD Camera (Built-in)">FaceTime HD Camera (Built-in)</option>
                         <option value="Studio Camera Pro">Studio Camera Pro (External)</option>
                       </select>
+                      <ChevronDownIcon
+                        size={13}
+                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/40"
+                      />
                     </div>
+                  </div>
 
-                    <div>
-                      <div className="flex items-center justify-between text-[11px] text-white/50 mb-1">
-                        <span className="font-semibold uppercase tracking-wider">Microphone</span>
-                        <span className="text-[10px] font-semibold text-[#53E0EC]">Active</span>
-                      </div>
+                  {/* Microphone Row with Live VU Bar */}
+                  <div>
+                    <label className="flex items-center justify-between text-[11px] text-white/60 mb-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <MicIcon size={13} className="text-white/40" />
+                        <span>Microphone</span>
+                      </span>
+                      <span className="text-[10px] text-white/40">
+                        {audioEnabled ? (micLevel > 10 ? 'Input detected' : 'Connected') : 'Muted'}
+                      </span>
+                    </label>
+                    <div className="relative">
                       <select
                         value={selectedMic}
                         onChange={(e) => setSelectedMic(e.target.value)}
-                        className="w-full rounded-lg border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-white/90 focus:outline-none focus:border-[#20C8F5]"
+                        className="w-full appearance-none rounded-xl border border-white/10 bg-neutral-900/80 px-3.5 py-2 text-xs text-white/90 focus:outline-none focus:border-sky-500/60 pr-8 cursor-pointer hover:bg-neutral-900 transition-colors"
                       >
                         <option value="MacBook Pro Microphone">MacBook Pro Microphone (Built-in)</option>
                         <option value="Studio USB Mic">Studio USB Mic (HD)</option>
                       </select>
+                      <ChevronDownIcon
+                        size={13}
+                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/40"
+                      />
                     </div>
 
-                    <div>
-                      <div className="flex items-center justify-between text-[11px] text-white/50 mb-1">
-                        <span className="font-semibold uppercase tracking-wider">Speaker</span>
-                        <button
-                          type="button"
-                          onClick={handleTestSpeaker}
-                          disabled={testPlaying}
-                          className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#20C8F5] hover:text-[#53E0EC] transition-colors cursor-pointer"
-                        >
-                          <VolumeIcon size={12} />
-                          <span>{testPlaying ? 'Testing…' : 'Test Sound'}</span>
-                        </button>
+                    {/* Clean Live Audio Level Meter */}
+                    {audioEnabled && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-[10px] text-white/40 shrink-0">Mic level</span>
+                        <div className="flex-1 h-1 rounded-full bg-white/[0.08] overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-400 rounded-full transition-all duration-75"
+                            style={{ width: `${Math.min(100, Math.max(8, micLevel))}%` }}
+                          />
+                        </div>
                       </div>
+                    )}
+                  </div>
+
+                  {/* Speaker Output Row */}
+                  <div>
+                    <label className="flex items-center justify-between text-[11px] text-white/60 mb-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <VolumeIcon size={13} className="text-white/40" />
+                        <span>Speakers</span>
+                      </span>
+                    </label>
+                    <div className="relative">
                       <select
                         value={selectedSpeaker}
                         onChange={(e) => setSelectedSpeaker(e.target.value)}
-                        className="w-full rounded-lg border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-white/90 focus:outline-none focus:border-[#20C8F5]"
+                        className="w-full appearance-none rounded-xl border border-white/10 bg-neutral-900/80 px-3.5 py-2 text-xs text-white/90 focus:outline-none focus:border-sky-500/60 pr-8 cursor-pointer hover:bg-neutral-900 transition-colors"
                       >
                         <option value="MacBook Pro Speakers">MacBook Pro Speakers (Default)</option>
                         <option value="External Studio Headphones">External Studio Headphones</option>
                       </select>
+                      <ChevronDownIcon
+                        size={13}
+                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/40"
+                      />
                     </div>
                   </div>
-
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={joining}
-                    className="relative mt-1 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#245BFF] via-[#20C8F5] to-[#53E0EC] font-bold text-neutral-950 text-sm shadow-[0_0_24px_rgba(32,200,245,0.4)] transition-all hover:shadow-[0_0_36px_rgba(32,200,245,0.65)] hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-                  >
-                    {joining ? (
-                      <span className="flex items-center gap-2">
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-950 border-t-transparent" />
-                        <span>Connecting to Monica…</span>
-                      </span>
-                    ) : (
-                      <span>Enter Interview Room</span>
-                    )}
-                  </button>
-                </form>
-
-                {/* Privacy Badge */}
-                <div className="flex items-center justify-center gap-1.5 text-[11px] text-white/40">
-                  <ShieldCheckIcon size={14} className="text-[#20C8F5]" />
-                  <span>Audio &amp; video only stream once you enter the room</span>
                 </div>
+
+                {/* Join Interview Button */}
+                <button
+                  type="submit"
+                  disabled={joining}
+                  className="mt-2 h-11 w-full rounded-xl bg-white hover:bg-neutral-100 text-neutral-950 font-semibold text-sm transition-all active:scale-[0.99] shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  {joining ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-950 border-t-transparent" />
+                      <span>Connecting…</span>
+                    </span>
+                  ) : (
+                    <span>Join Interview</span>
+                  )}
+                </button>
+              </form>
+
+              {/* Privacy Reassurance Note */}
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-white/40">
+                <ShieldCheckIcon size={13} className="text-emerald-400" />
+                <span>Audio &amp; video are private until you enter</span>
               </div>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Bottom Footer Bar */}
-      <footer className="relative z-10 flex shrink-0 items-center justify-between border-t border-white/[0.06] bg-neutral-950/40 px-6 py-2.5 text-[11px] text-white/40 backdrop-blur-xl md:px-12">
-        <span>HireXt Interview System · Enterprise Evaluation Engine</span>
-        <span className="hidden sm:inline">Low-Latency Multimodal WebRTC · 1080p HD</span>
+      {/* Subtle Footer Bar */}
+      <footer className="relative z-10 w-full shrink-0 border-t border-white/[0.06] bg-neutral-950/60 backdrop-blur-xl">
+        <div className="mx-auto flex h-11 max-w-6xl items-center justify-between px-6 sm:px-8 text-[11px] text-white/40">
+          <span>HireXt Interview Platform</span>
+          <span>End-to-End Encrypted</span>
+        </div>
       </footer>
     </div>
   );
