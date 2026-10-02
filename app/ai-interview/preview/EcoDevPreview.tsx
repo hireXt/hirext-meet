@@ -324,12 +324,12 @@ function Screen({
                 >
                   <img
                     src="/logo.png"
-                    alt="HireXt Logo"
+                    alt="MeeXt Logo"
                     className="h-8 w-auto object-contain select-none"
                   />
                   <span className="h-4 w-px bg-white/20" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-white/80">
-                    Interview
+                  <span className="text-xs font-semibold tracking-wide text-white/80">
+                    MeeXt by HireXt
                   </span>
                 </motion.div>
 
@@ -354,19 +354,8 @@ function Screen({
                   transition={{ duration: 0.7, delay: 0.25 }}
                   className="text-sm sm:text-base text-neutral-300/90 leading-relaxed max-w-xl pt-1"
                 >
-                  Thank you, <span className="text-white font-medium">{candidateName}</span>. Your interview responses, audio transcript, and technical assessment have been securely recorded.
+                  Thank you, <span className="text-white font-medium">{candidateName}</span>. Your interview responses have been submitted.
                 </motion.p>
-
-                {/* Trust & Reassurance */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.6, delay: 0.35 }}
-                  className="flex items-center gap-2 text-xs text-white/40 pt-1"
-                >
-                  <ShieldCheckIcon size={13} className="text-emerald-400/80" />
-                  <span>End-to-End Encrypted · AI Evaluation Engine Active</span>
-                </motion.div>
               </div>
 
               {/* Right Side: Telemetry Card */}
@@ -384,7 +373,7 @@ function Screen({
 
                   <div className="flex justify-between items-center text-xs text-white/70">
                     <span className="text-white/50">Candidate</span>
-                    <span className="text-white font-medium">{candidateName} (You)</span>
+                    <span className="text-white font-medium">{candidateName}</span>
                   </div>
 
                   <div className="flex justify-between items-center text-xs text-white/70">
@@ -394,23 +383,15 @@ function Screen({
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center text-xs text-white/70">
-                    <span className="text-white/50">Integrity &amp; Security</span>
-                    <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
-                      <ShieldCheckIcon size={13} />
-                      <span>Verified · AES-256</span>
-                    </span>
-                  </div>
-
                   <div className="h-px w-full bg-white/[0.06] my-1" />
 
                   <div className="flex justify-between items-center text-xs text-white/70">
                     <span className="text-white/50">Status</span>
-                    <span className="text-emerald-400 font-medium">Evaluation in progress</span>
+                    <span className="text-emerald-400 font-medium">Submitted</span>
                   </div>
 
                   {/* Action Callouts */}
-                  <div className="pt-2 space-y-3">
+                  <div className="pt-2">
                     <div className="flex flex-col sm:flex-row gap-2.5">
                       <button
                         type="button"
@@ -432,11 +413,6 @@ function Screen({
                         Reset Session
                       </button>
                     </div>
-
-                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-white/40 pt-1">
-                      <ShieldCheckIcon size={13} className="text-emerald-400" />
-                      <span>Encrypted submission · Confirmation sent to candidate email</span>
-                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -449,8 +425,8 @@ function Screen({
               transition={{ duration: 0.6, delay: 0.5 }}
               className="relative z-10 flex w-full items-center justify-between text-[11px] text-white/35 pt-4"
             >
-              <span>HireXt Interview Platform</span>
-              <span>AES-256 GCM Cryptographic Verification</span>
+              <span>MeeXt by HireXt</span>
+              <span>Session Concluded</span>
             </motion.footer>
           </>
         )}
@@ -1616,8 +1592,7 @@ function PreJoinPreview({
       {/* ── Footer Bar (Full Width matching Meeting Room) ── */}
       <footer className="relative z-10 w-full shrink-0 border-t border-white/[0.06] bg-neutral-950/40 px-4 sm:px-8 py-2.5 backdrop-blur-xl">
         <div className="container mx-auto flex items-center justify-between text-[11px] text-white/40">
-          <span>HireXt Interview Platform</span>
-          <span>End-to-End Encrypted</span>
+          <span>MeeXt by HireXt</span>
         </div>
       </footer>
     </div>
