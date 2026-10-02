@@ -1214,6 +1214,46 @@ function EcoInterviewRoom({
     else if (connection === ConnectionState.Disconnected && hasConnected.current) setEnded(true);
   }, [connection]);
 
+  // Clean up all local media hardware tracks when session ends
+  React.useEffect(() => {
+    if (ended) {
+      try {
+        previewTracks?.forEach((t) => {
+          try {
+            t.stop();
+          } catch {}
+        });
+        room.localParticipant?.trackPublications.forEach((pub) => {
+          try {
+            pub.track?.stop();
+          } catch {}
+        });
+      } catch (e) {
+        console.warn('Track teardown error on session completion:', e);
+      }
+    }
+  }, [ended, previewTracks, room]);
+
+  const handleEndAndSubmit = () => {
+    setConfirmLeaveOpen(false);
+    setEnded(true);
+    try {
+      previewTracks?.forEach((t) => {
+        try {
+          t.stop();
+        } catch {}
+      });
+      room.localParticipant?.trackPublications.forEach((pub) => {
+        try {
+          pub.track?.stop();
+        } catch {}
+      });
+      room.disconnect();
+    } catch (err) {
+      console.warn('Disconnect error:', err);
+    }
+  };
+
   const showVideo = !!ecoVideo;
   const speaking = energy > 0.04;
   const statusWord = speaking ? 'Speaking' : connection === ConnectionState.Connected ? 'Listening' : 'Connecting';
@@ -1333,7 +1373,10 @@ function EcoInterviewRoom({
               <button
                 type="button"
                 onClick={() => {
-                  if (typeof window !== 'undefined') window.close();
+                  if (typeof window !== 'undefined') {
+                    window.close();
+                    window.location.href = resultBase || '/';
+                  }
                 }}
                 className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 px-6 text-xs font-semibold text-white transition-all hover:bg-white/10 active:scale-[0.98]"
               >
@@ -2149,10 +2192,7 @@ function EcoInterviewRoom({
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setConfirmLeaveOpen(false);
-                      room.disconnect();
-                    }}
+                    onClick={handleEndAndSubmit}
                     className="flex-1 rounded-xl bg-[#F52D45] py-2.5 text-xs font-semibold text-white shadow-lg hover:bg-[#d92238] transition-colors"
                   >
                     End &amp; Submit
