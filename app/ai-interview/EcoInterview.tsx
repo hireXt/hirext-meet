@@ -19,6 +19,7 @@ import {
   createLocalTracks,
   LocalAudioTrack,
   LocalVideoTrack,
+  RoomEvent,
   Track,
 } from 'livekit-client';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -845,6 +846,14 @@ function EcoInterviewRoom({
   const ecoAudio = tracks.find((t) => env(t) && t.source === Track.Source.Microphone);
   const ecoVideo = tracks.find((t) => env(t) && t.source === Track.Source.Camera);
   const screenShareTrack = tracks.find((t) => t.source === Track.Source.ScreenShare);
+  const isScreenSharingActive = !!screenShareTrack;
+  // Derived early: the auto-share listener below needs them, and they used to be
+  // declared much further down the component.
+  const localScreenShare = screenShareTrack?.participant?.isLocal === true;
+  // The candidate must NOT be shown their own screen — they can already see it,
+  // and replacing the interview layout with a mirror of their desktop is
+  // disorienting. Only a remote (interviewer) share takes over the stage.
+  const remoteScreenShare = isScreenSharingActive && !localScreenShare;
 
   // Resolve the active local video track from all available sources:
   // 1. liveCameraPublication from useLocalParticipant()
@@ -1003,6 +1012,9 @@ function EcoInterviewRoom({
 
   const [seconds, setSeconds] = React.useState(0);
   const [sharing, setSharing] = React.useState(false);
+  // Set when the automatic picker is refused (browser needs a user gesture), so
+  // the share banner is surfaced instead of leaving the candidate stuck.
+  const [sharePromptVisible, setSharePromptVisible] = React.useState(false);
   const [ended, setEnded] = React.useState(false);
   const [finalDuration, setFinalDuration] = React.useState<number | null>(null);
   const [concludedStage, setConcludedStage] = React.useState<'center' | 'settled'>('center');
@@ -1464,6 +1476,43 @@ function EcoInterviewRoom({
       });
   }, [screenShareTrack, localParticipant]);
 
+  // The agent asks us to open the share picker as soon as it prompts for the
+  // screen. Doing it for the candidate means the interview does not stall on
+  // them finding the button.
+  const sharePromptedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!room) return;
+    const onData = (payload: Uint8Array, _participant?: unknown, _kind?: unknown, topic?: string) => {
+      if (topic && topic !== 'eco-screen-share') return;
+      let msg: { type?: string } | null = null;
+      try {
+        msg = JSON.parse(new TextDecoder().decode(payload));
+      } catch {
+        return;
+      }
+      if (msg?.type !== 'request_screen_share') return;
+      if (sharePromptedRef.current || sharing || isScreenSharingActive) return;
+      sharePromptedRef.current = true;
+      // Chrome requires transient user activation for getDisplayMedia, so this
+      // can be refused when the candidate has not clicked recently. Surface the
+      // button and tell them rather than failing silently.
+      void (async () => {
+        try {
+          await localParticipant.setScreenShareEnabled(true);
+          setSharing(true);
+        } catch {
+          sharePromptedRef.current = false;
+          setSharePromptVisible(true);
+          toast('Please choose what to share — click “Share screen”.');
+        }
+      })();
+    };
+    room.on(RoomEvent.DataReceived, onData);
+    return () => {
+      room.off(RoomEvent.DataReceived, onData);
+    };
+  }, [room, localParticipant, sharing, isScreenSharingActive]);
+
   const downloadTranscript = () => {
     if (lines.length === 0) {
       toast('No transcript available to export yet');
@@ -1821,9 +1870,6 @@ function EcoInterviewRoom({
     );
   }
 
-  // Active Screen Share present
-  const isScreenSharingActive = !!screenShareTrack;
-
   return (
     <div className="relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-black font-sans text-eco-fg antialiased select-none">
       <BackgroundBeams />
@@ -2016,8 +2062,12 @@ function EcoInterviewRoom({
 
       {/* ── Main Viewport Stage ── */}
       <main className="relative z-10 flex min-h-0 flex-1 flex-col gap-2.5 px-3 sm:px-6 py-2 container mx-auto w-full">
-        {/* SCREEN SHARE ACTIVE VIEW */}
-        {isScreenSharingActive ? (
+        {/* SCREEN SHARE STAGE — only for a REMOTE share.
+            The candidate is never shown a mirror of their own screen: they can
+            already see it, and swapping the interview layout for it is
+            disorienting. When they share, the normal layout stays and a compact
+            "you are sharing" chip appears instead. */}
+        {remoteScreenShare ? (
           <div className="relative flex flex-1 overflow-hidden rounded-[1.75rem] border border-eco-accent/30 bg-black shadow-2xl">
             <div className="relative flex h-full w-full items-center justify-center">
               <VideoTrack trackRef={screenShareTrack!} className="h-full w-full object-contain" />
@@ -2323,6 +2373,31 @@ function EcoInterviewRoom({
 
       {/* ── Screen Share Guidance Pill (When Not Sharing) ── */}
       <AnimatePresence>
+        {/* Compact indicator while the candidate shares. The stage stays on the
+            normal interview layout (see remoteScreenShare), so this is the only
+            acknowledgement that sharing is live, plus the way to stop. */}
+        {localScreenShare && !remoteScreenShare && (
+          <motion.div
+            className="relative z-10 mx-auto max-w-md w-full flex items-center justify-between gap-3 rounded-full border border-[#2ee6a6]/30 bg-[#2ee6a6]/[0.07] px-4 py-2 text-[11px] text-white/85 backdrop-blur-md mb-2 shadow-lg"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.3, ease: EASE }}
+          >
+            <div className="flex items-center gap-2">
+              <ScreenShareIcon size={16} className="text-[#2ee6a6]" />
+              <span>You are sharing your screen.</span>
+            </div>
+            <button
+              type="button"
+              onClick={toggleShare}
+              className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] font-semibold text-white/80 transition-colors hover:bg-white/10"
+            >
+              Stop
+            </button>
+          </motion.div>
+        )}
+
         {!sharing && !isScreenSharingActive && (
           <motion.div
             className="relative z-10 mx-auto max-w-md w-full flex items-center justify-between gap-3 rounded-full border border-[#20C8F5]/20 bg-[#20C8F5]/[0.05] px-4 py-2 text-[11px] text-white/80 backdrop-blur-md mb-2 shadow-lg"
