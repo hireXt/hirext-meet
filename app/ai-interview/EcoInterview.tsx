@@ -83,33 +83,49 @@ const NEGATIVE_REASONS = [
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 /**
- * Hand the candidate back to the window that opened MeeXt, then close this one.
+ * Hand the candidate back to the window that opened MeeXt and close this tab.
  *
- * The interview always runs in a tab the web client opened, so `window.opener`
- * is the app window they came from. Browsers only permit window.close() on a
- * window the script opened, so it silently no-ops when the tab was opened by
- * hand — hence the location fallback, which lands them on the same page either
- * way. opener.focus() raises the original window on desktop, where focus()
- * alone would not switch away from this tab.
+ * MeeXt runs on a different origin from the web client, so the opener cannot be
+ * navigated directly — the browser blocks cross-origin writes to it. The web
+ * client already implements the receiving half of this handshake
+ * (lib/interviewRedirect.ts, useInterviewReportRedirect): it listens for a
+ * "hxt-interview-concluded" message, closes the popup it spawned, and moves
+ * itself to the report URL, accepting it only when it is on its own origin.
+ *
+ * So the sequence is: post the message, focus the opener so it comes forward,
+ * then close. The opener both raises itself and performs the navigation.
+ *
+ * The self-redirect is the fallback for when this tab was opened by hand rather
+ * than by window.open (browsers refuse window.close() on a window the script
+ * did not open). It only runs if the tab survived, so it never fights the
+ * handshake.
  */
-function returnToOpener(fallbackHref: string) {
+function returnToOpener(reportHref: string) {
   if (typeof window === 'undefined') return;
   const opener = window.opener as Window | null;
-  try {
-    if (opener && !opener.closed) {
+
+  if (opener && !opener.closed && reportHref) {
+    try {
+      // targetOrigin MUST be the RECEIVER's origin (the web client's), not ours
+      // — postMessage silently discards the message on a mismatch. The report
+      // URL is built from FRONTEND_URL, which is that same origin, so derive it
+      // from the href rather than guessing.
+      const targetOrigin = new URL(reportHref).origin;
+      opener.postMessage({ type: 'hxt-interview-concluded', url: reportHref }, targetOrigin);
       opener.focus();
       window.close();
-      // Still here? close() was a no-op — navigate ourselves so the candidate
-      // is not stranded on the concluded screen.
+      // Still rendering? close() was a no-op — take the candidate to the report
+      // ourselves rather than stranding them on the concluded screen.
       window.setTimeout(() => {
-        window.location.href = fallbackHref;
-      }, 60);
+        if (!window.closed) window.location.href = reportHref;
+      }, 120);
       return;
+    } catch {
+      /* fall through to the self-redirect below */
     }
-  } catch {
-    /* cross-origin opener: fall through to the redirect below */
   }
-  window.location.href = fallbackHref;
+
+  window.location.href = reportHref;
 }
 
 /**
