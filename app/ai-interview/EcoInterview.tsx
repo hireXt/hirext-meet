@@ -14,7 +14,13 @@ import {
   VideoTrack,
   type TrackReferenceOrPlaceholder,
 } from '@livekit/components-react';
-import { ConnectionState, createLocalTracks, LocalAudioTrack, LocalVideoTrack, Track } from 'livekit-client';
+import {
+  ConnectionState,
+  createLocalTracks,
+  LocalAudioTrack,
+  LocalVideoTrack,
+  Track,
+} from 'livekit-client';
 import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { BackgroundBeams } from '@/components/ui/background-beams';
@@ -94,7 +100,10 @@ function useClickOutside(
 // ────────────────────────────────────────────────────────────────────────────
 // Custom SVG Icons for Closed Captions & Download
 // ────────────────────────────────────────────────────────────────────────────
-function ClosedCaptionsIcon({ size = 18, ...props }: React.SVGProps<SVGSVGElement> & { size?: number }) {
+function ClosedCaptionsIcon({
+  size = 18,
+  ...props
+}: React.SVGProps<SVGSVGElement> & { size?: number }) {
   return (
     <svg
       width={size}
@@ -197,11 +206,7 @@ function EcoPreJoin({
               ? { deviceId: { exact: vId } }
               : { facingMode: 'user' }
             : false,
-          audio: audioEnabled
-            ? aId
-              ? { deviceId: { exact: aId } }
-              : true
-            : false,
+          audio: audioEnabled ? (aId ? { deviceId: { exact: aId } } : true) : false,
         };
 
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -258,11 +263,11 @@ function EcoPreJoin({
         setPermissionError(
           err.name === 'NotAllowedError'
             ? 'Camera and microphone permissions were denied. Please grant permission in your browser.'
-            : 'Could not access camera or microphone. Please verify they are connected.'
+            : 'Could not access camera or microphone. Please verify they are connected.',
         );
       }
     },
-    [videoEnabled, audioEnabled, selectedVideoId, selectedAudioId, selectedSpeakerId]
+    [videoEnabled, audioEnabled, selectedVideoId, selectedAudioId, selectedSpeakerId],
   );
 
   React.useEffect(() => {
@@ -270,7 +275,7 @@ function EcoPreJoin({
     return () => {
       cancelAnimationFrame(animFrameRef.current);
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        audioContextRef.current.close().catch(() => { });
+        audioContextRef.current.close().catch(() => {});
       }
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach((t) => t.stop());
@@ -311,7 +316,7 @@ function EcoPreJoin({
       // Clean up pre-join preview and wait for camera hardware driver release
       cancelAnimationFrame(animFrameRef.current);
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        audioContextRef.current.close().catch(() => { });
+        audioContextRef.current.close().catch(() => {});
       }
       if (mediaStreamRef.current) {
         const msts = mediaStreamRef.current.getTracks();
@@ -342,10 +347,10 @@ function EcoPreJoin({
         audio: audioEnabled ? { deviceId: selectedAudioId || undefined } : false,
         video: videoEnabled
           ? {
-            deviceId: selectedVideoId || undefined,
-            facingMode: 'user',
-            resolution: { width: 1280, height: 720, frameRate: 30 },
-          }
+              deviceId: selectedVideoId || undefined,
+              facingMode: 'user',
+              resolution: { width: 1280, height: 720, frameRate: 30 },
+            }
           : false,
       });
 
@@ -371,7 +376,11 @@ function EcoPreJoin({
       {/* Top Navbar */}
       <header className="relative z-10 flex w-full shrink-0 items-center justify-between border-b border-white/[0.06] bg-neutral-950/60 px-6 py-3.5 backdrop-blur-xl md:px-12">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="HireXt Logo" className="h-7 w-auto object-contain select-none" />
+          <img
+            src="/logo.png"
+            alt="HireXt Logo"
+            className="h-7 w-auto object-contain select-none"
+          />
           <span className="h-4 w-px bg-white/15" />
           <span className="text-xs font-semibold uppercase tracking-wider text-white">
             Interview
@@ -420,10 +429,11 @@ function EcoPreJoin({
                   {/* Dynamic Audio Level Meter */}
                   <div className="flex items-center gap-2.5 rounded-full border border-white/10 bg-black/60 px-3.5 py-1.5 backdrop-blur-md">
                     <span
-                      className={`h-2 w-2 rounded-full transition-all duration-300 ${audioEnabled && micLevel > 15
-                        ? 'bg-[#20C8F5] shadow-[0_0_8px_#20C8F5]'
-                        : 'bg-white/30'
-                        }`}
+                      className={`h-2 w-2 rounded-full transition-all duration-300 ${
+                        audioEnabled && micLevel > 15
+                          ? 'bg-[#20C8F5] shadow-[0_0_8px_#20C8F5]'
+                          : 'bg-white/30'
+                      }`}
                     />
                     <span className="text-[11px] font-medium text-white/90">
                       {audioEnabled
@@ -459,10 +469,11 @@ function EcoPreJoin({
                     <button
                       type="button"
                       onClick={handleToggleMic}
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border transition-all active:scale-95 ${audioEnabled
-                        ? 'border-white/10 bg-white/10 text-white hover:bg-white/20'
-                        : 'border-[#F52D45]/40 bg-[#F52D45]/20 text-[#F52D45] hover:bg-[#F52D45]/30'
-                        }`}
+                      className={`flex h-10 w-10 items-center justify-center rounded-full border transition-all active:scale-95 ${
+                        audioEnabled
+                          ? 'border-white/10 bg-white/10 text-white hover:bg-white/20'
+                          : 'border-[#F52D45]/40 bg-[#F52D45]/20 text-[#F52D45] hover:bg-[#F52D45]/30'
+                      }`}
                       title={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
                     >
                       {audioEnabled ? <MicIcon size={17} /> : <MicOffIcon size={17} />}
@@ -471,10 +482,11 @@ function EcoPreJoin({
                     <button
                       type="button"
                       onClick={handleToggleCam}
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border transition-all active:scale-95 ${videoEnabled
-                        ? 'border-white/10 bg-white/10 text-white hover:bg-white/20'
-                        : 'border-[#F52D45]/40 bg-[#F52D45]/20 text-[#F52D45] hover:bg-[#F52D45]/30'
-                        }`}
+                      className={`flex h-10 w-10 items-center justify-center rounded-full border transition-all active:scale-95 ${
+                        videoEnabled
+                          ? 'border-white/10 bg-white/10 text-white hover:bg-white/20'
+                          : 'border-[#F52D45]/40 bg-[#F52D45]/20 text-[#F52D45] hover:bg-[#F52D45]/30'
+                      }`}
                       title={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
                     >
                       {videoEnabled ? <CameraIcon size={17} /> : <CameraOffIcon size={17} />}
@@ -517,21 +529,9 @@ function EcoPreJoin({
                     {interviewTitle}
                   </h1>
                   <p className="mt-1 text-xs text-white/60 leading-relaxed">
-                    Check your camera and audio devices before entering your interactive evaluation session.
+                    Check your camera and audio devices before entering your interactive evaluation
+                    session.
                   </p>
-
-                  {/* Highlights Checklist */}
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] font-medium text-white/70">
-                      ⚡ Evaluator: Monica
-                    </span>
-                    <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] font-medium text-white/70">
-                      📝 Live Transcript
-                    </span>
-                    <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] font-medium text-white/70">
-                      🖥️ Screen Sharing Enabled
-                    </span>
-                  </div>
                 </div>
 
                 <form onSubmit={handleEnterInterview} className="flex flex-col gap-3.5">
@@ -692,15 +692,7 @@ function LocalSelfView({
     };
   }, [mst]);
 
-  return (
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      muted
-      className={className}
-    />
-  );
+  return <video ref={videoRef} autoPlay playsInline muted className={className} />;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -769,7 +761,9 @@ function EcoInterviewRoom({
     if (fromLp?.mediaStreamTrack && fromLp.mediaStreamTrack.readyState === 'live') {
       return fromLp;
     }
-    const fromPreview = previewTracks.find((t) => t.kind === 'video') as LocalVideoTrack | undefined;
+    const fromPreview = previewTracks.find((t) => t.kind === 'video') as
+      | LocalVideoTrack
+      | undefined;
     if (fromPreview?.mediaStreamTrack && fromPreview.mediaStreamTrack.readyState === 'live') {
       return fromPreview;
     }
@@ -787,9 +781,8 @@ function EcoInterviewRoom({
 
   // Resolve active local audio track from room publication or pre-acquired tracks
   const activeLocalAudioTrack = React.useMemo(() => {
-    const fromPub = (liveMicrophonePublication as unknown as { track?: unknown } | undefined)?.track as
-      | LocalAudioTrack
-      | undefined;
+    const fromPub = (liveMicrophonePublication as unknown as { track?: unknown } | undefined)
+      ?.track as LocalAudioTrack | undefined;
     if (fromPub?.mediaStreamTrack && fromPub.mediaStreamTrack.readyState === 'live') {
       return fromPub;
     }
@@ -799,7 +792,9 @@ function EcoInterviewRoom({
     if (fromLp?.mediaStreamTrack && fromLp.mediaStreamTrack.readyState === 'live') {
       return fromLp;
     }
-    const fromPreview = previewTracks.find((t) => t.kind === 'audio') as LocalAudioTrack | undefined;
+    const fromPreview = previewTracks.find((t) => t.kind === 'audio') as
+      | LocalAudioTrack
+      | undefined;
     if (fromPreview?.mediaStreamTrack && fromPreview.mediaStreamTrack.readyState === 'live') {
       return fromPreview;
     }
@@ -860,7 +855,10 @@ function EcoInterviewRoom({
           }
         } else if (userChoices.videoEnabled) {
           await room.localParticipant
-            .setCameraEnabled(true, userChoices.videoDeviceId ? { deviceId: userChoices.videoDeviceId } : undefined)
+            .setCameraEnabled(
+              true,
+              userChoices.videoDeviceId ? { deviceId: userChoices.videoDeviceId } : undefined,
+            )
             .catch((err) => {
               console.warn('Could not enable camera on join:', err);
             });
@@ -887,7 +885,10 @@ function EcoInterviewRoom({
           }
         } else if (userChoices.audioEnabled) {
           await room.localParticipant
-            .setMicrophoneEnabled(true, userChoices.audioDeviceId ? { deviceId: userChoices.audioDeviceId } : undefined)
+            .setMicrophoneEnabled(
+              true,
+              userChoices.audioDeviceId ? { deviceId: userChoices.audioDeviceId } : undefined,
+            )
             .catch((err) => {
               console.warn('Could not enable mic on join:', err);
             });
@@ -915,8 +916,12 @@ function EcoInterviewRoom({
   const [videoDevices, setVideoDevices] = React.useState<MediaDeviceInfo[]>([]);
   const [audioDevices, setAudioDevices] = React.useState<MediaDeviceInfo[]>([]);
   const [speakerDevices, setSpeakerDevices] = React.useState<MediaDeviceInfo[]>([]);
-  const [activeVideoId, setActiveVideoId] = React.useState<string | undefined>(userChoices.videoDeviceId);
-  const [activeAudioId, setActiveAudioId] = React.useState<string | undefined>(userChoices.audioDeviceId);
+  const [activeVideoId, setActiveVideoId] = React.useState<string | undefined>(
+    userChoices.videoDeviceId,
+  );
+  const [activeAudioId, setActiveAudioId] = React.useState<string | undefined>(
+    userChoices.audioDeviceId,
+  );
   const [activeSpeakerId, setActiveSpeakerId] = React.useState<string | undefined>(undefined);
 
   // Pending action guards to prevent duplicate/concurrent track acquisition
@@ -957,11 +962,15 @@ function EcoInterviewRoom({
       const currentAudio = room.getActiveDevice('audioinput');
       const currentVideo = room.getActiveDevice('videoinput');
       const currentSpeaker = room.getActiveDevice('audiooutput');
-      const savedSpeaker = typeof window !== 'undefined' ? localStorage.getItem('hx_meet_speaker_id') : undefined;
+      const savedSpeaker =
+        typeof window !== 'undefined' ? localStorage.getItem('hx_meet_speaker_id') : undefined;
 
       if (currentAudio) setActiveAudioId(currentAudio);
       if (currentVideo) setActiveVideoId(currentVideo);
-      if (savedSpeaker && devices.some((d) => d.kind === 'audiooutput' && d.deviceId === savedSpeaker)) {
+      if (
+        savedSpeaker &&
+        devices.some((d) => d.kind === 'audiooutput' && d.deviceId === savedSpeaker)
+      ) {
         setActiveSpeakerId(savedSpeaker);
         room.switchActiveDevice('audiooutput', savedSpeaker).catch(() => undefined);
       } else if (currentSpeaker) {
@@ -1256,7 +1265,11 @@ function EcoInterviewRoom({
 
   const showVideo = !!ecoVideo;
   const speaking = energy > 0.04;
-  const statusWord = speaking ? 'Speaking' : connection === ConnectionState.Connected ? 'Listening' : 'Connecting';
+  const statusWord = speaking
+    ? 'Speaking'
+    : connection === ConnectionState.Connected
+      ? 'Listening'
+      : 'Connecting';
 
   const lines = (transcriptions as any[])
     .map((t, idx) => ({
@@ -1341,7 +1354,9 @@ function EcoInterviewRoom({
                 Interview Concluded
               </h2>
               <p className="text-xs sm:text-sm text-eco-muted leading-relaxed max-w-sm">
-                Thank you, <span className="text-white font-medium">{candidateName}</span>. Your interview responses, audio transcript, and technical assessment have been securely recorded.
+                Thank you, <span className="text-white font-medium">{candidateName}</span>. Your
+                interview responses, audio transcript, and technical assessment have been securely
+                recorded.
               </p>
             </div>
 
@@ -1405,7 +1420,11 @@ function EcoInterviewRoom({
       <header className="relative z-20 flex w-full shrink-0 items-center justify-between border-b border-white/[0.06] bg-neutral-950/40 px-4 sm:px-8 py-3 backdrop-blur-xl">
         {/* Brand & Interview Session Info */}
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="HireXt Logo" className="h-7 w-auto object-contain select-none" />
+          <img
+            src="/logo.png"
+            alt="HireXt Logo"
+            className="h-7 w-auto object-contain select-none"
+          />
           <span className="h-4 w-px bg-white/15" />
           <span className="text-xs font-semibold uppercase tracking-wider text-white">
             Interview
@@ -1425,10 +1444,11 @@ function EcoInterviewRoom({
           {/* AI State Pill */}
           <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/80">
             <span
-              className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${speaking
-                ? 'bg-[#F34BB5] shadow-[0_0_8px_#F34BB5]'
-                : 'bg-[#20C8F5] shadow-[0_0_6px_#20C8F5]'
-                }`}
+              className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
+                speaking
+                  ? 'bg-[#F34BB5] shadow-[0_0_8px_#F34BB5]'
+                  : 'bg-[#20C8F5] shadow-[0_0_6px_#20C8F5]'
+              }`}
             />
             <span>Monica is {statusWord.toLowerCase()}</span>
           </div>
@@ -1444,14 +1464,18 @@ function EcoInterviewRoom({
             <button
               type="button"
               onClick={() => setParticipantsOpen((v) => !v)}
-              className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full border px-2.5 sm:px-3 py-1.5 text-[11px] font-medium transition-all ${participantsOpen
-                ? 'border-[#20C8F5]/60 bg-[#20C8F5]/20 text-[#53E0EC] shadow-[0_0_12px_rgba(32,200,245,0.25)]'
-                : 'border-white/[0.08] bg-white/[0.03] text-white/80 hover:bg-white/[0.08] hover:text-white hover:border-white/20'
-                }`}
+              className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full border px-2.5 sm:px-3 py-1.5 text-[11px] font-medium transition-all ${
+                participantsOpen
+                  ? 'border-[#20C8F5]/60 bg-[#20C8F5]/20 text-[#53E0EC] shadow-[0_0_12px_rgba(32,200,245,0.25)]'
+                  : 'border-white/[0.08] bg-white/[0.03] text-white/80 hover:bg-white/[0.08] hover:text-white hover:border-white/20'
+              }`}
               title="Participants"
               aria-expanded={participantsOpen}
             >
-              <UsersIcon size={14} className={participantsOpen ? 'text-[#20C8F5]' : 'text-white/70'} />
+              <UsersIcon
+                size={14}
+                className={participantsOpen ? 'text-[#20C8F5]' : 'text-white/70'}
+              />
               <span className="font-semibold text-white">{participantCount}</span>
               <span className="hidden sm:inline text-white/60">Participants</span>
               <ChevronDownIcon
@@ -1479,7 +1503,9 @@ function EcoInterviewRoom({
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#245BFF] to-[#20C8F5] text-white font-semibold text-xs shadow-[0_0_10px_rgba(32,200,245,0.3)]">
                         M
-                        <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-neutral-900 ${speaking ? 'bg-[#F34BB5]' : 'bg-[#20C8F5]'}`} />
+                        <span
+                          className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-neutral-900 ${speaking ? 'bg-[#F34BB5]' : 'bg-[#20C8F5]'}`}
+                        />
                       </div>
                       <div className="min-w-0 flex flex-col">
                         <div className="flex items-center gap-1.5">
@@ -1494,7 +1520,9 @@ function EcoInterviewRoom({
                       </div>
                     </div>
                     <div className="flex items-center gap-1 text-white/60">
-                      <span className={`h-2 w-2 rounded-full ${speaking ? 'bg-[#F34BB5] animate-pulse' : 'bg-[#20C8F5]'}`} />
+                      <span
+                        className={`h-2 w-2 rounded-full ${speaking ? 'bg-[#F34BB5] animate-pulse' : 'bg-[#20C8F5]'}`}
+                      />
                     </div>
                   </div>
 
@@ -1503,7 +1531,9 @@ function EcoInterviewRoom({
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-white font-semibold text-xs border border-white/10">
                         {getInitials(candidateName)}
-                        <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-neutral-900 ${isLocalMicLive ? 'bg-emerald-400' : 'bg-[#F52D45]'}`} />
+                        <span
+                          className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-neutral-900 ${isLocalMicLive ? 'bg-emerald-400' : 'bg-[#F52D45]'}`}
+                        />
                       </div>
                       <div className="min-w-0 flex flex-col">
                         <div className="flex items-center gap-1.5">
@@ -1515,7 +1545,8 @@ function EcoInterviewRoom({
                           </span>
                         </div>
                         <span className="text-[10px] text-white/50">
-                          {isLocalMicLive ? 'Mic Active' : 'Muted'} • {isLocalVideoLive ? 'Cam On' : 'Cam Off'}
+                          {isLocalMicLive ? 'Mic Active' : 'Muted'} •{' '}
+                          {isLocalVideoLive ? 'Cam On' : 'Cam Off'}
                         </span>
                       </div>
                     </div>
@@ -1537,7 +1568,10 @@ function EcoInterviewRoom({
                   {participants
                     .filter((p) => !p.isLocal && p.identity !== ECO_IDENTITY)
                     .map((p) => (
-                      <div key={p.identity} className="flex items-center justify-between p-2 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                      <div
+                        key={p.identity}
+                        className="flex items-center justify-between p-2 rounded-xl bg-white/[0.03] border border-white/[0.05]"
+                      >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-white font-semibold text-xs border border-white/10">
                             {getInitials(p.name || p.identity)}
@@ -1555,7 +1589,6 @@ function EcoInterviewRoom({
               </div>
             )}
           </div>
-
 
           {/* Fullscreen Button */}
           <button
@@ -1594,7 +1627,9 @@ function EcoInterviewRoom({
                     <VideoTrack trackRef={ecoVideo!} className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-black/70">
-                      <span className={`h-3 w-3 rounded-full ${speaking ? 'bg-eco-accent animate-ping' : 'bg-white/30'}`} />
+                      <span
+                        className={`h-3 w-3 rounded-full ${speaking ? 'bg-eco-accent animate-ping' : 'bg-white/30'}`}
+                      />
                     </div>
                   )}
                   <span className="absolute bottom-1.5 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90">
@@ -1625,7 +1660,9 @@ function EcoInterviewRoom({
               {/* Transcript Stream Header */}
               <div className="flex items-center justify-end pb-3 border-b border-white/[0.06] mb-auto">
                 <div className="flex items-center gap-3">
-                  <span className="text-[11px] text-white/40 hidden sm:inline">Streaming last 4 exchanges</span>
+                  <span className="text-[11px] text-white/40 hidden sm:inline">
+                    Streaming last 4 exchanges
+                  </span>
                   <button
                     type="button"
                     onClick={downloadTranscript}
@@ -1652,7 +1689,8 @@ function EcoInterviewRoom({
                       <span>Ready to Begin</span>
                     </div>
                     <p className="text-sm text-white/50 max-w-md leading-relaxed">
-                      As you and Monica speak, the live dialogue will flow here dynamically with real-time recognition.
+                      As you and Monica speak, the live dialogue will flow here dynamically with
+                      real-time recognition.
                     </p>
                   </div>
                 ) : (
@@ -1668,21 +1706,24 @@ function EcoInterviewRoom({
                           className={`flex flex-col w-full ${ecoLine ? 'items-start' : 'items-end'}`}
                         >
                           <div
-                            className={`flex flex-col w-[80%] max-w-[80%] ${ecoLine ? 'items-start text-left' : 'items-end text-right'
-                              }`}
+                            className={`flex flex-col w-[80%] max-w-[80%] ${
+                              ecoLine ? 'items-start text-left' : 'items-end text-right'
+                            }`}
                           >
                             {/* Speaker Label (clean text, no pill, no dot) */}
                             <span
-                              className={`text-[11px] font-semibold uppercase tracking-wider mb-1 ${ecoLine ? 'text-white/40 text-left' : 'text-[#53E0EC]/70 text-right'
-                                }`}
+                              className={`text-[11px] font-semibold uppercase tracking-wider mb-1 ${
+                                ecoLine ? 'text-white/40 text-left' : 'text-[#53E0EC]/70 text-right'
+                              }`}
                             >
                               {ecoLine ? 'Monica' : `${candidateName} (You)`}
                             </span>
 
                             {/* Spoken dialogue text using Aceternity TextGenerateEffect */}
                             <div
-                              className={`text-base sm:text-lg lg:text-xl font-semibold leading-relaxed tracking-tight ${ecoLine ? 'text-white text-left' : 'text-[#53E0EC] text-right'
-                                }`}
+                              className={`text-base sm:text-lg lg:text-xl font-semibold leading-relaxed tracking-tight ${
+                                ecoLine ? 'text-white text-left' : 'text-[#53E0EC] text-right'
+                              }`}
                             >
                               <TextGenerateEffect
                                 words={l.text}
@@ -1728,10 +1769,11 @@ function EcoInterviewRoom({
                       {/* Central Normal User DP with simple circle around */}
                       <div className="relative z-10 flex flex-col items-center gap-3">
                         <div
-                          className={`relative rounded-full p-1 transition-all duration-300 ${speaking
-                            ? 'ring-2 ring-[#20C8F5] ring-offset-2 ring-offset-neutral-950 shadow-[0_0_20px_rgba(32,200,245,0.35)]'
-                            : 'ring-1 ring-white/20 ring-offset-2 ring-offset-neutral-950'
-                            }`}
+                          className={`relative rounded-full p-1 transition-all duration-300 ${
+                            speaking
+                              ? 'ring-2 ring-[#20C8F5] ring-offset-2 ring-offset-neutral-950 shadow-[0_0_20px_rgba(32,200,245,0.35)]'
+                              : 'ring-1 ring-white/20 ring-offset-2 ring-offset-neutral-950'
+                          }`}
                         >
                           <div className="relative h-20 w-20 sm:h-24 sm:w-24 overflow-hidden rounded-full border border-white/10 bg-neutral-900 shadow-xl">
                             <img
@@ -1744,8 +1786,11 @@ function EcoInterviewRoom({
 
                         <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3.5 py-1 text-[11px] font-medium text-white/90 backdrop-blur-md shadow-md">
                           <span
-                            className={`h-2 w-2 rounded-full transition-all duration-300 ${speaking ? 'bg-[#F34BB5] shadow-[0_0_8px_#F34BB5]' : 'bg-[#20C8F5] shadow-[0_0_6px_#20C8F5]'
-                              }`}
+                            className={`h-2 w-2 rounded-full transition-all duration-300 ${
+                              speaking
+                                ? 'bg-[#F34BB5] shadow-[0_0_8px_#F34BB5]'
+                                : 'bg-[#20C8F5] shadow-[0_0_6px_#20C8F5]'
+                            }`}
                           />
                           <span>Monica</span>
                           <span className="text-[10px] uppercase tracking-wider text-white/40">
@@ -1861,10 +1906,11 @@ function EcoInterviewRoom({
           {/* Split Mic Button */}
           <div className="relative" ref={micMenuRef}>
             <div
-              className={`inline-flex h-11 items-stretch rounded-full border transition-all duration-200 overflow-hidden ${isLocalMicLive
-                ? 'border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.10]'
-                : 'border-[#F52D45]/40 bg-[#F52D45]/20 text-[#F52D45] hover:bg-[#F52D45]/25'
-                }`}
+              className={`inline-flex h-11 items-stretch rounded-full border transition-all duration-200 overflow-hidden ${
+                isLocalMicLive
+                  ? 'border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.10]'
+                  : 'border-[#F52D45]/40 bg-[#F52D45]/20 text-[#F52D45] hover:bg-[#F52D45]/25'
+              }`}
             >
               <button
                 type="button"
@@ -1914,14 +1960,19 @@ function EcoInterviewRoom({
                         <button
                           key={d.deviceId || i}
                           type="button"
-                          onClick={() => handleSwitchAudio(d.deviceId, d.label || `Microphone ${i + 1}`)}
-                          className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors ${isSelected
-                            ? 'bg-[#20C8F5]/15 text-[#20C8F5] font-medium'
-                            : 'text-white/80 hover:bg-white/5 hover:text-white'
-                            }`}
+                          onClick={() =>
+                            handleSwitchAudio(d.deviceId, d.label || `Microphone ${i + 1}`)
+                          }
+                          className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors ${
+                            isSelected
+                              ? 'bg-[#20C8F5]/15 text-[#20C8F5] font-medium'
+                              : 'text-white/80 hover:bg-white/5 hover:text-white'
+                          }`}
                         >
                           <span className="truncate pr-2">{d.label || `Microphone ${i + 1}`}</span>
-                          {isSelected && <CheckIcon size={14} className="shrink-0 text-[#20C8F5]" />}
+                          {isSelected && (
+                            <CheckIcon size={14} className="shrink-0 text-[#20C8F5]" />
+                          )}
                         </button>
                       );
                     })}
@@ -1937,19 +1988,26 @@ function EcoInterviewRoom({
                       <div className="px-2 py-1 text-xs text-white/40">Default system speaker</div>
                     ) : (
                       speakerDevices.map((d, i) => {
-                        const isSelected = activeSpeakerId ? activeSpeakerId === d.deviceId : i === 0;
+                        const isSelected = activeSpeakerId
+                          ? activeSpeakerId === d.deviceId
+                          : i === 0;
                         return (
                           <button
                             key={d.deviceId || i}
                             type="button"
-                            onClick={() => handleSwitchSpeaker(d.deviceId, d.label || `Speaker ${i + 1}`)}
-                            className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors ${isSelected
-                              ? 'bg-[#20C8F5]/15 text-[#20C8F5] font-medium'
-                              : 'text-white/80 hover:bg-white/5 hover:text-white'
-                              }`}
+                            onClick={() =>
+                              handleSwitchSpeaker(d.deviceId, d.label || `Speaker ${i + 1}`)
+                            }
+                            className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors ${
+                              isSelected
+                                ? 'bg-[#20C8F5]/15 text-[#20C8F5] font-medium'
+                                : 'text-white/80 hover:bg-white/5 hover:text-white'
+                            }`}
                           >
                             <span className="truncate pr-2">{d.label || `Speaker ${i + 1}`}</span>
-                            {isSelected && <CheckIcon size={14} className="shrink-0 text-[#20C8F5]" />}
+                            {isSelected && (
+                              <CheckIcon size={14} className="shrink-0 text-[#20C8F5]" />
+                            )}
                           </button>
                         );
                       })
@@ -1975,10 +2033,11 @@ function EcoInterviewRoom({
           {/* Split Camera Button */}
           <div className="relative" ref={cameraMenuRef}>
             <div
-              className={`inline-flex h-11 items-stretch rounded-full border transition-all duration-200 overflow-hidden ${isLocalVideoLive
-                ? 'border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.10]'
-                : 'border-[#F52D45]/40 bg-[#F52D45]/20 text-[#F52D45] hover:bg-[#F52D45]/25'
-                }`}
+              className={`inline-flex h-11 items-stretch rounded-full border transition-all duration-200 overflow-hidden ${
+                isLocalVideoLive
+                  ? 'border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.10]'
+                  : 'border-[#F52D45]/40 bg-[#F52D45]/20 text-[#F52D45] hover:bg-[#F52D45]/25'
+              }`}
             >
               <button
                 type="button"
@@ -2028,14 +2087,19 @@ function EcoInterviewRoom({
                         <button
                           key={d.deviceId || i}
                           type="button"
-                          onClick={() => handleSwitchVideo(d.deviceId, d.label || `Camera ${i + 1}`)}
-                          className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors ${isSelected
-                            ? 'bg-[#20C8F5]/15 text-[#20C8F5] font-medium'
-                            : 'text-white/80 hover:bg-white/5 hover:text-white'
-                            }`}
+                          onClick={() =>
+                            handleSwitchVideo(d.deviceId, d.label || `Camera ${i + 1}`)
+                          }
+                          className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors ${
+                            isSelected
+                              ? 'bg-[#20C8F5]/15 text-[#20C8F5] font-medium'
+                              : 'text-white/80 hover:bg-white/5 hover:text-white'
+                          }`}
                         >
                           <span className="truncate pr-2">{d.label || `Camera ${i + 1}`}</span>
-                          {isSelected && <CheckIcon size={14} className="shrink-0 text-[#20C8F5]" />}
+                          {isSelected && (
+                            <CheckIcon size={14} className="shrink-0 text-[#20C8F5]" />
+                          )}
                         </button>
                       );
                     })}
@@ -2049,10 +2113,11 @@ function EcoInterviewRoom({
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={toggleShare}
-            className={`inline-flex h-11 items-center gap-2 rounded-full border px-4 text-xs font-semibold transition-all duration-200 ${sharing
-              ? 'border-[#245BFF] bg-gradient-to-r from-[#245BFF] to-[#20C8F5] text-white font-bold shadow-[0_0_18px_rgba(36,91,255,0.4)]'
-              : 'border-white/10 bg-white/[0.06] text-white/90 hover:bg-white/[0.12] hover:text-white'
-              }`}
+            className={`inline-flex h-11 items-center gap-2 rounded-full border px-4 text-xs font-semibold transition-all duration-200 ${
+              sharing
+                ? 'border-[#245BFF] bg-gradient-to-r from-[#245BFF] to-[#20C8F5] text-white font-bold shadow-[0_0_18px_rgba(36,91,255,0.4)]'
+                : 'border-white/10 bg-white/[0.06] text-white/90 hover:bg-white/[0.12] hover:text-white'
+            }`}
             title={sharing ? 'Stop sharing screen' : 'Share your screen'}
           >
             <ScreenShareIcon size={16} />
@@ -2078,10 +2143,11 @@ function EcoInterviewRoom({
                 setMicMenuOpen(false);
                 setCameraMenuOpen(false);
               }}
-              className={`inline-flex h-11 w-11 items-center justify-center rounded-full border transition-all duration-200 ${moreMenuOpen
-                ? 'border-white/20 bg-white/20 text-white'
-                : 'border-white/10 bg-white/[0.06] text-white/80 hover:bg-white/[0.12] hover:text-white'
-                }`}
+              className={`inline-flex h-11 w-11 items-center justify-center rounded-full border transition-all duration-200 ${
+                moreMenuOpen
+                  ? 'border-white/20 bg-white/20 text-white'
+                  : 'border-white/10 bg-white/[0.06] text-white/80 hover:bg-white/[0.12] hover:text-white'
+              }`}
               title="More options"
             >
               <MoreIcon size={17} />
@@ -2178,7 +2244,8 @@ function EcoInterviewRoom({
                     Conclude Interview Session?
                   </h3>
                   <p className="text-xs text-white/60 leading-relaxed">
-                    Are you sure you want to end your interview? Once disconnected, your session will be locked and your answers submitted for scoring.
+                    Are you sure you want to end your interview? Once disconnected, your session
+                    will be locked and your answers submitted for scoring.
                   </p>
                 </div>
 
@@ -2243,7 +2310,11 @@ function EcoInterviewRoom({
                     className="w-full rounded-xl border border-white/10 bg-neutral-900 px-3 py-2 text-xs text-white focus:outline-none focus:border-eco-accent"
                   >
                     {videoDevices.map((d, i) => (
-                      <option key={d.deviceId || i} value={d.deviceId} className="bg-neutral-900 text-white">
+                      <option
+                        key={d.deviceId || i}
+                        value={d.deviceId}
+                        className="bg-neutral-900 text-white"
+                      >
                         {d.label || `Camera ${i + 1}`}
                       </option>
                     ))}
@@ -2263,7 +2334,11 @@ function EcoInterviewRoom({
                     className="w-full rounded-xl border border-white/10 bg-neutral-900 px-3 py-2 text-xs text-white focus:outline-none focus:border-eco-accent"
                   >
                     {audioDevices.map((d, i) => (
-                      <option key={d.deviceId || i} value={d.deviceId} className="bg-neutral-900 text-white">
+                      <option
+                        key={d.deviceId || i}
+                        value={d.deviceId}
+                        className="bg-neutral-900 text-white"
+                      >
                         {d.label || `Microphone ${i + 1}`}
                       </option>
                     ))}
@@ -2289,7 +2364,11 @@ function EcoInterviewRoom({
                         </option>
                       ) : (
                         speakerDevices.map((d, i) => (
-                          <option key={d.deviceId || i} value={d.deviceId} className="bg-neutral-900 text-white">
+                          <option
+                            key={d.deviceId || i}
+                            value={d.deviceId}
+                            className="bg-neutral-900 text-white"
+                          >
                             {d.label || `Speaker ${i + 1}`}
                           </option>
                         ))
@@ -2310,7 +2389,11 @@ function EcoInterviewRoom({
                 <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 text-xs space-y-2">
                   <div className="flex items-center justify-between text-white/60">
                     <span>AI Voice Isolation (Krisp)</span>
-                    <span className={noiseFilterEnabled ? 'text-emerald-400 font-semibold' : 'text-white/40'}>
+                    <span
+                      className={
+                        noiseFilterEnabled ? 'text-emerald-400 font-semibold' : 'text-white/40'
+                      }
+                    >
                       {noiseFilterEnabled ? 'Enabled' : 'Disabled'}
                     </span>
                   </div>
@@ -2342,18 +2425,16 @@ function EcoInterviewRoom({
 // EcoInterview Root Gate Component
 // ────────────────────────────────────────────────────────────────────────────
 export function EcoInterview(props: EcoInterviewProps) {
-  const [preAcquiredTracks, setPreAcquiredTracks] = React.useState<
-    Awaited<ReturnType<typeof createLocalTracks>> | null
-  >(null);
+  const [preAcquiredTracks, setPreAcquiredTracks] = React.useState<Awaited<
+    ReturnType<typeof createLocalTracks>
+  > | null>(null);
   const [userChoices, setUserChoices] = React.useState<{
     videoEnabled: boolean;
     audioEnabled: boolean;
     videoDeviceId?: string;
     audioDeviceId?: string;
   }>({ videoEnabled: true, audioEnabled: true });
-  const [resolvedUsername, setResolvedUsername] = React.useState<string>(
-    props.candidateName || ''
-  );
+  const [resolvedUsername, setResolvedUsername] = React.useState<string>(props.candidateName || '');
 
   if (!preAcquiredTracks) {
     return (
