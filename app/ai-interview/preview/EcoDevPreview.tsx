@@ -240,22 +240,17 @@ function Screen({
       {/* ── Top Header ── */}
       <header className="relative z-20 flex shrink-0 items-center justify-between border-b border-white/[0.06] bg-neutral-950/40 px-6 py-3.5 backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2.5 w-2.5 items-center justify-center">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#20C8F5] opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#20C8F5] shadow-[0_0_8px_#20C8F5]" />
-            </span>
-            <span className="text-sm font-semibold tracking-tight text-white">Eco</span>
-          </div>
+          <img src="/logo.png" alt="HireXt Logo" className="h-7 w-auto object-contain select-none" />
+          <span className="h-4 w-px bg-white/15" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-white">
+            Interview
+          </span>
 
           <span className="h-3.5 w-px bg-white/15" />
 
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-white/80">
               Senior Software Engineer Assessment
-            </span>
-            <span className="text-[10px] uppercase tracking-wider text-white/40 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.06]">
-              HireXt Enterprise
             </span>
           </div>
         </div>
@@ -317,7 +312,7 @@ function Screen({
               className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${speaking ? 'bg-[#F34BB5] shadow-[0_0_8px_#F34BB5]' : 'bg-[#20C8F5] shadow-[0_0_6px_#20C8F5]'
                 }`}
             />
-            <span>Eco is {speaking ? 'speaking' : 'listening'}</span>
+            <span>Monica is {speaking ? 'speaking' : 'listening'}</span>
           </div>
 
           {/* Recording & Timer */}
@@ -362,16 +357,16 @@ function Screen({
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  {/* Eco AI Interviewer */}
+                  {/* Monica AI Interviewer */}
                   <div className="flex items-center justify-between p-2 rounded-xl bg-white/[0.03] border border-white/[0.05]">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#245BFF] to-[#20C8F5] text-white font-semibold text-xs shadow-[0_0_10px_rgba(32,200,245,0.3)]">
-                        E
+                        M
                         <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-neutral-900 ${speaking ? 'bg-[#F34BB5]' : 'bg-[#20C8F5]'}`} />
                       </div>
                       <div className="min-w-0 flex flex-col">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-medium text-white truncate">Eco</span>
+                          <span className="text-xs font-medium text-white truncate">Monica</span>
                           <span className="text-[9px] font-semibold uppercase tracking-wider text-[#20C8F5] bg-[#20C8F5]/15 px-1.5 py-0.2 rounded border border-[#20C8F5]/30">
                             AI
                           </span>
@@ -543,7 +538,7 @@ function Screen({
                         <div className="relative h-20 w-20 sm:h-24 sm:w-24 overflow-hidden rounded-full border border-white/10 bg-neutral-900 shadow-xl">
                           <img
                             src="/images/eco-avatar.jpg"
-                            alt="Eco AI Interviewer"
+                            alt="Monica"
                             className="h-full w-full object-cover"
                           />
                         </div>
@@ -554,7 +549,7 @@ function Screen({
                           className={`h-2 w-2 rounded-full transition-all duration-300 ${speaking ? 'bg-[#F34BB5] shadow-[0_0_8px_#F34BB5]' : 'bg-[#20C8F5] shadow-[0_0_6px_#20C8F5]'
                             }`}
                         />
-                        <span>Eco</span>
+                        <span>Monica</span>
                         <span className="text-[10px] uppercase tracking-wider text-white/40">
                           {speaking ? 'Speaking' : 'Listening'}
                         </span>
@@ -602,6 +597,10 @@ function Screen({
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5 rounded-full border border-[#20C8F5]/30 bg-[#20C8F5]/15 px-2.5 py-1 text-[10px] font-medium text-[#53E0EC] backdrop-blur-md">
+                      <span className="relative flex h-1.5 w-1.5 items-center justify-center">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#20C8F5] opacity-75" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#20C8F5]" />
+                      </span>
                       <MicIcon size={12} />
                       <span>Mic On</span>
                     </div>
@@ -1086,20 +1085,11 @@ function PreJoinPreview({
 
       {/* Top Navbar */}
       <header className="relative z-10 flex w-full shrink-0 items-center justify-between border-b border-white/[0.06] bg-neutral-950/60 px-6 py-3.5 backdrop-blur-xl md:px-12">
-        <div className="flex items-center gap-3.5">
-          <BrandLogo theme="dark" size={30} />
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="HireXt Logo" className="h-7 w-auto object-contain select-none" />
           <span className="h-4 w-px bg-white/15" />
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2.5 w-2.5 items-center justify-center">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#20C8F5] opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#20C8F5] shadow-[0_0_8px_#20C8F5]" />
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-white">
-              Eco AI Interview
-            </span>
-          </div>
-          <span className="hidden sm:inline-block text-[10px] uppercase tracking-wider text-white/40 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.06]">
-            HireXt Enterprise
+          <span className="text-xs font-semibold uppercase tracking-wider text-white">
+            Interview
           </span>
         </div>
 
@@ -1128,11 +1118,6 @@ function PreJoinPreview({
           </div>
         )}
 
-        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/70 backdrop-blur-md">
-          <ShieldCheckIcon size={15} className="text-[#20C8F5]" />
-          <span className="hidden sm:inline">Green Room · Hardware &amp; Audio Verification</span>
-          <span className="sm:hidden">Green Room</span>
-        </div>
       </header>
 
       {/* Main PreJoin Stage */}
@@ -1272,7 +1257,7 @@ function PreJoinPreview({
                   {/* Highlights Checklist */}
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] font-medium text-white/70">
-                      ⚡ AI Evaluator: Eco
+                      ⚡ Evaluator: Monica
                     </span>
                     <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] font-medium text-white/70">
                       📝 Live Transcript
@@ -1364,7 +1349,7 @@ function PreJoinPreview({
                     {joining ? (
                       <span className="flex items-center gap-2">
                         <span className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-950 border-t-transparent" />
-                        <span>Connecting to Eco…</span>
+                        <span>Connecting to Monica…</span>
                       </span>
                     ) : (
                       <span>Enter Interview Room</span>
@@ -1385,7 +1370,7 @@ function PreJoinPreview({
 
       {/* Bottom Footer Bar */}
       <footer className="relative z-10 flex shrink-0 items-center justify-between border-t border-white/[0.06] bg-neutral-950/40 px-6 py-2.5 text-[11px] text-white/40 backdrop-blur-xl md:px-12">
-        <span>HireXt Eco AI Interview System · Enterprise Evaluation Engine</span>
+        <span>HireXt Interview System · Enterprise Evaluation Engine</span>
         <span className="hidden sm:inline">Low-Latency Multimodal WebRTC · 1080p HD</span>
       </footer>
     </div>
