@@ -933,6 +933,15 @@ function EcoInterviewRoom({
   const [finalDuration, setFinalDuration] = React.useState<number | null>(null);
   const [concludedStage, setConcludedStage] = React.useState<'center' | 'settled'>('center');
 
+  // Feedback form state
+  const [feedbackView, setFeedbackView] = React.useState<'form' | 'done'>('form');
+  const [fbOverall, setFbOverall] = React.useState(0);
+  const [fbAspects, setFbAspects] = React.useState({ knowledge: 0, communication: 0, professionalism: 0, clarity: 0, experience: 0 });
+  const [fbSuggestion, setFbSuggestion] = React.useState('');
+  const [fbHover, setFbHover] = React.useState(0);
+  const [fbSubmitting, setFbSubmitting] = React.useState(false);
+  const [fbError, setFbError] = React.useState<string | null>(null);
+
   React.useEffect(() => {
     if (ended) {
       setConcludedStage('center');
@@ -1479,58 +1488,175 @@ function EcoInterviewRoom({
                 className="flex w-full flex-col items-center lg:col-span-5 lg:items-end"
               >
                 <div className="w-full max-w-md rounded-3xl border border-white/[0.08] bg-white/[0.02] p-6 sm:p-7 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.85)] backdrop-blur-2xl space-y-4 text-left">
-                  <div className="flex justify-between items-center text-xs text-white/70">
-                    <span className="text-white/50">Session</span>
-                    <span className="font-semibold text-white">
+                  {/* Session meta */}
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-white/40">Session</span>
+                    <span className="font-semibold text-white truncate max-w-[60%] text-right">
                       {interviewTitle && interviewTitle !== 'Assessment' ? interviewTitle : 'Technical Assessment'}
                     </span>
                   </div>
-
-                  <div className="flex justify-between items-center text-xs text-white/70">
-                    <span className="text-white/50">Candidate</span>
-                    <span className="text-white font-medium">{candidateName}</span>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-white/40">Duration</span>
+                    <span className="font-mono font-bold text-sky-400">{fmt(finalDuration ?? seconds)}</span>
                   </div>
-
-                  <div className="flex justify-between items-center text-xs text-white/70">
-                    <span className="text-white/50">Total Duration</span>
-                    <span className="font-mono text-sm font-bold text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.4)]">
-                      {fmt(finalDuration ?? seconds)}
-                    </span>
-                  </div>
-
-                  <div className="h-px w-full bg-white/[0.06] my-1" />
-
-                  <div className="flex justify-between items-center text-xs text-white/70">
-                    <span className="text-white/50">Status</span>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-white/40">Status</span>
                     <span className="text-emerald-400 font-medium">Submitted</span>
                   </div>
 
-                  {/* Action Callouts */}
-                  <div className="pt-2">
-                    {resultBase ? (
-                      <a
-                        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#20C8F5] via-[#245BFF] to-[#F34BB5] px-6 text-sm font-bold text-white shadow-[0_0_28px_rgba(32,200,245,0.35)] transition-all hover:shadow-[0_0_40px_rgba(32,200,245,0.55)] active:scale-[0.98]"
-                        href={resultBase}
-                        target="_blank"
-                        rel="noreferrer"
+                  <div className="h-px w-full bg-white/[0.06]" />
+
+                  {/* Feedback form or done state */}
+                  <AnimatePresence mode="wait">
+                    {feedbackView === 'form' ? (
+                      <motion.div
+                        key="fb-form"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.35 }}
+                        className="space-y-4"
                       >
-                        View Your Scorecard &amp; Report
-                      </a>
+                        <div>
+                          <p className="text-xs font-semibold text-white/80 mb-0.5">Rate your experience</p>
+                          <p className="text-[10px] text-white/40 leading-relaxed">Your honest feedback helps us improve the interview quality.</p>
+                        </div>
+
+                        {/* Overall star rating */}
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] text-white/50 uppercase tracking-wider">Overall</span>
+                          <div className="flex items-center gap-1">
+                            {[1,2,3,4,5].map((n) => (
+                              <button
+                                key={n}
+                                type="button"
+                                onMouseEnter={() => setFbHover(n)}
+                                onMouseLeave={() => setFbHover(0)}
+                                onClick={() => setFbOverall(n)}
+                                className="transition-transform hover:scale-110 focus:outline-none"
+                              >
+                                <svg viewBox="0 0 20 20" className={`w-6 h-6 transition-colors ${ n <= (fbHover || fbOverall) ? 'text-amber-400' : 'text-white/20' }`} fill="currentColor">
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Aspect ratings — compact labels */}
+                        {([
+                          ['knowledge', 'Knowledge'],
+                          ['communication', 'Communication'],
+                          ['professionalism', 'Professionalism'],
+                          ['clarity', 'Question Clarity'],
+                          ['experience', 'Overall Experience'],
+                        ] as const).map(([key, label]) => (
+                          <div key={key} className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] text-white/50 shrink-0">{label}</span>
+                            <div className="flex items-center gap-0.5">
+                              {[1,2,3,4,5].map((n) => (
+                                <button
+                                  key={n}
+                                  type="button"
+                                  onClick={() => setFbAspects((prev) => ({ ...prev, [key]: n }))}
+                                  className="focus:outline-none"
+                                >
+                                  <svg viewBox="0 0 20 20" className={`w-4 h-4 transition-colors ${ n <= fbAspects[key] ? 'text-amber-400' : 'text-white/15' }`} fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                  </svg>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Suggestion */}
+                        <textarea
+                          rows={2}
+                          value={fbSuggestion}
+                          onChange={(e) => setFbSuggestion(e.target.value)}
+                          placeholder="Any suggestions? (optional)"
+                          maxLength={2000}
+                          className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-xs text-white/80 placeholder-white/25 focus:outline-none focus:border-white/20 transition-colors"
+                        />
+
+                        {fbError && <p className="text-[10px] text-red-400">{fbError}</p>}
+
+                        {/* Submit / Skip */}
+                        <div className="flex flex-col gap-2 pt-1">
+                          <button
+                            type="button"
+                            disabled={fbSubmitting}
+                            onClick={async () => {
+                              setFbError(null);
+                              if (fbOverall === 0) { setFbError('Please give an overall rating.'); return; }
+                              const missing = (['knowledge','communication','professionalism','clarity','experience'] as const).find((k) => fbAspects[k] === 0);
+                              if (missing) { setFbError('Please rate all five aspects.'); return; }
+                              const sessionId = room.name;
+                              const apiBase = resultBase ? resultBase.replace(/\/$/, '') : '';
+                              if (!sessionId || !apiBase) { setFeedbackView('done'); return; }
+                              setFbSubmitting(true);
+                              try {
+                                const res = await fetch(`${apiBase}/api/interview/session/${sessionId}/feedback`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
+                                  body: JSON.stringify({ overall: fbOverall, aspects: fbAspects, suggestion: fbSuggestion.trim() || '—' }),
+                                });
+                                if (res.ok || res.status === 409) {
+                                  setFeedbackView('done');
+                                } else {
+                                  const body = await res.json().catch(() => ({}));
+                                  setFbError(body?.message || 'Could not submit feedback.');
+                                }
+                              } catch {
+                                setFbError('Network error. Please try again.');
+                              } finally {
+                                setFbSubmitting(false);
+                              }
+                            }}
+                            className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-white/10 hover:bg-white/[0.15] border border-white/[0.08] text-xs font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                          >
+                            {fbSubmitting ? 'Submitting…' : 'Submit Feedback'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFeedbackView('done')}
+                            className="text-[10px] text-white/30 hover:text-white/60 transition-colors cursor-pointer"
+                          >
+                            Skip
+                          </button>
+                        </div>
+                      </motion.div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (typeof window !== 'undefined') {
-                            window.close();
-                            window.location.href = resultBase || '/';
-                          }
-                        }}
-                        className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-white hover:bg-neutral-100 text-neutral-950 px-6 text-xs font-semibold transition-all active:scale-[0.98] shadow-lg cursor-pointer"
+                      <motion.div
+                        key="fb-done"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4 }}
+                        className="space-y-3 pt-1"
                       >
-                        Close Session
-                      </button>
+                        {resultBase ? (
+                          <a
+                            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#20C8F5] via-[#245BFF] to-[#F34BB5] px-6 text-sm font-bold text-white shadow-[0_0_28px_rgba(32,200,245,0.35)] transition-all hover:shadow-[0_0_40px_rgba(32,200,245,0.55)] active:scale-[0.98]"
+                            href={resultBase}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            View Scorecard &amp; Report
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => { if (typeof window !== 'undefined') { window.close(); } }}
+                            className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-white/10 hover:bg-white/[0.15] border border-white/[0.08] text-white px-6 text-xs font-semibold transition-all active:scale-[0.98] cursor-pointer"
+                          >
+                            Close Session
+                          </button>
+                        )}
+                      </motion.div>
                     )}
-                  </div>
+                  </AnimatePresence>
                 </div>
               </motion.div>
             </div>
