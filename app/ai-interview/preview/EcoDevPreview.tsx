@@ -157,13 +157,36 @@ function Screen({
   onModeChange,
 }: {
   showVideo: boolean;
-  mode?: 'video' | 'audio' | 'both' | 'greenroom';
-  onModeChange?: (m: 'video' | 'audio' | 'both' | 'greenroom') => void;
+  mode?: 'video' | 'audio' | 'both' | 'greenroom' | 'concluded';
+  onModeChange?: (m: 'video' | 'audio' | 'both' | 'greenroom' | 'concluded') => void;
 }) {
   const energy = useMockEnergy(true);
   const speaking = energy > 0.05;
   const candidateName = 'Veer';
   const [seconds, setSeconds] = React.useState(74);
+  const [ended, setEnded] = React.useState(mode === 'concluded');
+  const [finalDuration, setFinalDuration] = React.useState<number | null>(mode === 'concluded' ? 74 : null);
+  const [concludedStage, setConcludedStage] = React.useState<'center' | 'settled'>('center');
+
+  React.useEffect(() => {
+    if (mode === 'concluded') {
+      setEnded(true);
+      setFinalDuration(74);
+    } else {
+      setEnded(false);
+      setFinalDuration(null);
+    }
+  }, [mode]);
+
+  React.useEffect(() => {
+    if (ended) {
+      setConcludedStage('center');
+      const timer = setTimeout(() => {
+        setConcludedStage('settled');
+      }, 1400);
+      return () => clearTimeout(timer);
+    }
+  }, [ended]);
 
   const [micEnabled, setMicEnabled] = React.useState(true);
   const [cameraEnabled, setCameraEnabled] = React.useState(true);
@@ -185,9 +208,10 @@ function Screen({
   useClickOutside(participantsRef, participantsOpen, () => setParticipantsOpen(false));
 
   React.useEffect(() => {
+    if (ended) return;
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [ended]);
 
   const transcriptContainerRef = React.useRef<HTMLDivElement>(null);
   const transcriptEndRef = React.useRef<HTMLDivElement>(null);
@@ -198,7 +222,7 @@ function Screen({
 
   // Advance transcript incrementally to simulate live conversational speech
   React.useEffect(() => {
-    if (!streamActive) return;
+    if (!streamActive || ended) return;
     const interval = setInterval(() => {
       setTranscriptLines((prev) => {
         const nextIdx = prev.length;
@@ -215,7 +239,7 @@ function Screen({
     }, 4500);
 
     return () => clearInterval(interval);
-  }, [streamActive]);
+  }, [streamActive, ended]);
 
   React.useEffect(() => {
     if (transcriptEndRef.current) {
@@ -232,6 +256,207 @@ function Screen({
       return [...prev, item];
     });
   };
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Post-Interview Completed Screen (Cinematic Framer Motion)
+  // ────────────────────────────────────────────────────────────────────────
+  if (ended) {
+    return (
+      <div className="relative isolate flex min-h-[100dvh] w-full flex-col justify-between overflow-hidden bg-[#06080C] px-6 sm:px-12 lg:px-16 py-8 sm:py-12 font-sans text-white antialiased select-none">
+        {/* Cinematic ambient background glow */}
+        <motion.div
+          className="pointer-events-none absolute -top-40 left-1/4 h-[650px] w-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(36,91,255,0.12),rgba(32,200,245,0.08),rgba(0,0,0,0)_70%)] blur-[140px]"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.5 }}
+        />
+        <motion.div
+          className="pointer-events-none absolute -bottom-40 right-1/4 h-[600px] w-[800px] rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.14),rgba(0,0,0,0)_70%)] blur-[140px]"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.5, delay: 0.3 }}
+        />
+
+        {/* Cinematic Vignette */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(0,0,0,0.85)_100%)]" />
+
+        {/* ── STAGE 1: CENTER PRESENTATION ── */}
+        {concludedStage === 'center' && (
+          <div className="fixed inset-0 z-30 flex flex-col items-center justify-center pointer-events-none px-6">
+            {/* Soft central radiant aura */}
+            <motion.div
+              className="absolute h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(52,211,153,0.14),rgba(32,200,245,0.08),rgba(0,0,0,0)_70%)] blur-[90px]"
+              animate={{ opacity: [0.5, 0.8, 0.5], scale: [0.96, 1.06, 0.96] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            />
+
+            <motion.div
+              layoutId="interview-concluded-title-container"
+              transition={{ duration: 1.1, ease: EASE }}
+              className="flex flex-col items-center text-center"
+            >
+              <motion.h1
+                layoutId="interview-concluded-heading"
+                initial={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
+                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                transition={{ duration: 0.7, ease: EASE }}
+                className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight bg-gradient-to-b from-white via-neutral-100 to-neutral-400 bg-clip-text text-transparent"
+              >
+                Interview Concluded
+              </motion.h1>
+            </motion.div>
+          </div>
+        )}
+
+        {/* ── STAGE 2: SETTLED EXECUTIVE SPLIT VIEW ── */}
+        {concludedStage === 'settled' && (
+          <>
+            {/* Main Split Section: Left Bottom Hero + Right Telemetry Card */}
+            <div className="relative z-10 mx-auto my-auto grid w-full max-w-7xl grid-cols-1 items-end gap-12 lg:grid-cols-12 lg:gap-16 py-8">
+              {/* Left Side: Shifted to bottom-left */}
+              <div className="flex flex-col items-start text-left lg:col-span-7 space-y-4">
+                {/* Logo professionally placed on the top of the title */}
+                <motion.div
+                  initial={{ opacity: 0, y: -16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.1, ease: EASE }}
+                  className="flex items-center gap-3 mb-1"
+                >
+                  <img
+                    src="/logo.png"
+                    alt="HireXt Logo"
+                    className="h-8 w-auto object-contain select-none"
+                  />
+                  <span className="h-4 w-px bg-white/20" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-white/80">
+                    Interview
+                  </span>
+                </motion.div>
+
+                {/* Shifted Heading */}
+                <motion.div
+                  layoutId="interview-concluded-title-container"
+                  transition={{ duration: 1.1, ease: EASE }}
+                  className="flex flex-col items-start text-left"
+                >
+                  <motion.h1
+                    layoutId="interview-concluded-heading"
+                    className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.08] bg-gradient-to-b from-white via-neutral-100 to-neutral-400 bg-clip-text text-transparent"
+                  >
+                    Interview Concluded
+                  </motion.h1>
+                </motion.div>
+
+                {/* Candidate personalized confirmation */}
+                <motion.p
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, delay: 0.25 }}
+                  className="text-sm sm:text-base text-neutral-300/90 leading-relaxed max-w-xl pt-1"
+                >
+                  Thank you, <span className="text-white font-medium">{candidateName}</span>. Your interview responses, audio transcript, and technical assessment have been securely recorded.
+                </motion.p>
+
+                {/* Trust & Reassurance */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 0.35 }}
+                  className="flex items-center gap-2 text-xs text-white/40 pt-1"
+                >
+                  <ShieldCheckIcon size={13} className="text-emerald-400/80" />
+                  <span>End-to-End Encrypted · AI Evaluation Engine Active</span>
+                </motion.div>
+              </div>
+
+              {/* Right Side: Telemetry Card */}
+              <motion.div
+                initial={{ opacity: 0, x: 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.7, delay: 0.15, ease: EASE }}
+                className="flex w-full flex-col items-center lg:col-span-5 lg:items-end"
+              >
+                <div className="w-full max-w-md rounded-3xl border border-white/[0.08] bg-white/[0.02] p-6 sm:p-7 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.85)] backdrop-blur-2xl space-y-4 text-left">
+                  <div className="flex justify-between items-center text-xs text-white/70">
+                    <span className="text-white/50">Session</span>
+                    <span className="font-semibold text-white">Senior Software Engineer Assessment</span>
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs text-white/70">
+                    <span className="text-white/50">Candidate</span>
+                    <span className="text-white font-medium">{candidateName} (You)</span>
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs text-white/70">
+                    <span className="text-white/50">Total Duration</span>
+                    <span className="font-mono text-sm font-bold text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.4)]">
+                      {fmt(finalDuration ?? seconds)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs text-white/70">
+                    <span className="text-white/50">Integrity &amp; Security</span>
+                    <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
+                      <ShieldCheckIcon size={13} />
+                      <span>Verified · AES-256</span>
+                    </span>
+                  </div>
+
+                  <div className="h-px w-full bg-white/[0.06] my-1" />
+
+                  <div className="flex justify-between items-center text-xs text-white/70">
+                    <span className="text-white/50">Status</span>
+                    <span className="text-emerald-400 font-medium">Evaluation in progress</span>
+                  </div>
+
+                  {/* Action Callouts */}
+                  <div className="pt-2 space-y-3">
+                    <div className="flex flex-col sm:flex-row gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEnded(false);
+                          setFinalDuration(null);
+                        }}
+                        className="flex-1 inline-flex h-11 items-center justify-center rounded-xl bg-white hover:bg-neutral-100 text-neutral-950 px-6 text-xs font-semibold transition-all active:scale-[0.98] shadow-lg cursor-pointer"
+                      >
+                        Replay Interview
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof window !== 'undefined') window.location.reload();
+                        }}
+                        className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white px-5 text-xs font-semibold transition-all active:scale-[0.98] cursor-pointer"
+                      >
+                        Reset Session
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-white/40 pt-1">
+                      <ShieldCheckIcon size={13} className="text-emerald-400" />
+                      <span>Encrypted submission · Confirmation sent to candidate email</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Bottom Footer */}
+            <motion.footer
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="relative z-10 flex w-full items-center justify-between text-[11px] text-white/35 pt-4"
+            >
+              <span>HireXt Interview Platform</span>
+              <span>AES-256 GCM Cryptographic Verification</span>
+            </motion.footer>
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-black font-sans text-[#eef1f5] antialiased select-none">
@@ -259,7 +484,7 @@ function Screen({
         <div className="hidden lg:flex items-center gap-2">
           {onModeChange && (
             <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
-              {(['video', 'audio', 'both', 'greenroom'] as const).map((s) => (
+              {(['video', 'audio', 'both', 'greenroom', 'concluded'] as const).map((s) => (
                 <button
                   key={s}
                   type="button"
@@ -275,7 +500,9 @@ function Screen({
                       ? 'Audio DP'
                       : s === 'both'
                         ? 'Compare'
-                        : 'Green Room'}
+                        : s === 'greenroom'
+                          ? 'Green Room'
+                          : 'Concluded'}
                 </button>
               ))}
             </div>
@@ -929,8 +1156,12 @@ function Screen({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setConfirmLeaveOpen(false)}
-                    className="flex-1 rounded-xl bg-[#F52D45] py-2.5 text-xs font-semibold text-white shadow-[0_0_16px_rgba(245,45,69,0.4)] hover:bg-[#d92238]"
+                    onClick={() => {
+                      setConfirmLeaveOpen(false);
+                      setFinalDuration(seconds);
+                      setEnded(true);
+                    }}
+                    className="flex-1 rounded-xl bg-[#F52D45] py-2.5 text-xs font-semibold text-white shadow-[0_0_16px_rgba(245,45,69,0.4)] hover:bg-[#d92238] cursor-pointer"
                   >
                     End &amp; Submit
                   </button>
@@ -1031,8 +1262,8 @@ function PreJoinPreview({
   onModeChange,
 }: {
   onEnter: () => void;
-  mode?: 'video' | 'audio' | 'both' | 'greenroom';
-  onModeChange?: (m: 'video' | 'audio' | 'both' | 'greenroom') => void;
+  mode?: 'video' | 'audio' | 'both' | 'greenroom' | 'concluded';
+  onModeChange?: (m: 'video' | 'audio' | 'both' | 'greenroom' | 'concluded') => void;
 }) {
   const [username, setUsername] = React.useState('Veer');
   const [videoEnabled, setVideoEnabled] = React.useState(true);
@@ -1099,7 +1330,7 @@ function PreJoinPreview({
           {/* Dev Mode Switcher */}
           {onModeChange && (
             <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
-              {(['video', 'audio', 'both', 'greenroom'] as const).map((s) => (
+              {(['video', 'audio', 'both', 'greenroom', 'concluded'] as const).map((s) => (
                 <button
                   key={s}
                   type="button"
@@ -1116,7 +1347,9 @@ function PreJoinPreview({
                       ? 'Audio DP'
                       : s === 'both'
                         ? 'Compare'
-                        : 'Green Room'}
+                        : s === 'greenroom'
+                          ? 'Green Room'
+                          : 'Concluded'}
                 </button>
               ))}
             </div>
@@ -1392,7 +1625,23 @@ function PreJoinPreview({
 }
 
 export default function EcoDevPreview() {
-  const [currentMode, setCurrentMode] = React.useState<'video' | 'audio' | 'both' | 'greenroom'>('video');
+  const [currentMode, setCurrentMode] = React.useState<
+    'video' | 'audio' | 'both' | 'greenroom' | 'concluded'
+  >(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('state');
+      if (
+        p === 'audio' ||
+        p === 'video' ||
+        p === 'both' ||
+        p === 'greenroom' ||
+        p === 'concluded'
+      ) {
+        return p as any;
+      }
+    }
+    return 'video';
+  });
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1402,7 +1651,8 @@ export default function EcoDevPreview() {
         stateParam === 'audio' ||
         stateParam === 'video' ||
         stateParam === 'both' ||
-        stateParam === 'greenroom'
+        stateParam === 'greenroom' ||
+        stateParam === 'concluded'
       ) {
         setCurrentMode(stateParam as any);
       }
@@ -1428,7 +1678,7 @@ export default function EcoDevPreview() {
             mock harness — side-by-side mode
           </span>
           <div className="flex-1" />
-          {(['video', 'audio', 'both', 'greenroom'] as const).map((s) => (
+          {(['video', 'audio', 'both', 'greenroom', 'concluded'] as const).map((s) => (
             <button
               key={s}
               type="button"
@@ -1438,7 +1688,7 @@ export default function EcoDevPreview() {
                   : 'border-white/15 text-neutral-300 hover:bg-white/10'
                 }`}
             >
-              {s === 'both' ? 'Compare' : s === 'greenroom' ? 'Green Room' : s}
+              {s === 'both' ? 'Compare' : s === 'greenroom' ? 'Green Room' : s === 'concluded' ? 'Concluded' : s}
             </button>
           ))}
         </div>

@@ -932,6 +932,17 @@ function EcoInterviewRoom({
   const [sharing, setSharing] = React.useState(false);
   const [ended, setEnded] = React.useState(false);
   const [finalDuration, setFinalDuration] = React.useState<number | null>(null);
+  const [concludedStage, setConcludedStage] = React.useState<'center' | 'settled'>('center');
+
+  React.useEffect(() => {
+    if (ended) {
+      setConcludedStage('center');
+      const timer = setTimeout(() => {
+        setConcludedStage('settled');
+      }, 1400);
+      return () => clearTimeout(timer);
+    }
+  }, [ended]);
   const hasConnected = React.useRef(false);
 
   // Auto-scroll transcript state
@@ -1361,88 +1372,206 @@ function EcoInterviewRoom({
   };
 
   // ────────────────────────────────────────────────────────────────────────
-  // Post-Interview Completed Screen
+  // Post-Interview Completed Screen (Cinematic Framer Motion)
   // ────────────────────────────────────────────────────────────────────────
   if (ended) {
     return (
-      <div className="relative isolate flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden bg-black text-eco-fg p-4 sm:p-6">
-        <BackgroundBeams />
-
-        {/* Ambient emerald illumination */}
-        <div className="pointer-events-none absolute -top-40 left-1/2 h-[500px] w-[600px] -translate-x-1/2 rounded-full bg-eco-accent/15 blur-[130px]" />
-
+      <div className="relative isolate flex min-h-[100dvh] w-full flex-col justify-between overflow-hidden bg-[#06080C] px-6 sm:px-12 lg:px-16 py-8 sm:py-12 font-sans text-white antialiased select-none">
+        {/* Cinematic ambient background glow */}
         <motion.div
-          className="relative z-10 flex flex-col items-center gap-6 rounded-[2.5rem] border border-white/[0.08] bg-white/[0.03] p-2 shadow-2xl backdrop-blur-2xl max-w-lg w-full"
-          initial={{ opacity: 0, y: 16, filter: 'blur(8px)' }}
-          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-          transition={{ duration: 0.7, ease: EASE }}
-        >
-          <div className="flex w-full flex-col items-center gap-6 rounded-[calc(2.5rem-0.5rem)] bg-neutral-950/80 px-6 sm:px-10 py-10 sm:py-12 text-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-eco-accent/30 bg-eco-accent/10 text-eco-accent shadow-[0_0_30px_rgba(46,230,166,0.35)]">
-              <CheckIcon size={32} />
-            </div>
+          className="pointer-events-none absolute -top-40 left-1/4 h-[650px] w-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(36,91,255,0.12),rgba(32,200,245,0.08),rgba(0,0,0,0)_70%)] blur-[140px]"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.5 }}
+        />
+        <motion.div
+          className="pointer-events-none absolute -bottom-40 right-1/4 h-[600px] w-[800px] rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.14),rgba(0,0,0,0)_70%)] blur-[140px]"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.5, delay: 0.3 }}
+        />
 
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-eco-accent">
-                Session Complete
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+        {/* Cinematic Vignette */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(0,0,0,0.85)_100%)]" />
+
+        {/* ── STAGE 1: CENTER PRESENTATION ── */}
+        {concludedStage === 'center' && (
+          <div className="fixed inset-0 z-30 flex flex-col items-center justify-center pointer-events-none px-6">
+            {/* Soft central radiant aura */}
+            <motion.div
+              className="absolute h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(52,211,153,0.14),rgba(32,200,245,0.08),rgba(0,0,0,0)_70%)] blur-[90px]"
+              animate={{ opacity: [0.5, 0.8, 0.5], scale: [0.96, 1.06, 0.96] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            />
+
+            <motion.div
+              layoutId="interview-concluded-title-container"
+              transition={{ duration: 1.1, ease: EASE }}
+              className="flex flex-col items-center text-center"
+            >
+              <motion.h1
+                layoutId="interview-concluded-heading"
+                initial={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
+                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                transition={{ duration: 0.7, ease: EASE }}
+                className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight bg-gradient-to-b from-white via-neutral-100 to-neutral-400 bg-clip-text text-transparent"
+              >
                 Interview Concluded
-              </h2>
-              <p className="text-xs sm:text-sm text-eco-muted leading-relaxed max-w-sm">
-                Thank you, <span className="text-white font-medium">{candidateName}</span>. Your
-                interview responses, audio transcript, and technical assessment have been securely
-                recorded.
-              </p>
-            </div>
-
-            <div className="w-full rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 text-xs space-y-2.5 text-left">
-              <div className="flex justify-between text-white/70">
-                <span>Session</span>
-                <span className="font-semibold text-white">
-                  {interviewTitle && interviewTitle !== 'Assessment' ? interviewTitle : 'Technical Assessment'}
-                </span>
-              </div>
-              <div className="flex justify-between text-white/70">
-                <span>Total Duration</span>
-                <span className="font-mono text-[#20C8F5]">{fmt(finalDuration ?? seconds)}</span>
-              </div>
-              <div className="flex justify-between text-white/70">
-                <span>Status</span>
-                <span className="text-[#53E0EC] font-medium">Evaluation in progress</span>
-              </div>
-            </div>
-
-            {resultBase ? (
-              <a
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FFC45E] via-[#FF7049] to-[#F34BB5] px-6 text-sm font-bold text-white shadow-[0_0_28px_rgba(255,112,73,0.35)] transition-all hover:shadow-[0_0_40px_rgba(255,112,73,0.55)] active:scale-[0.98]"
-                href={resultBase}
-                target="_blank"
-                rel="noreferrer"
-              >
-                View Your Scorecard &amp; Report
-              </a>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    window.close();
-                    window.location.href = resultBase || '/';
-                  }
-                }}
-                className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 px-6 text-xs font-semibold text-white transition-all hover:bg-white/10 active:scale-[0.98]"
-              >
-                Close Window
-              </button>
-            )}
-
-            <div className="flex items-center gap-1.5 text-[11px] text-white/40">
-              <ShieldCheckIcon size={14} className="text-[#20C8F5]" />
-              <span>Encrypted submission · Confirmation sent via email</span>
-            </div>
+              </motion.h1>
+            </motion.div>
           </div>
-        </motion.div>
+        )}
+
+        {/* ── STAGE 2: SETTLED EXECUTIVE SPLIT VIEW ── */}
+        {concludedStage === 'settled' && (
+          <>
+            {/* Main Split Section: Left Bottom Hero + Right Telemetry Card */}
+            <div className="relative z-10 mx-auto my-auto grid w-full max-w-7xl grid-cols-1 items-end gap-12 lg:grid-cols-12 lg:gap-16 py-8">
+              {/* Left Side: Shifted to bottom-left */}
+              <div className="flex flex-col items-start text-left lg:col-span-7 space-y-4">
+                {/* Logo professionally placed on the top of the title */}
+                <motion.div
+                  initial={{ opacity: 0, y: -16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.1, ease: EASE }}
+                  className="flex items-center gap-3 mb-1"
+                >
+                  <img
+                    src="/logo.png"
+                    alt="HireXt Logo"
+                    className="h-8 w-auto object-contain select-none"
+                  />
+                  <span className="h-4 w-px bg-white/20" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-white/80">
+                    Interview
+                  </span>
+                </motion.div>
+
+                {/* Shifted Heading */}
+                <motion.div
+                  layoutId="interview-concluded-title-container"
+                  transition={{ duration: 1.1, ease: EASE }}
+                  className="flex flex-col items-start text-left"
+                >
+                  <motion.h1
+                    layoutId="interview-concluded-heading"
+                    className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.08] bg-gradient-to-b from-white via-neutral-100 to-neutral-400 bg-clip-text text-transparent"
+                  >
+                    Interview Concluded
+                  </motion.h1>
+                </motion.div>
+
+                {/* Candidate personalized confirmation */}
+                <motion.p
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, delay: 0.25 }}
+                  className="text-sm sm:text-base text-neutral-300/90 leading-relaxed max-w-xl pt-1"
+                >
+                  Thank you, <span className="text-white font-medium">{candidateName}</span>. Your interview responses, audio transcript, and technical assessment have been securely recorded.
+                </motion.p>
+
+                {/* Trust & Reassurance */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 0.35 }}
+                  className="flex items-center gap-2 text-xs text-white/40 pt-1"
+                >
+                  <ShieldCheckIcon size={13} className="text-emerald-400/80" />
+                  <span>End-to-End Encrypted · AI Evaluation Engine Active</span>
+                </motion.div>
+              </div>
+
+              {/* Right Side: Telemetry Card */}
+              <motion.div
+                initial={{ opacity: 0, x: 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.7, delay: 0.15, ease: EASE }}
+                className="flex w-full flex-col items-center lg:col-span-5 lg:items-end"
+              >
+                <div className="w-full max-w-md rounded-3xl border border-white/[0.08] bg-white/[0.02] p-6 sm:p-7 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.85)] backdrop-blur-2xl space-y-4 text-left">
+                  <div className="flex justify-between items-center text-xs text-white/70">
+                    <span className="text-white/50">Session</span>
+                    <span className="font-semibold text-white">
+                      {interviewTitle && interviewTitle !== 'Assessment' ? interviewTitle : 'Technical Assessment'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs text-white/70">
+                    <span className="text-white/50">Candidate</span>
+                    <span className="text-white font-medium">{candidateName} (You)</span>
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs text-white/70">
+                    <span className="text-white/50">Total Duration</span>
+                    <span className="font-mono text-sm font-bold text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.4)]">
+                      {fmt(finalDuration ?? seconds)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs text-white/70">
+                    <span className="text-white/50">Integrity &amp; Security</span>
+                    <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
+                      <ShieldCheckIcon size={13} />
+                      <span>Verified · AES-256</span>
+                    </span>
+                  </div>
+
+                  <div className="h-px w-full bg-white/[0.06] my-1" />
+
+                  <div className="flex justify-between items-center text-xs text-white/70">
+                    <span className="text-white/50">Status</span>
+                    <span className="text-emerald-400 font-medium">Evaluation in progress</span>
+                  </div>
+
+                  {/* Action Callouts */}
+                  <div className="pt-2 space-y-3">
+                    {resultBase ? (
+                      <a
+                        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#20C8F5] via-[#245BFF] to-[#F34BB5] px-6 text-sm font-bold text-white shadow-[0_0_28px_rgba(32,200,245,0.35)] transition-all hover:shadow-[0_0_40px_rgba(32,200,245,0.55)] active:scale-[0.98]"
+                        href={resultBase}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        View Your Scorecard &amp; Report
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof window !== 'undefined') {
+                            window.close();
+                            window.location.href = resultBase || '/';
+                          }
+                        }}
+                        className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-white hover:bg-neutral-100 text-neutral-950 px-6 text-xs font-semibold transition-all active:scale-[0.98] shadow-lg cursor-pointer"
+                      >
+                        Close Session
+                      </button>
+                    )}
+
+                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-white/40 pt-1">
+                      <ShieldCheckIcon size={13} className="text-emerald-400" />
+                      <span>Encrypted submission · Confirmation sent to candidate email</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Bottom Footer */}
+            <motion.footer
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="relative z-10 flex w-full items-center justify-between text-[11px] text-white/35 pt-4"
+            >
+              <span>HireXt Interview Platform</span>
+              <span>AES-256 GCM Cryptographic Verification</span>
+            </motion.footer>
+          </>
+        )}
       </div>
     );
   }
