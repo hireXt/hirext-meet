@@ -1434,6 +1434,36 @@ function EcoInterviewRoom({
     }
   };
 
+  // Tell the agent a screen share has actually started. The agent holds the
+  // interview at the screen-share gate until it receives this, so it cannot ask
+  // a question while the candidate is still presenting. Sent from the room
+  // event (not the button) so it also fires when the share begins via browser
+  // shortcuts or Meet's own UI.
+  const shareSignalledRef = React.useRef(false);
+  React.useEffect(() => {
+    const local = screenShareTrack?.participant?.isLocal;
+    if (!local) {
+      // Ended (or never started): allow the signal again next time.
+      if (screenShareTrack === undefined) shareSignalledRef.current = false;
+      return;
+    }
+    if (shareSignalledRef.current) return;
+    shareSignalledRef.current = true;
+    const payload = JSON.stringify({ type: 'screen_share_started' });
+    localParticipant
+      .publishData(new TextEncoder().encode(payload), {
+        reliable: true,
+        topic: 'eco-screen-share',
+      })
+      .then(() => {
+        toast('Screen sharing detected — starting the interview');
+      })
+      .catch((e: unknown) => {
+        console.warn('screen_share_started signal failed', e);
+        shareSignalledRef.current = false;
+      });
+  }, [screenShareTrack, localParticipant]);
+
   const downloadTranscript = () => {
     if (lines.length === 0) {
       toast('No transcript available to export yet');
@@ -2006,7 +2036,10 @@ function EcoInterviewRoom({
               <div className="absolute bottom-4 right-4 z-20 flex gap-3">
                 <div className="relative h-28 w-44 overflow-hidden rounded-2xl border border-white/15 bg-neutral-900 shadow-2xl backdrop-blur-xl">
                   {showVideo ? (
-                    <VideoTrack trackRef={ecoVideo!} className="h-full w-full object-cover" />
+                    <VideoTrack
+                      trackRef={ecoVideo!}
+                      className="absolute inset-0 block h-full w-full object-cover"
+                    />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-black/70">
                       <span
@@ -2128,9 +2161,17 @@ function EcoInterviewRoom({
             <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-3 min-h-0 h-full justify-center order-1 lg:order-2">
               {/* Eco AI Interviewer Tile (Top) */}
               <div className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.03] p-1.5 shadow-xl flex flex-col flex-1 min-h-0">
-                <div className="relative flex flex-1 w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-neutral-950/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
+                <div className="relative flex flex-1 min-h-0 w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-neutral-950/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
                   {showVideo ? (
-                    <VideoTrack trackRef={ecoVideo!} className="h-full w-full object-cover" />
+                    /* The intro clip is 16:9 like any camera feed, so it must fill
+                       this tile edge-to-edge rather than letterboxing inside it.
+                       object-cover + a block-level video is what actually fills:
+                       an inline <video> leaves a baseline gap that makes cover
+                       resolve against the wrong box. */
+                    <VideoTrack
+                      trackRef={ecoVideo!}
+                      className="absolute inset-0 block h-full w-full object-cover"
+                    />
                   ) : (
                     <div className="relative flex h-full w-full items-center justify-center">
                       {/* Bottom Wavy Audio Flow (Thin Sharp Lines) */}
@@ -2183,8 +2224,26 @@ function EcoInterviewRoom({
                     </div>
                   )}
 
-                  {/* Eco Bottom Pill */}
-                  <div className="absolute bottom-3 left-3 z-20 flex items-center rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur-md border border-white/10">
+                  {/* Eco Bottom Pill — camera/mic state.
+                      The avatar is audio-only whenever the intro clip is not
+                      playing, so the camera icon reads red then, and returns to
+                      the normal (live) colour while the clip plays. Without it
+                      the tile looked identical in both states and the video
+                      felt like an unrelated pop-in. */}
+                  <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white/90 backdrop-blur-md border border-white/10">
+                    <span
+                      className="flex items-center gap-1"
+                      title={showVideo ? 'Camera on' : 'Camera off'}
+                    >
+                      {showVideo ? (
+                        <CameraIcon size={12} className="text-eco-accent" />
+                      ) : (
+                        <CameraOffIcon size={12} className="text-[#F52D45]" />
+                      )}
+                    </span>
+                    <span className="flex items-center gap-1" title="Microphone live">
+                      <MicIcon size={12} className="text-eco-accent" />
+                    </span>
                     <span>Monica</span>
                   </div>
                 </div>
