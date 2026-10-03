@@ -910,6 +910,27 @@ function EcoInterviewRoom({
     activeLocalVideoTrack?.isMuted !== true &&
     localVideoMst.enabled !== false;
 
+  // The poster is only a bridge across the join, so it must never outlive it.
+  // When the camera re-acquires after the preview stop there is a window where
+  // isLocalVideoLive is still false; without an expiry the frozen frame just
+  // sits there and reads as a stuck webcam, which is worse than the camera-off
+  // placeholder it replaced. Give up after a moment and let the live track (or
+  // the muted fallback) take over.
+  const [posterExpired, setPosterExpired] = React.useState(false);
+  React.useEffect(() => {
+    setPosterExpired(false);
+  }, [posterUrl]);
+  React.useEffect(() => {
+    if (!posterUrl) return;
+    if (isLocalVideoLive) {
+      setPosterExpired(true);
+      return;
+    }
+    const t = setTimeout(() => setPosterExpired(true), 5000);
+    return () => clearTimeout(t);
+  }, [posterUrl, isLocalVideoLive]);
+  const showPoster = !!posterUrl && !posterExpired;
+
   // Resolve active local audio track from room publication or pre-acquired tracks
   const activeLocalAudioTrack = React.useMemo(() => {
     const fromPub = (liveMicrophonePublication as unknown as { track?: unknown } | undefined)
@@ -2400,7 +2421,7 @@ function EcoInterviewRoom({
                       >
                         <LocalSelfView mst={localVideoMst} />
                       </motion.div>
-                    ) : posterUrl ? (
+                    ) : showPoster ? (
                       // The frozen green-room frame, shown while the real track is
                       // still publishing. Without it the shared-element morph
                       // lands on an empty tile and the video pops in afterwards.
