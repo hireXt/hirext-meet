@@ -80,7 +80,6 @@ const NEGATIVE_REASONS = [
   'Too easy / did not reflect the role',
 ];
 
-
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 /**
@@ -249,6 +248,12 @@ function EcoPreJoin({
   const [videoEnabled, setVideoEnabled] = React.useState(true);
   const [audioEnabled, setAudioEnabled] = React.useState(true);
   const [joining, setJoining] = React.useState(false);
+  // Snapshot of the last preview frame. Joining stops the preview stream so the
+  // camera driver can be re-acquired for the real LiveKit tracks, which leaves
+  // the <video> black for a moment. Showing the frozen frame over it keeps the
+  // candidate looking at themselves through the handoff instead of at a flash of
+  // black.
+  const [poster, setPoster] = React.useState<string | null>(null);
 
   const [videoDevices, setVideoDevices] = React.useState<MediaDeviceInfo[]>([]);
   const [audioDevices, setAudioDevices] = React.useState<MediaDeviceInfo[]>([]);
@@ -387,6 +392,23 @@ function EcoPreJoin({
     }
     setJoining(true);
 
+    // Capture BEFORE the stream is stopped — after that the frame is gone.
+    try {
+      const v = videoRef.current;
+      if (v && v.videoWidth) {
+        const canvas = document.createElement('canvas');
+        canvas.width = v.videoWidth;
+        canvas.height = v.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+          setPoster(canvas.toDataURL('image/jpeg', 0.7));
+        }
+      }
+    } catch {
+      /* a missing poster is cosmetic only */
+    }
+
     try {
       // Clean up pre-join preview and wait for camera hardware driver release
       cancelAnimationFrame(animFrameRef.current);
@@ -447,7 +469,7 @@ function EcoPreJoin({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_-15%,rgba(36,91,255,0.08),rgba(0,0,0,0))]" />
 
       {/* ── Top Header (Full Width matching Meeting Room) ── */}
-      <header className="relative z-20 flex w-full shrink-0 items-center justify-between border-b border-white/[0.06] bg-neutral-950/40 px-4 sm:px-8 py-3 backdrop-blur-xl">
+      <header className="relative z-20 flex w-full shrink-0 items-center justify-between px-4 sm:px-8 py-3 backdrop-blur-xl">
         {/* Brand & Interview Session Info */}
         <div className="flex items-center gap-3">
           <img
@@ -456,27 +478,11 @@ function EcoPreJoin({
             className="h-7 w-auto object-contain select-none"
           />
           <span className="h-4 w-px bg-white/15" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-white">
-            Interview
-          </span>
-
-          <span className="h-3.5 w-px bg-white/15" />
 
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-white/80 max-w-[160px] sm:max-w-none truncate">
               {interviewTitle}
             </span>
-          </div>
-        </div>
-
-        {/* Status Indicators */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/80">
-            <span className="relative flex h-2 w-2 items-center justify-center">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            </span>
-            <span>Ready to connect</span>
           </div>
         </div>
       </header>
@@ -486,15 +492,27 @@ function EcoPreJoin({
         <div className="grid w-full grid-cols-1 items-center gap-6 lg:gap-10 lg:grid-cols-12 my-auto">
           {/* Left Column: Video Viewport & Direct Controls */}
           <div className="flex flex-col gap-3 lg:col-span-7">
-            <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-neutral-950 border border-white/[0.08] shadow-[0_20px_50px_-15px_rgba(0,0,0,0.8)] ring-1 ring-white/[0.05]">
+            <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-neutral-950 border border-white/[0.08] ring-1 ring-white/[0.05]">
               {videoEnabled ? (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="h-full w-full scale-x-[-1] object-cover"
-                />
+                <>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="h-full w-full scale-x-[-1] object-cover"
+                  />
+                  {poster && (
+                    // Mirrored to match the video's scale-x-[-1] so the frame
+                    // does not visibly flip when the poster covers it.
+                    <img
+                      src={poster}
+                      alt=""
+                      aria-hidden
+                      className="absolute inset-0 h-full w-full scale-x-[-1] object-cover"
+                    />
+                  )}
+                </>
               ) : (
                 <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-b from-neutral-900/60 to-neutral-950">
                   <div className="flex h-20 w-20 items-center justify-center rounded-full bg-neutral-900 text-xl font-semibold text-white/90 border border-white/10 shadow-lg">
@@ -518,9 +536,7 @@ function EcoPreJoin({
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
                       <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
                     </span>
-                    <span className="text-[10px] font-medium text-emerald-300">
-                      Mic active
-                    </span>
+                    <span className="text-[10px] font-medium text-emerald-300">Mic active</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 rounded-full bg-rose-500/20 px-2.5 py-1 text-[10px] font-medium text-rose-300 backdrop-blur-md border border-rose-500/30">
@@ -589,7 +605,7 @@ function EcoPreJoin({
 
           {/* Right Column: Pre-Join Settings & Join Action */}
           <div className="flex flex-col lg:col-span-5">
-            <div className="flex flex-col gap-6 rounded-2xl border border-white/[0.08] bg-neutral-900/40 p-6 sm:p-7 backdrop-blur-2xl shadow-xl">
+            <div className="flex flex-col gap-6 rounded-2xl p-6 sm:p-7 backdrop-blur-2xl shadow-xl">
               <div>
                 <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-white">
                   Ready to join?
@@ -745,23 +761,10 @@ function EcoPreJoin({
                   )}
                 </button>
               </form>
-
-              {/* Privacy Reassurance Note */}
-              <div className="flex items-center justify-center gap-1.5 text-[11px] text-white/40">
-                <ShieldCheckIcon size={13} className="text-emerald-400" />
-                <span>Audio &amp; video are private until you enter</span>
-              </div>
             </div>
           </div>
         </div>
       </main>
-
-      {/* ── Footer Bar (Full Width matching Meeting Room) ── */}
-      <footer className="relative z-10 w-full shrink-0 border-t border-white/[0.06] bg-neutral-950/40 px-4 sm:px-8 py-2.5 backdrop-blur-xl">
-        <div className="container mx-auto flex items-center justify-between text-[11px] text-white/40">
-          <span>MeeXt by HireXt</span>
-        </div>
-      </footer>
     </div>
   );
 }
@@ -1022,7 +1025,13 @@ function EcoInterviewRoom({
   // Feedback form state
   const [feedbackView, setFeedbackView] = React.useState<'form' | 'done'>('form');
   const [fbOverall, setFbOverall] = React.useState(0);
-  const [fbAspects, setFbAspects] = React.useState({ knowledge: 0, communication: 0, professionalism: 0, clarity: 0, experience: 0 });
+  const [fbAspects, setFbAspects] = React.useState({
+    knowledge: 0,
+    communication: 0,
+    professionalism: 0,
+    clarity: 0,
+    experience: 0,
+  });
   const [fbSuggestion, setFbSuggestion] = React.useState('');
   const [fbHover, setFbHover] = React.useState(0);
   const [fbSubmitting, setFbSubmitting] = React.useState(false);
@@ -1482,7 +1491,12 @@ function EcoInterviewRoom({
   const sharePromptedRef = React.useRef(false);
   React.useEffect(() => {
     if (!room) return;
-    const onData = (payload: Uint8Array, _participant?: unknown, _kind?: unknown, topic?: string) => {
+    const onData = (
+      payload: Uint8Array,
+      _participant?: unknown,
+      _kind?: unknown,
+      topic?: string,
+    ) => {
       if (topic && topic !== 'eco-screen-share') return;
       let msg: { type?: string } | null = null;
       try {
@@ -1629,7 +1643,8 @@ function EcoInterviewRoom({
                   transition={{ duration: 0.7, delay: 0.25 }}
                   className="text-sm sm:text-base text-neutral-300/90 leading-relaxed max-w-xl pt-1"
                 >
-                  Thank you, <span className="text-white font-medium">{candidateName}</span>. Your interview responses have been submitted.
+                  Thank you, <span className="text-white font-medium">{candidateName}</span>. Your
+                  interview responses have been submitted.
                 </motion.p>
 
                 {/* Session meta — sits under the thank-you on the left so the
@@ -1643,12 +1658,16 @@ function EcoInterviewRoom({
                   <div className="flex items-center gap-2">
                     <dt className="text-white/40">Session</dt>
                     <dd className="font-semibold text-white/90 truncate max-w-[16rem]">
-                      {interviewTitle && interviewTitle !== 'Assessment' ? interviewTitle : 'Technical Assessment'}
+                      {interviewTitle && interviewTitle !== 'Assessment'
+                        ? interviewTitle
+                        : 'Technical Assessment'}
                     </dd>
                   </div>
                   <div className="flex items-center gap-2">
                     <dt className="text-white/40">Duration</dt>
-                    <dd className="font-mono font-bold text-sky-400">{fmt(finalDuration ?? seconds)}</dd>
+                    <dd className="font-mono font-bold text-sky-400">
+                      {fmt(finalDuration ?? seconds)}
+                    </dd>
                   </div>
                   <div className="flex items-center gap-2">
                     <dt className="text-white/40">Status</dt>
@@ -1677,15 +1696,21 @@ function EcoInterviewRoom({
                         className="space-y-4"
                       >
                         <div>
-                          <p className="text-xs font-semibold text-white/80 mb-0.5">Rate your experience</p>
-                          <p className="text-[10px] text-white/40 leading-relaxed">Your honest feedback helps us improve the interview quality.</p>
+                          <p className="text-xs font-semibold text-white/80 mb-0.5">
+                            Rate your experience
+                          </p>
+                          <p className="text-[10px] text-white/40 leading-relaxed">
+                            Your honest feedback helps us improve the interview quality.
+                          </p>
                         </div>
 
                         {/* Overall star rating */}
                         <div className="space-y-1.5">
-                          <span className="text-[10px] text-white/50 uppercase tracking-wider">Overall</span>
+                          <span className="text-[10px] text-white/50 uppercase tracking-wider">
+                            Overall
+                          </span>
                           <div className="flex items-center gap-1">
-                            {[1,2,3,4,5].map((n) => (
+                            {[1, 2, 3, 4, 5].map((n) => (
                               <button
                                 key={n}
                                 type="button"
@@ -1694,8 +1719,12 @@ function EcoInterviewRoom({
                                 onClick={() => setFbOverall(n)}
                                 className="transition-transform hover:scale-110 focus:outline-none"
                               >
-                                <svg viewBox="0 0 20 20" className={`w-6 h-6 transition-colors ${ n <= (fbHover || fbOverall) ? 'text-amber-400' : 'text-white/20' }`} fill="currentColor">
-                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                <svg
+                                  viewBox="0 0 20 20"
+                                  className={`w-6 h-6 transition-colors ${n <= (fbHover || fbOverall) ? 'text-amber-400' : 'text-white/20'}`}
+                                  fill="currentColor"
+                                >
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                 </svg>
                               </button>
                             ))}
@@ -1703,25 +1732,31 @@ function EcoInterviewRoom({
                         </div>
 
                         {/* Aspect ratings — compact labels */}
-                        {([
-                          ['knowledge', 'Knowledge'],
-                          ['communication', 'Communication'],
-                          ['professionalism', 'Professionalism'],
-                          ['clarity', 'Question Clarity'],
-                          ['experience', 'Overall Experience'],
-                        ] as const).map(([key, label]) => (
+                        {(
+                          [
+                            ['knowledge', 'Knowledge'],
+                            ['communication', 'Communication'],
+                            ['professionalism', 'Professionalism'],
+                            ['clarity', 'Question Clarity'],
+                            ['experience', 'Overall Experience'],
+                          ] as const
+                        ).map(([key, label]) => (
                           <div key={key} className="flex items-center justify-between gap-2">
                             <span className="text-[10px] text-white/50 shrink-0">{label}</span>
                             <div className="flex items-center gap-0.5">
-                              {[1,2,3,4,5].map((n) => (
+                              {[1, 2, 3, 4, 5].map((n) => (
                                 <button
                                   key={n}
                                   type="button"
                                   onClick={() => setFbAspects((prev) => ({ ...prev, [key]: n }))}
                                   className="focus:outline-none"
                                 >
-                                  <svg viewBox="0 0 20 20" className={`w-4 h-4 transition-colors ${ n <= fbAspects[key] ? 'text-amber-400' : 'text-white/15' }`} fill="currentColor">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                  <svg
+                                    viewBox="0 0 20 20"
+                                    className={`w-4 h-4 transition-colors ${n <= fbAspects[key] ? 'text-amber-400' : 'text-white/15'}`}
+                                    fill="currentColor"
+                                  >
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                   </svg>
                                 </button>
                               ))}
@@ -1771,12 +1806,32 @@ function EcoInterviewRoom({
                             disabled={fbSubmitting}
                             onClick={async () => {
                               setFbError(null);
-                              if (fbOverall === 0) { setFbError('Please give an overall rating.'); return; }
-                              const missing = (['knowledge','communication','professionalism','clarity','experience'] as const).find((k) => fbAspects[k] === 0);
-                              if (missing) { setFbError('Please rate all five aspects.'); return; }
-                              if (!fbSuggestion.trim()) { setFbError('Please add a short suggestion.'); return; }
+                              if (fbOverall === 0) {
+                                setFbError('Please give an overall rating.');
+                                return;
+                              }
+                              const missing = (
+                                [
+                                  'knowledge',
+                                  'communication',
+                                  'professionalism',
+                                  'clarity',
+                                  'experience',
+                                ] as const
+                              ).find((k) => fbAspects[k] === 0);
+                              if (missing) {
+                                setFbError('Please rate all five aspects.');
+                                return;
+                              }
+                              if (!fbSuggestion.trim()) {
+                                setFbError('Please add a short suggestion.');
+                                return;
+                              }
                               const sessionId = room.name;
-                              const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+                              const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(
+                                /\/$/,
+                                '',
+                              );
                               const reportHref = resultPageUrl(resultBase, sessionId);
                               if (!sessionId || !apiBase || !reportHref) {
                                 setFbError('Feedback is unavailable right now.');
@@ -1784,16 +1839,23 @@ function EcoInterviewRoom({
                               }
                               setFbSubmitting(true);
                               try {
-                                const res = await fetch(`${apiBase}/api/interview/session/${encodeURIComponent(sessionId)}/feedback`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  credentials: 'include',
-                                  // suggestion is required by the API (min 1 char) and
-                                  // validated client-side above, so it is never empty and
-                                  // never a placeholder — a stored "—" would pollute the
-                                  // admin feedback data.
-                                  body: JSON.stringify({ overall: fbOverall, aspects: fbAspects, suggestion: fbSuggestion.trim() }),
-                                });
+                                const res = await fetch(
+                                  `${apiBase}/api/interview/session/${encodeURIComponent(sessionId)}/feedback`,
+                                  {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    credentials: 'include',
+                                    // suggestion is required by the API (min 1 char) and
+                                    // validated client-side above, so it is never empty and
+                                    // never a placeholder — a stored "—" would pollute the
+                                    // admin feedback data.
+                                    body: JSON.stringify({
+                                      overall: fbOverall,
+                                      aspects: fbAspects,
+                                      suggestion: fbSuggestion.trim(),
+                                    }),
+                                  },
+                                );
                                 if (res.ok) {
                                   // Submitted: back to the app window, this tab closes.
                                   returnToOpener(reportHref);
@@ -2259,7 +2321,7 @@ function EcoInterviewRoom({
                         >
                           <div className="relative h-20 w-20 sm:h-24 sm:w-24 overflow-hidden rounded-full border border-white/10 bg-neutral-900 shadow-xl">
                             <img
-                              src="/images/eco-avatar.jpg"
+                              src="/images/eco-avatar.png"
                               alt="Monica"
                               className="h-full w-full object-cover"
                             />
@@ -2267,17 +2329,7 @@ function EcoInterviewRoom({
                         </div>
 
                         <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3.5 py-1 text-[11px] font-medium text-white/90 backdrop-blur-md shadow-md">
-                          <span
-                            className={`h-2 w-2 rounded-full transition-all duration-300 ${
-                              speaking
-                                ? 'bg-[#F34BB5] shadow-[0_0_8px_#F34BB5]'
-                                : 'bg-[#20C8F5] shadow-[0_0_6px_#20C8F5]'
-                            }`}
-                          />
                           <span>Monica</span>
-                          <span className="text-[10px] uppercase tracking-wider text-white/40">
-                            {speaking ? 'Speaking' : 'Listening'}
-                          </span>
                         </div>
                       </div>
                     </div>
@@ -2303,7 +2355,7 @@ function EcoInterviewRoom({
                     <span className="flex items-center gap-1" title="Microphone live">
                       <MicIcon size={12} className="text-eco-accent" />
                     </span>
-                    <span>Monica</span>
+                    {showVideo && <span>Monica</span>}
                   </div>
                 </div>
               </div>

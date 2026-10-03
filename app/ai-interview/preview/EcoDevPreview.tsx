@@ -764,7 +764,7 @@ function Screen({
                       >
                         <div className="relative h-20 w-20 sm:h-24 sm:w-24 overflow-hidden rounded-full border border-white/10 bg-neutral-900 shadow-xl">
                           <img
-                            src="/images/eco-avatar.jpg"
+                            src="/images/eco-avatar.png"
                             alt="Monica"
                             className="h-full w-full object-cover"
                           />
