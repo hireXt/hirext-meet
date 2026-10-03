@@ -2128,7 +2128,7 @@ function EcoInterviewRoom({
             {/* ── Left Side: Flowing Live Transcript Area (No Box, Auto-flowing, 4 Recent) ── */}
             <div className="lg:col-span-7 xl:col-span-8 flex flex-col justify-between min-h-0 h-full relative py-2 px-1 sm:px-3 order-2 lg:order-1">
               {/* Transcript Stream Header */}
-              <div className="flex items-center justify-end pb-3 border-b border-white/[0.06] mb-auto">
+              {/* <div className="flex items-center justify-end pb-3 border-b border-white/[0.06] mb-auto">
                 <div className="flex items-center gap-3">
                   <span className="text-[11px] text-white/40 hidden sm:inline">
                     Streaming last 4 exchanges
@@ -2143,12 +2143,12 @@ function EcoInterviewRoom({
                     <span>Export</span>
                   </button>
                 </div>
-              </div>
+              </div> */}
 
               {/* Flowing Transcript Dialogue Stream */}
               <div
                 ref={transcriptContainerRef}
-                className="relative flex flex-col justify-end gap-5 overflow-hidden flex-1 py-4"
+                className="relative flex flex-col justify-center gap-5 overflow-hidden flex-1 py-4"
               >
                 {/* Ambient top dissolution gradient */}
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black to-transparent z-10" />
@@ -2197,8 +2197,7 @@ function EcoInterviewRoom({
                             >
                               <TextGenerateEffect
                                 words={l.text}
-                                duration={0.3}
-                                staggerDelay={0.025}
+                                typingSpeed={10}
                                 className={`font-semibold ${ecoLine ? 'text-white text-left' : 'text-[#53E0EC] text-right'}`}
                               />
                             </div>

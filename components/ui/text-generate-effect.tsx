@@ -1,60 +1,84 @@
-"use client";
-import { useEffect } from "react";
-import { motion, stagger, useAnimate } from "motion/react";
-import { cn } from "@/lib/utils";
+'use client';
+import { useEffect, useRef, useState } from 'react';
+import { motion } from 'motion/react';
+import { cn } from '@/lib/utils';
 
-/**
- * Aceternity's TextGenerateEffect.
- *
- * Changes from the demo, needed for a live transcript:
- *  - the hardcoded `font-bold` / `text-2xl` / `dark:text-white` wrapper is
- *    gone; sizing and colour come from `className` so it inherits the
- *    transcript's type styles (the demo's defaults rendered invisible text on
- *    this dark screen);
- *  - it re-runs on `words` change, not just on mount, because LiveKit
- *    transcriptions update in place as speech is recognised;
- *  - `stagger(0.2)` was far too slow for a spoken sentence, so the per-word
- *    delay is a prop.
- */
 export const TextGenerateEffect = ({
   words,
   className,
-  filter = true,
-  duration = 0.5,
-  staggerDelay = 0.045,
+  typingSpeed = 15, // Milliseconds per character
 }: {
   words: string;
   className?: string;
-  filter?: boolean;
-  duration?: number;
-  staggerDelay?: number;
+  typingSpeed?: number;
 }) => {
-  const [scope, animate] = useAnimate();
-  const wordsArray = words.split(" ");
+  const textRef = useRef<HTMLSpanElement>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [isDoneTyping, setIsDoneTyping] = useState(false);
 
   useEffect(() => {
-    const controls = animate(
-      "span",
-      { opacity: 1, filter: filter ? "blur(0px)" : "none" },
-      { duration, delay: stagger(staggerDelay) }
-    );
-    return () => controls.stop();
-  }, [words, scope, animate, filter, duration, staggerDelay]);
+    if (!textRef.current) return;
+
+    const targetText = Array.from(words);
+    const currentString = textRef.current.textContent || '';
+
+    // Check if LiveKit is continuing gracefully or if it corrected a past word
+    const isContinuing = words.startsWith(currentString);
+
+    if (!isContinuing) {
+      // Hard snap for corrections
+      textRef.current.textContent = words;
+      setIsDoneTyping(true);
+      return;
+    }
+
+    let currentIndex = currentString.length;
+
+    // If we're already caught up, hide the cursor and do nothing
+    if (currentIndex >= targetText.length) {
+      setIsDoneTyping(true);
+      return;
+    }
+
+    // Otherwise, ensure the cursor is visible because we have typing to do
+    setIsDoneTyping(false);
+
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    intervalRef.current = setInterval(() => {
+      if (currentIndex < targetText.length) {
+        textRef.current!.textContent += targetText[currentIndex];
+        currentIndex++;
+      } else {
+        // Typing finished for the current chunk
+        setIsDoneTyping(true);
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      }
+    }, typingSpeed);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [words, typingSpeed]);
 
   return (
-    <div className={cn("inline-block", className)}>
-      <motion.div ref={scope} className="inline">
-        {wordsArray.map((word, idx) => (
-          <motion.span
-            key={word + idx}
-            className="inline opacity-0"
-            style={filter ? { filter: "blur(6px)" } : undefined}
-          >
-            {word}
-            {idx < wordsArray.length - 1 ? " " : ""}
-          </motion.span>
-        ))}
-      </motion.div>
+    <div className={cn('inline-block relative text-left leading-relaxed', className)}>
+      {/* The text container */}
+      <span ref={textRef} className="inline whitespace-pre-wrap"></span>
+
+      {/* Blue bot cursor subscript - only renders when actively typing */}
+      {!isDoneTyping && (
+        <motion.span
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{
+            duration: 0.8,
+            repeat: Infinity,
+            repeatType: 'reverse',
+          }}
+          className="inline-block w-2 aspect-square mt-2 ml-1 bg-blue-500 align-middle -translate-y-[0.1em] rounded-full"
+        />
+      )}
     </div>
   );
 };

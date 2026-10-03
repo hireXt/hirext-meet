@@ -43,18 +43,62 @@ import {
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 export const MOCK_DIALOGUE_POOL = [
-  { id: 't-1', eco: true, text: 'Hi Veer, good morning. Thanks for joining the interview today. Are you ready to begin our technical assessment?' },
+  {
+    id: 't-1',
+    eco: true,
+    text: 'Hi Veer, good morning. Thanks for joining the interview today. Are you ready to begin our technical assessment?',
+  },
   { id: 't-2', eco: false, text: 'Good morning! Yes, absolutely ready.' },
-  { id: 't-3', eco: true, text: 'Great. Let us start with system design. Tell me about a time you had to diagnose and resolve a severe production outage.' },
-  { id: 't-4', eco: false, text: 'We had an incident where an asynchronous queue backed up due to a database deadlock. I isolated the worker pool and deployed a migration within ten minutes.' },
-  { id: 't-5', eco: true, text: 'Walk me through the deadlock diagnosis. What telemetry or metrics led you to pinpoint the contention?' },
-  { id: 't-6', eco: false, text: 'We analyzed PostgreSQL lock tables and pg_stat_activity, correlating latency spikes with slow RPC timeouts in Datadog.' },
-  { id: 't-7', eco: true, text: 'Good catch. How did you restructure the transaction boundaries to prevent future deadlocks under peak traffic?' },
-  { id: 't-8', eco: false, text: 'We enforced strict resource acquisition ordering across transactions and moved non-critical side effects outside the atomic commit.' },
-  { id: 't-9', eco: true, text: 'Excellent architectural decision. Now let us touch on distributed consistency and cache invalidation strategies.' },
-  { id: 't-10', eco: false, text: 'We utilize cache-aside with write-through invalidation via Kafka change data capture streams, avoiding stale reads.' },
-  { id: 't-11', eco: true, text: 'How do you handle partition rebalancing during heavy consumer skew without dropping SLA promises?' },
-  { id: 't-12', eco: false, text: 'We tuned cooperative sticky partition assignment and backpressured batch consumption with bounded thread pools.' },
+  {
+    id: 't-3',
+    eco: true,
+    text: 'Great. Let us start with system design. Tell me about a time you had to diagnose and resolve a severe production outage.',
+  },
+  {
+    id: 't-4',
+    eco: false,
+    text: 'We had an incident where an asynchronous queue backed up due to a database deadlock. I isolated the worker pool and deployed a migration within ten minutes.',
+  },
+  {
+    id: 't-5',
+    eco: true,
+    text: 'Walk me through the deadlock diagnosis. What telemetry or metrics led you to pinpoint the contention?',
+  },
+  {
+    id: 't-6',
+    eco: false,
+    text: 'We analyzed PostgreSQL lock tables and pg_stat_activity, correlating latency spikes with slow RPC timeouts in Datadog.',
+  },
+  {
+    id: 't-7',
+    eco: true,
+    text: 'Good catch. How did you restructure the transaction boundaries to prevent future deadlocks under peak traffic?',
+  },
+  {
+    id: 't-8',
+    eco: false,
+    text: 'We enforced strict resource acquisition ordering across transactions and moved non-critical side effects outside the atomic commit.',
+  },
+  {
+    id: 't-9',
+    eco: true,
+    text: 'Excellent architectural decision. Now let us touch on distributed consistency and cache invalidation strategies.',
+  },
+  {
+    id: 't-10',
+    eco: false,
+    text: 'We utilize cache-aside with write-through invalidation via Kafka change data capture streams, avoiding stale reads.',
+  },
+  {
+    id: 't-11',
+    eco: true,
+    text: 'How do you handle partition rebalancing during heavy consumer skew without dropping SLA promises?',
+  },
+  {
+    id: 't-12',
+    eco: false,
+    text: 'We tuned cooperative sticky partition assignment and backpressured batch consumption with bounded thread pools.',
+  },
 ];
 
 const YOU_CLIP = '/mock/eco-candidate-video.mp4';
@@ -92,7 +136,10 @@ function useClickOutside(
   }, [ref, active, onClose]);
 }
 
-function ClosedCaptionsIcon({ size = 18, ...props }: React.SVGProps<SVGSVGElement> & { size?: number }) {
+function ClosedCaptionsIcon({
+  size = 18,
+  ...props
+}: React.SVGProps<SVGSVGElement> & { size?: number }) {
   return (
     <svg
       width={size}
@@ -132,7 +179,6 @@ function DownloadIcon({ size = 18, ...props }: React.SVGProps<SVGSVGElement> & {
   );
 }
 
-/** Deterministic pseudo-audio energy cycling between speaking bursts and stillness. */
 function useMockEnergy(active: boolean) {
   const [energy, setEnergy] = React.useState(0.4);
   React.useEffect(() => {
@@ -165,7 +211,9 @@ function Screen({
   const candidateName = 'Veer';
   const [seconds, setSeconds] = React.useState(74);
   const [ended, setEnded] = React.useState(mode === 'concluded');
-  const [finalDuration, setFinalDuration] = React.useState<number | null>(mode === 'concluded' ? 74 : null);
+  const [finalDuration, setFinalDuration] = React.useState<number | null>(
+    mode === 'concluded' ? 74 : null,
+  );
   const [concludedStage, setConcludedStage] = React.useState<'center' | 'settled'>('center');
 
   React.useEffect(() => {
@@ -216,11 +264,11 @@ function Screen({
   const transcriptContainerRef = React.useRef<HTMLDivElement>(null);
   const transcriptEndRef = React.useRef<HTMLDivElement>(null);
 
-  // Progressive live mock transcript stream
-  const [transcriptLines, setTranscriptLines] = React.useState(() => MOCK_DIALOGUE_POOL.slice(0, 3));
+  const [transcriptLines, setTranscriptLines] = React.useState(() =>
+    MOCK_DIALOGUE_POOL.slice(0, 3),
+  );
   const [streamActive, setStreamActive] = React.useState(true);
 
-  // Advance transcript incrementally to simulate live conversational speech
   React.useEffect(() => {
     if (!streamActive || ended) return;
     const interval = setInterval(() => {
@@ -229,7 +277,6 @@ function Screen({
         if (nextIdx < MOCK_DIALOGUE_POOL.length) {
           return [...prev, MOCK_DIALOGUE_POOL[nextIdx]];
         }
-        // Continuous loop with fresh keys
         const loopItem = {
           ...MOCK_DIALOGUE_POOL[nextIdx % MOCK_DIALOGUE_POOL.length],
           id: `t-${Date.now()}-${nextIdx}`,
@@ -250,42 +297,40 @@ function Screen({
   const handleNextExchange = () => {
     setTranscriptLines((prev) => {
       const nextIdx = prev.length;
-      const item = nextIdx < MOCK_DIALOGUE_POOL.length
-        ? MOCK_DIALOGUE_POOL[nextIdx]
-        : { ...MOCK_DIALOGUE_POOL[nextIdx % MOCK_DIALOGUE_POOL.length], id: `t-${Date.now()}-${nextIdx}` };
+      const item =
+        nextIdx < MOCK_DIALOGUE_POOL.length
+          ? MOCK_DIALOGUE_POOL[nextIdx]
+          : {
+              ...MOCK_DIALOGUE_POOL[nextIdx % MOCK_DIALOGUE_POOL.length],
+              id: `t-${Date.now()}-${nextIdx}`,
+            };
       return [...prev, item];
     });
   };
 
-  // ────────────────────────────────────────────────────────────────────────
-  // Post-Interview Completed Screen (Cinematic Framer Motion)
-  // ────────────────────────────────────────────────────────────────────────
   if (ended) {
     return (
       <div className="relative isolate flex min-h-[100dvh] w-full flex-col justify-between overflow-hidden bg-[#06080C] px-6 sm:px-12 lg:px-16 py-8 sm:py-12 font-sans text-white antialiased select-none">
-        {/* Cinematic ambient background glow */}
+        {/* Cinematic ambient background glow - themed to the logo */}
         <motion.div
-          className="pointer-events-none absolute -top-40 left-1/4 h-[650px] w-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(36,91,255,0.12),rgba(32,200,245,0.08),rgba(0,0,0,0)_70%)] blur-[140px]"
+          className="pointer-events-none absolute -top-40 left-1/4 h-[650px] w-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,62,62,0.15),rgba(255,0,160,0.08),rgba(0,0,0,0)_70%)] blur-[140px]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1.5 }}
         />
         <motion.div
-          className="pointer-events-none absolute -bottom-40 right-1/4 h-[600px] w-[800px] rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.14),rgba(0,0,0,0)_70%)] blur-[140px]"
+          className="pointer-events-none absolute -bottom-40 right-1/4 h-[600px] w-[800px] rounded-full bg-[radial-gradient(circle_at_center,rgba(0,163,255,0.15),rgba(162,0,255,0.08),rgba(0,0,0,0)_70%)] blur-[140px]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1.5, delay: 0.3 }}
         />
 
-        {/* Cinematic Vignette */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(0,0,0,0.85)_100%)]" />
 
-        {/* ── STAGE 1: CENTER PRESENTATION ── */}
         {concludedStage === 'center' && (
           <div className="fixed inset-0 z-30 flex flex-col items-center justify-center pointer-events-none px-6">
-            {/* Soft central radiant aura */}
             <motion.div
-              className="absolute h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(52,211,153,0.14),rgba(32,200,245,0.08),rgba(0,0,0,0)_70%)] blur-[90px]"
+              className="absolute h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(255,0,160,0.15),rgba(0,163,255,0.12),rgba(0,0,0,0)_70%)] blur-[90px]"
               animate={{ opacity: [0.5, 0.8, 0.5], scale: [0.96, 1.06, 0.96] }}
               transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
             />
@@ -293,14 +338,14 @@ function Screen({
             <motion.div
               layoutId="interview-concluded-title-container"
               transition={{ duration: 1.1, ease: EASE }}
-              className="flex flex-col items-center text-center"
+              className="flex flex-col items-center text-center relative z-10"
             >
               <motion.h1
                 layoutId="interview-concluded-heading"
                 initial={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
                 animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
                 transition={{ duration: 0.7, ease: EASE }}
-                className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight bg-gradient-to-b from-white via-neutral-100 to-neutral-400 bg-clip-text text-transparent"
+                className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight bg-gradient-to-br from-[#FFB03A] via-[#FF00A0] to-[#00A3FF] bg-clip-text text-transparent"
               >
                 Interview Concluded
               </motion.h1>
@@ -308,14 +353,10 @@ function Screen({
           </div>
         )}
 
-        {/* ── STAGE 2: SETTLED EXECUTIVE SPLIT VIEW ── */}
         {concludedStage === 'settled' && (
           <>
-            {/* Main Split Section: Left Bottom Hero + Right Telemetry Card */}
             <div className="relative z-10 mx-auto my-auto grid w-full max-w-7xl grid-cols-1 items-end gap-12 lg:grid-cols-12 lg:gap-16 py-8">
-              {/* Left Side: Shifted to bottom-left */}
               <div className="flex flex-col items-start text-left lg:col-span-7 space-y-4">
-                {/* Logo professionally placed on the top of the title */}
                 <motion.div
                   initial={{ opacity: 0, y: -16 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -333,7 +374,6 @@ function Screen({
                   </span>
                 </motion.div>
 
-                {/* Shifted Heading */}
                 <motion.div
                   layoutId="interview-concluded-title-container"
                   transition={{ duration: 1.1, ease: EASE }}
@@ -341,34 +381,37 @@ function Screen({
                 >
                   <motion.h1
                     layoutId="interview-concluded-heading"
-                    className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.08] bg-gradient-to-b from-white via-neutral-100 to-neutral-400 bg-clip-text text-transparent"
+                    className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.08] bg-gradient-to-br from-[#FFB03A] via-[#FF00A0] to-[#00A3FF] bg-clip-text text-transparent pb-2"
                   >
                     Interview Concluded
                   </motion.h1>
                 </motion.div>
 
-                {/* Candidate personalized confirmation */}
                 <motion.p
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, delay: 0.25 }}
                   className="text-sm sm:text-base text-neutral-300/90 leading-relaxed max-w-xl pt-1"
                 >
-                  Thank you, <span className="text-white font-medium">{candidateName}</span>. Your interview responses have been submitted.
+                  Thank you, <span className="text-white font-medium">{candidateName}</span>. Your
+                  interview responses have been submitted.
                 </motion.p>
               </div>
 
-              {/* Right Side: Telemetry Card */}
               <motion.div
                 initial={{ opacity: 0, x: 40 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.7, delay: 0.15, ease: EASE }}
                 className="flex w-full flex-col items-center lg:col-span-5 lg:items-end"
               >
-                <div className="w-full max-w-md rounded-3xl border border-white/[0.08] bg-white/[0.02] p-6 sm:p-7 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.85)] backdrop-blur-2xl space-y-4 text-left">
+                <div className="w-full max-w-md rounded-3xl border border-white/[0.08] bg-white/[0.02] p-6 sm:p-7 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.85)] backdrop-blur-2xl space-y-4 text-left relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#FFB03A] via-[#FF00A0] to-[#00A3FF] opacity-50" />
+
                   <div className="flex justify-between items-center text-xs text-white/70">
                     <span className="text-white/50">Session</span>
-                    <span className="font-semibold text-white">Senior Software Engineer Assessment</span>
+                    <span className="font-semibold text-white">
+                      Senior Software Engineer Assessment
+                    </span>
                   </div>
 
                   <div className="flex justify-between items-center text-xs text-white/70">
@@ -378,7 +421,7 @@ function Screen({
 
                   <div className="flex justify-between items-center text-xs text-white/70">
                     <span className="text-white/50">Total Duration</span>
-                    <span className="font-mono text-sm font-bold text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.4)]">
+                    <span className="font-mono text-sm font-bold text-[#FF00A0] drop-shadow-[0_0_8px_rgba(255,0,160,0.4)]">
                       {fmt(finalDuration ?? seconds)}
                     </span>
                   </div>
@@ -387,10 +430,9 @@ function Screen({
 
                   <div className="flex justify-between items-center text-xs text-white/70">
                     <span className="text-white/50">Status</span>
-                    <span className="text-emerald-400 font-medium">Submitted</span>
+                    <span className="text-[#00A3FF] font-medium">Submitted</span>
                   </div>
 
-                  {/* Action Callouts */}
                   <div className="pt-2">
                     <div className="flex flex-col sm:flex-row gap-2.5">
                       <button
@@ -418,7 +460,6 @@ function Screen({
               </motion.div>
             </div>
 
-            {/* Bottom Footer */}
             <motion.footer
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -438,10 +479,13 @@ function Screen({
     <div className="relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-black font-sans text-[#eef1f5] antialiased select-none">
       <BackgroundBeams />
 
-      {/* ── Top Header ── */}
       <header className="relative z-20 flex shrink-0 items-center justify-between border-b border-white/[0.06] bg-neutral-950/40 px-6 py-3.5 backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="HireXt Logo" className="h-7 w-auto object-contain select-none" />
+          <img
+            src="/logo.png"
+            alt="HireXt Logo"
+            className="h-7 w-auto object-contain select-none"
+          />
           <span className="h-4 w-px bg-white/15" />
           <span className="text-xs font-semibold uppercase tracking-wider text-white">
             Interview
@@ -456,7 +500,6 @@ function Screen({
           </div>
         </div>
 
-        {/* Dev Mode Switcher Pills */}
         <div className="hidden lg:flex items-center gap-2">
           {onModeChange && (
             <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
@@ -465,10 +508,11 @@ function Screen({
                   key={s}
                   type="button"
                   onClick={() => onModeChange(s)}
-                  className={`rounded-full px-2.5 py-1 font-medium transition-all ${mode === s
-                      ? 'bg-gradient-to-r from-[#245BFF] to-[#20C8F5] text-white font-bold shadow-[0_0_12px_rgba(32,200,245,0.35)]'
+                  className={`rounded-full px-2.5 py-1 font-medium transition-all ${
+                    mode === s
+                      ? 'bg-gradient-to-r from-[#FF3E3E] via-[#A200FF] to-[#00A3FF] text-white font-bold shadow-[0_0_12px_rgba(162,0,255,0.35)]'
                       : 'text-white/60 hover:text-white hover:bg-white/5'
-                    }`}
+                  }`}
                 >
                   {s === 'video'
                     ? 'Avatar Video'
@@ -484,15 +528,15 @@ function Screen({
             </div>
           )}
 
-          {/* Quick simulation controls */}
           <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
             <button
               type="button"
               onClick={() => setStreamActive(!streamActive)}
-              className={`rounded-full px-2.5 py-1 font-medium transition-all ${streamActive
-                  ? 'bg-[#20C8F5]/15 text-[#53E0EC] border border-[#20C8F5]/30 shadow-[0_0_8px_rgba(32,200,245,0.2)]'
+              className={`rounded-full px-2.5 py-1 font-medium transition-all ${
+                streamActive
+                  ? 'bg-[#00A3FF]/15 text-[#00A3FF] border border-[#00A3FF]/30 shadow-[0_0_8px_rgba(0,163,255,0.2)]'
                   : 'text-white/50 hover:text-white'
-                }`}
+              }`}
               title={streamActive ? 'Pause live mock stream' : 'Resume live mock stream'}
             >
               {streamActive ? 'Live Mocking' : 'Paused'}
@@ -509,35 +553,38 @@ function Screen({
         </div>
 
         <div className="flex items-center gap-2.5">
-          {/* Status badge */}
           <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/80">
             <span
-              className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${speaking ? 'bg-[#F34BB5] shadow-[0_0_8px_#F34BB5]' : 'bg-[#20C8F5] shadow-[0_0_6px_#20C8F5]'
-                }`}
+              className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
+                speaking
+                  ? 'bg-[#FF00A0] shadow-[0_0_8px_#FF00A0]'
+                  : 'bg-[#00A3FF] shadow-[0_0_6px_#00A3FF]'
+              }`}
             />
             <span>Monica is {speaking ? 'speaking' : 'listening'}</span>
           </div>
 
-          {/* Recording & Timer */}
           <div className="inline-flex items-center gap-2 rounded-full border border-[#F52D45]/30 bg-[#F52D45]/15 px-3 py-1.5 text-[11px] font-semibold text-[#F52D45]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#F52D45] animate-pulse" />
             <span className="font-mono tabular-nums">{fmt(seconds)}</span>
           </div>
 
-          {/* Participants Counter Badge & Popover */}
           <div className="relative" ref={participantsRef}>
             <button
               type="button"
               onClick={() => setParticipantsOpen((v) => !v)}
               className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full border px-2.5 sm:px-3 py-1.5 text-[11px] font-medium transition-all ${
                 participantsOpen
-                  ? 'border-[#20C8F5]/60 bg-[#20C8F5]/20 text-[#53E0EC] shadow-[0_0_12px_rgba(32,200,245,0.25)]'
+                  ? 'border-[#00A3FF]/60 bg-[#00A3FF]/20 text-[#00A3FF] shadow-[0_0_12px_rgba(0,163,255,0.25)]'
                   : 'border-white/[0.08] bg-white/[0.03] text-white/80 hover:bg-white/[0.08] hover:text-white hover:border-white/20'
               }`}
               title="Participants"
               aria-expanded={participantsOpen}
             >
-              <UsersIcon size={14} className={participantsOpen ? 'text-[#20C8F5]' : 'text-white/70'} />
+              <UsersIcon
+                size={14}
+                className={participantsOpen ? 'text-[#00A3FF]' : 'text-white/70'}
+              />
               <span className="font-semibold text-white">2</span>
               <span className="hidden sm:inline text-white/60">Participants</span>
               <ChevronDownIcon
@@ -546,31 +593,31 @@ function Screen({
               />
             </button>
 
-            {/* Participants Popover */}
             {participantsOpen && (
               <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-white/10 bg-neutral-900/95 p-3.5 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in zoom-in-95 duration-150">
                 <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/[0.08]">
                   <div className="flex items-center gap-2">
-                    <UsersIcon size={14} className="text-[#20C8F5]" />
+                    <UsersIcon size={14} className="text-[#00A3FF]" />
                     <span className="text-xs font-semibold text-white">Participants</span>
                   </div>
-                  <span className="text-[10px] font-medium text-[#20C8F5] bg-[#20C8F5]/10 px-2 py-0.5 rounded-full border border-[#20C8F5]/20">
+                  <span className="text-[10px] font-medium text-[#00A3FF] bg-[#00A3FF]/10 px-2 py-0.5 rounded-full border border-[#00A3FF]/20">
                     2 Active
                   </span>
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  {/* Monica AI Interviewer */}
                   <div className="flex items-center justify-between p-2 rounded-xl bg-white/[0.03] border border-white/[0.05]">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#245BFF] to-[#20C8F5] text-white font-semibold text-xs shadow-[0_0_10px_rgba(32,200,245,0.3)]">
+                      <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#FF3E3E] via-[#A200FF] to-[#00A3FF] text-white font-semibold text-xs shadow-[0_0_10px_rgba(162,0,255,0.3)]">
                         M
-                        <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-neutral-900 ${speaking ? 'bg-[#F34BB5]' : 'bg-[#20C8F5]'}`} />
+                        <span
+                          className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-neutral-900 ${speaking ? 'bg-[#FF00A0]' : 'bg-[#00A3FF]'}`}
+                        />
                       </div>
                       <div className="min-w-0 flex flex-col">
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs font-medium text-white truncate">Monica</span>
-                          <span className="text-[9px] font-semibold uppercase tracking-wider text-[#20C8F5] bg-[#20C8F5]/15 px-1.5 py-0.2 rounded border border-[#20C8F5]/30">
+                          <span className="text-[9px] font-semibold uppercase tracking-wider text-[#A200FF] bg-[#A200FF]/15 px-1.5 py-0.2 rounded border border-[#A200FF]/30">
                             AI
                           </span>
                         </div>
@@ -580,16 +627,19 @@ function Screen({
                       </div>
                     </div>
                     <div className="flex items-center gap-1 text-white/60">
-                      <span className={`h-2 w-2 rounded-full ${speaking ? 'bg-[#F34BB5] animate-pulse' : 'bg-[#20C8F5]'}`} />
+                      <span
+                        className={`h-2 w-2 rounded-full ${speaking ? 'bg-[#FF00A0] animate-pulse' : 'bg-[#00A3FF]'}`}
+                      />
                     </div>
                   </div>
 
-                  {/* Candidate (You) */}
                   <div className="flex items-center justify-between p-2 rounded-xl bg-white/[0.03] border border-white/[0.05]">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-white font-semibold text-xs border border-white/10">
                         {getInitials(candidateName)}
-                        <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-neutral-900 ${micEnabled ? 'bg-emerald-400' : 'bg-[#F52D45]'}`} />
+                        <span
+                          className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-neutral-900 ${micEnabled ? 'bg-[#FFB03A]' : 'bg-[#F52D45]'}`}
+                        />
                       </div>
                       <div className="min-w-0 flex flex-col">
                         <div className="flex items-center gap-1.5">
@@ -601,18 +651,19 @@ function Screen({
                           </span>
                         </div>
                         <span className="text-[10px] text-white/50">
-                          {micEnabled ? 'Mic Active' : 'Muted'} • {cameraEnabled ? 'Cam On' : 'Cam Off'}
+                          {micEnabled ? 'Mic Active' : 'Muted'} •{' '}
+                          {cameraEnabled ? 'Cam On' : 'Cam Off'}
                         </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 text-white/60">
                       {micEnabled ? (
-                        <MicIcon size={13} className="text-emerald-400" />
+                        <MicIcon size={13} className="text-[#FFB03A]" />
                       ) : (
                         <MicOffIcon size={13} className="text-[#F52D45]" />
                       )}
                       {cameraEnabled ? (
-                        <CameraIcon size={13} className="text-emerald-400" />
+                        <CameraIcon size={13} className="text-[#FFB03A]" />
                       ) : (
                         <CameraOffIcon size={13} className="text-[#F52D45]" />
                       )}
@@ -622,37 +673,16 @@ function Screen({
               </div>
             )}
           </div>
-
         </div>
       </header>
 
-      {/* ── Main Content Area ── */}
       <main className="relative z-10 flex min-h-0 flex-1 flex-col gap-2.5 px-3 sm:px-6 py-2 container mx-auto w-full">
         <div className="grid flex-1 grid-cols-1 lg:grid-cols-12 gap-5 min-h-0 w-full h-full items-stretch">
-          {/* ── Left Side: Flowing Live Transcript Area (No Box, Auto-flowing, 4 Recent) ── */}
           <div className="lg:col-span-7 xl:col-span-8 flex flex-col justify-between min-h-0 h-full relative py-2 px-1 sm:px-3 order-2 lg:order-1">
-            {/* Transcript Stream Header */}
-            <div className="flex items-center justify-end pb-3 border-b border-white/[0.06] mb-auto">
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] text-white/40 hidden sm:inline">Streaming last 4 exchanges</span>
-                <button
-                  type="button"
-                  onClick={() => alert('Transcript exported')}
-                  className="flex items-center gap-1 text-[11px] font-medium text-white/60 hover:text-white transition-colors"
-                  title="Export transcript as text"
-                >
-                  <DownloadIcon size={13} />
-                  <span>Export</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Flowing Transcript Dialogue Stream */}
             <div
               ref={transcriptContainerRef}
-              className="relative flex flex-col justify-end gap-5 overflow-hidden flex-1 py-4"
+              className="relative flex flex-col justify-center gap-5 overflow-hidden flex-1 py-4"
             >
-              {/* Ambient top dissolution gradient */}
               <div className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black to-transparent z-10" />
 
               <div className="flex flex-col gap-4 justify-end">
@@ -669,26 +699,23 @@ function Screen({
                         line.eco ? 'items-start text-left' : 'items-end text-right'
                       }`}
                     >
-                      {/* Speaker Label (clean text, no pill, no dot) */}
                       <span
                         className={`text-[11px] font-semibold uppercase tracking-wider mb-1 ${
-                          line.eco ? 'text-white/40 text-left' : 'text-[#53E0EC]/70 text-right'
+                          line.eco ? 'text-white/40 text-left' : 'text-[#00A3FF]/70 text-right'
                         }`}
                       >
                         {line.eco ? 'Monica' : 'Veer (You)'}
                       </span>
 
-                      {/* Spoken dialogue text using Aceternity TextGenerateEffect */}
                       <div
-                        className={`text-base sm:text-lg lg:text-xl font-semibold leading-relaxed tracking-tight ${
-                          line.eco ? 'text-white text-left' : 'text-[#53E0EC] text-right'
+                        className={`text-base sm:text-lg lg:text-xl font-extrabold leading-relaxed tracking-tight ${
+                          line.eco ? 'text-white text-left' : 'text-[#00A3FF] text-right'
                         }`}
                       >
                         <TextGenerateEffect
                           words={line.text}
-                          duration={0.3}
-                          staggerDelay={0.025}
-                          className={`font-semibold ${line.eco ? 'text-white text-left' : 'text-[#53E0EC] text-right'}`}
+                          typingSpeed={10}
+                          className={`font-bold ${line.eco ? 'text-white text-left' : 'text-[#00A3FF] text-right'}`}
                         />
                       </div>
                     </div>
@@ -699,11 +726,9 @@ function Screen({
             </div>
           </div>
 
-          {/* ── Right Side: AI & Candidate Stacked Vertically (Up and Down) ── */}
           <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-3 min-h-0 h-full justify-center order-1 lg:order-2">
-            {/* Eco AI Interviewer Tile (Top) */}
-            <div className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.03] p-1.5 shadow-xl flex flex-col flex-1 min-h-0">
-              <div className="relative flex flex-1 w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-neutral-950/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
+            <div className="rounded-[1.75rem] p-1.5 flex flex-col flex-1 min-h-0">
+              <div className="relative flex flex-1 w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)]">
                 {showVideo ? (
                   <video
                     src={ECO_CLIP}
@@ -715,7 +740,6 @@ function Screen({
                   />
                 ) : (
                   <div className="relative flex h-full w-full items-center justify-center">
-                    {/* Bottom Wavy Audio Flow (Thin Sharp Lines) */}
                     <div className="absolute inset-x-0 bottom-0 h-28 sm:h-32 overflow-hidden pointer-events-none [mask-image:linear-gradient(to_top,black_70%,transparent_100%)]">
                       <WavyBackground
                         blur={0}
@@ -723,20 +747,20 @@ function Screen({
                         waveOpacity={0.9}
                         speed="fast"
                         backgroundFill="transparent"
-                        colors={['#FFC45E', '#FF7049', '#F34BB5', '#245BFF', '#20C8F5']}
+                        colors={['#FFB03A', '#FF3E3E', '#FF00A0', '#A200FF', '#00A3FF']}
                         audioEnergy={energy}
                         isSpeaking={speaking}
                         containerClassName="h-full w-full"
                       />
                     </div>
 
-                    {/* Central Normal User DP with simple circle around */}
                     <div className="relative z-10 flex flex-col items-center gap-3">
                       <div
-                        className={`relative rounded-full p-1 transition-all duration-300 ${speaking
-                            ? 'ring-2 ring-[#20C8F5] ring-offset-2 ring-offset-neutral-950 shadow-[0_0_20px_rgba(32,200,245,0.35)]'
+                        className={`relative rounded-full p-1 transition-all duration-300 ${
+                          speaking
+                            ? 'ring-2 ring-[#FF00A0] ring-offset-2 ring-offset-neutral-950 shadow-[0_0_20px_rgba(255,0,160,0.35)]'
                             : 'ring-1 ring-white/20 ring-offset-2 ring-offset-neutral-950'
-                          }`}
+                        }`}
                       >
                         <div className="relative h-20 w-20 sm:h-24 sm:w-24 overflow-hidden rounded-full border border-white/10 bg-neutral-900 shadow-xl">
                           <img
@@ -748,26 +772,20 @@ function Screen({
                       </div>
 
                       <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3.5 py-1 text-[11px] font-medium text-white/90 backdrop-blur-md shadow-md">
-                        <span
-                          className={`h-2 w-2 rounded-full transition-all duration-300 ${speaking ? 'bg-[#F34BB5] shadow-[0_0_8px_#F34BB5]' : 'bg-[#20C8F5] shadow-[0_0_6px_#20C8F5]'
-                            }`}
-                        />
                         <span>Monica</span>
-                        <span className="text-[10px] uppercase tracking-wider text-white/40">
-                          {speaking ? 'Speaking' : 'Listening'}
-                        </span>
                       </div>
                     </div>
                   </div>
                 )}
 
-                <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur-md border border-white/10">
-                  <span>Monica</span>
-                </div>
+                {showVideo && (
+                  <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur-md border border-white/10">
+                    <span>Monica</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Candidate Tile (Bottom) */}
             <div className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.03] p-1.5 shadow-xl flex flex-col flex-1 min-h-0">
               <div className="relative flex flex-1 w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-neutral-950/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
                 {cameraEnabled ? (
@@ -799,10 +817,10 @@ function Screen({
                       <span>Muted</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1.5 rounded-full border border-[#20C8F5]/30 bg-[#20C8F5]/15 px-2.5 py-1 text-[10px] font-medium text-[#53E0EC] backdrop-blur-md">
+                    <div className="flex items-center gap-1.5 rounded-full border border-[#00A3FF]/30 bg-[#00A3FF]/15 px-2.5 py-1 text-[10px] font-medium text-[#00A3FF] backdrop-blur-md">
                       <span className="relative flex h-1.5 w-1.5 items-center justify-center">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#20C8F5] opacity-75" />
-                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#20C8F5]" />
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00A3FF] opacity-75" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#00A3FF]" />
                       </span>
                       <MicIcon size={12} />
                       <span>Mic On</span>
@@ -815,7 +833,6 @@ function Screen({
         </div>
       </main>
 
-      {/* ── Control Bar Dock ── */}
       <div className="relative z-20 flex shrink-0 justify-center px-4 pb-3 sm:pb-4 pt-1">
         <motion.footer
           className="inline-flex items-center gap-2 rounded-full border border-white/[0.12] bg-neutral-950/85 p-2 backdrop-blur-2xl shadow-[0_16px_48px_rgba(0,0,0,0.7)]"
@@ -823,13 +840,13 @@ function Screen({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: EASE }}
         >
-          {/* Split Mic Button */}
           <div className="relative">
             <div
-              className={`inline-flex h-11 items-stretch rounded-full border transition-all duration-200 overflow-hidden ${micEnabled
+              className={`inline-flex h-11 items-stretch rounded-full border transition-all duration-200 overflow-hidden ${
+                micEnabled
                   ? 'border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.10]'
                   : 'border-red-500/40 bg-red-500/20 text-red-200 hover:bg-red-500/25'
-                }`}
+              }`}
             >
               <button
                 type="button"
@@ -858,7 +875,6 @@ function Screen({
               </button>
             </div>
 
-            {/* Audio Device Menu Popover */}
             <AnimatePresence>
               {micMenuOpen && (
                 <motion.div
@@ -872,7 +888,11 @@ function Screen({
                     Microphone
                   </div>
                   <div className="space-y-0.5">
-                    {['Default - Studio Microphone (HD)', 'External USB Mic', 'MacBook Air Microphone'].map((m) => {
+                    {[
+                      'Default - Studio Microphone (HD)',
+                      'External USB Mic',
+                      'MacBook Air Microphone',
+                    ].map((m) => {
                       const isSelected = activeMic === m;
                       return (
                         <button
@@ -882,13 +902,16 @@ function Screen({
                             setActiveMic(m);
                             setMicMenuOpen(false);
                           }}
-                          className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors ${isSelected
-                              ? 'bg-eco-accent/15 text-eco-accent font-medium'
+                          className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors ${
+                            isSelected
+                              ? 'bg-[#00A3FF]/15 text-[#00A3FF] font-medium'
                               : 'text-white/80 hover:bg-white/5 hover:text-white'
-                            }`}
+                          }`}
                         >
                           <span className="truncate pr-2">{m}</span>
-                          {isSelected && <CheckIcon size={14} className="shrink-0 text-eco-accent" />}
+                          {isSelected && (
+                            <CheckIcon size={14} className="shrink-0 text-[#00A3FF]" />
+                          )}
                         </button>
                       );
                     })}
@@ -900,39 +923,44 @@ function Screen({
                     Speaker
                   </div>
                   <div className="space-y-0.5">
-                    {['Studio Monitor Speakers', 'MacBook Air Speakers', 'Headphones (3.5mm)'].map((s) => {
-                      const isSelected = activeSpeaker === s;
-                      return (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => {
-                            setActiveSpeaker(s);
-                            setMicMenuOpen(false);
-                          }}
-                          className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors ${isSelected
-                              ? 'bg-eco-accent/15 text-eco-accent font-medium'
-                              : 'text-white/80 hover:bg-white/5 hover:text-white'
+                    {['Studio Monitor Speakers', 'MacBook Air Speakers', 'Headphones (3.5mm)'].map(
+                      (s) => {
+                        const isSelected = activeSpeaker === s;
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => {
+                              setActiveSpeaker(s);
+                              setMicMenuOpen(false);
+                            }}
+                            className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors ${
+                              isSelected
+                                ? 'bg-[#00A3FF]/15 text-[#00A3FF] font-medium'
+                                : 'text-white/80 hover:bg-white/5 hover:text-white'
                             }`}
-                        >
-                          <span className="truncate pr-2">{s}</span>
-                          {isSelected && <CheckIcon size={14} className="shrink-0 text-eco-accent" />}
-                        </button>
-                      );
-                    })}
+                          >
+                            <span className="truncate pr-2">{s}</span>
+                            {isSelected && (
+                              <CheckIcon size={14} className="shrink-0 text-[#00A3FF]" />
+                            )}
+                          </button>
+                        );
+                      },
+                    )}
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* Split Camera Button */}
           <div className="relative">
             <div
-              className={`inline-flex h-11 items-stretch rounded-full border transition-all duration-200 overflow-hidden ${cameraEnabled
+              className={`inline-flex h-11 items-stretch rounded-full border transition-all duration-200 overflow-hidden ${
+                cameraEnabled
                   ? 'border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.10]'
                   : 'border-red-500/40 bg-red-500/20 text-red-200 hover:bg-red-500/25'
-                }`}
+              }`}
             >
               <button
                 type="button"
@@ -961,7 +989,6 @@ function Screen({
               </button>
             </div>
 
-            {/* Camera Device Menu Popover */}
             <AnimatePresence>
               {cameraMenuOpen && (
                 <motion.div
@@ -985,13 +1012,16 @@ function Screen({
                             setActiveCam(c);
                             setCameraMenuOpen(false);
                           }}
-                          className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors ${isSelected
-                              ? 'bg-eco-accent/15 text-eco-accent font-medium'
+                          className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors ${
+                            isSelected
+                              ? 'bg-[#00A3FF]/15 text-[#00A3FF] font-medium'
                               : 'text-white/80 hover:bg-white/5 hover:text-white'
-                            }`}
+                          }`}
                         >
                           <span className="truncate pr-2">{c}</span>
-                          {isSelected && <CheckIcon size={14} className="shrink-0 text-eco-accent" />}
+                          {isSelected && (
+                            <CheckIcon size={14} className="shrink-0 text-[#00A3FF]" />
+                          )}
                         </button>
                       );
                     })}
@@ -1001,22 +1031,20 @@ function Screen({
             </AnimatePresence>
           </div>
 
-          {/* Screen Share */}
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setSharing(!sharing)}
-            className={`inline-flex h-11 items-center gap-2 rounded-full border px-4 text-xs font-semibold transition-all duration-200 ${sharing
-                ? 'border-[#245BFF] bg-gradient-to-r from-[#245BFF] to-[#20C8F5] text-white font-bold shadow-[0_0_16px_rgba(36,91,255,0.4)]'
+            className={`inline-flex h-11 items-center gap-2 rounded-full border px-4 text-xs font-semibold transition-all duration-200 ${
+              sharing
+                ? 'border-[#FF00A0] bg-gradient-to-r from-[#FF3E3E] via-[#FF00A0] to-[#A200FF] text-white font-bold shadow-[0_0_16px_rgba(255,0,160,0.4)]'
                 : 'border-white/10 bg-white/[0.06] text-white/90 hover:bg-white/[0.12] hover:text-white'
-              }`}
+            }`}
             title={sharing ? 'Stop sharing screen' : 'Share your screen'}
           >
             <ScreenShareIcon size={16} />
             <span className="hidden sm:inline">{sharing ? 'Sharing' : 'Share'}</span>
           </motion.button>
 
-
-          {/* Settings */}
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setSettingsOpen(true)}
@@ -1026,7 +1054,6 @@ function Screen({
             <SettingsIcon size={17} />
           </motion.button>
 
-          {/* More Options */}
           <div className="relative">
             <motion.button
               whileTap={{ scale: 0.95 }}
@@ -1035,10 +1062,11 @@ function Screen({
                 setMicMenuOpen(false);
                 setCameraMenuOpen(false);
               }}
-              className={`inline-flex h-11 w-11 items-center justify-center rounded-full border transition-all duration-200 ${moreMenuOpen
+              className={`inline-flex h-11 w-11 items-center justify-center rounded-full border transition-all duration-200 ${
+                moreMenuOpen
                   ? 'border-white/20 bg-white/20 text-white'
                   : 'border-white/10 bg-white/[0.06] text-white/80 hover:bg-white/[0.12] hover:text-white'
-                }`}
+              }`}
               title="More options"
             >
               <MoreIcon size={17} />
@@ -1056,8 +1084,9 @@ function Screen({
                   <button
                     type="button"
                     onClick={() => {
-                      if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => { });
-                      else document.exitFullscreen().catch(() => { });
+                      if (!document.fullscreenElement)
+                        document.documentElement.requestFullscreen().catch(() => {});
+                      else document.exitFullscreen().catch(() => {});
                       setMoreMenuOpen(false);
                     }}
                     className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs text-white/80 hover:bg-white/10 hover:text-white transition-colors"
@@ -1091,7 +1120,6 @@ function Screen({
 
           <div className="h-6 w-px bg-white/10 mx-1" />
 
-          {/* End Interview Button */}
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setConfirmLeaveOpen(true)}
@@ -1104,7 +1132,6 @@ function Screen({
         </motion.footer>
       </div>
 
-      {/* Leave Modal */}
       <AnimatePresence>
         {confirmLeaveOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
@@ -1120,7 +1147,8 @@ function Screen({
                 </div>
                 <h3 className="text-lg font-bold">Conclude Interview Session?</h3>
                 <p className="text-xs text-neutral-400">
-                  Are you sure you want to end your interview? Once disconnected, your session will conclude.
+                  Are you sure you want to end your interview? Once disconnected, your session will
+                  conclude.
                 </p>
                 <div className="flex w-full gap-3 pt-2">
                   <button
@@ -1148,7 +1176,6 @@ function Screen({
         )}
       </AnimatePresence>
 
-      {/* Settings Modal */}
       <AnimatePresence>
         {settingsOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
@@ -1204,13 +1231,17 @@ function Screen({
                 <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 text-xs space-y-2">
                   <div className="flex items-center justify-between text-white/60">
                     <span>AI Voice Isolation (Krisp)</span>
-                    <span className={noiseFilterEnabled ? 'text-eco-accent font-semibold' : 'text-white/40'}>
+                    <span
+                      className={
+                        noiseFilterEnabled ? 'text-[#00A3FF] font-semibold' : 'text-white/40'
+                      }
+                    >
                       {noiseFilterEnabled ? 'Active' : 'Disabled'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-white/60">
                     <span>Network Stream Quality</span>
-                    <span className="text-eco-accent font-semibold">HD 1080p · 60fps Adaptive</span>
+                    <span className="text-[#00A3FF] font-semibold">HD 1080p · 60fps Adaptive</span>
                   </div>
                 </div>
               </div>
@@ -1251,7 +1282,6 @@ function PreJoinPreview({
   const [selectedSpeaker, setSelectedSpeaker] = React.useState('MacBook Pro Speakers');
   const [joining, setJoining] = React.useState(false);
 
-  // Animate mock mic level
   React.useEffect(() => {
     if (!audioEnabled) {
       setMicLevel(0);
@@ -1268,8 +1298,8 @@ function PreJoinPreview({
     setTestPlaying(true);
     try {
       await playSpeakerTestSound();
-    } catch { }
-    finally {
+    } catch {
+    } finally {
       setTestPlaying(false);
     }
   };
@@ -1285,13 +1315,15 @@ function PreJoinPreview({
 
   return (
     <div className="relative isolate flex min-h-[100dvh] w-full flex-col justify-between overflow-x-hidden bg-[#0A0C10] font-sans text-white antialiased">
-      {/* Ambient background lighting */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_-15%,rgba(36,91,255,0.08),rgba(0,0,0,0))]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_-15%,rgba(162,0,255,0.08),rgba(0,0,0,0))]" />
 
-      {/* ── Top Header (Full Width matching Meeting Room) ── */}
       <header className="relative z-20 flex w-full shrink-0 items-center justify-between border-b border-white/[0.06] bg-neutral-950/40 px-4 sm:px-8 py-3 backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="HireXt Logo" className="h-7 w-auto object-contain select-none" />
+          <img
+            src="/logo.png"
+            alt="HireXt Logo"
+            className="h-7 w-auto object-contain select-none"
+          />
           <span className="h-4 w-px bg-white/15" />
           <span className="text-xs font-semibold uppercase tracking-wider text-white">
             Interview
@@ -1303,7 +1335,6 @@ function PreJoinPreview({
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Dev Mode Switcher */}
           {onModeChange && (
             <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
               {(['video', 'audio', 'both', 'greenroom', 'concluded'] as const).map((s) => (
@@ -1313,7 +1344,7 @@ function PreJoinPreview({
                   onClick={() => onModeChange(s)}
                   className={`rounded-full px-2.5 py-1 font-medium transition-all ${
                     mode === s
-                      ? 'bg-gradient-to-r from-[#245BFF] to-[#20C8F5] text-white font-bold shadow-[0_0_12px_rgba(32,200,245,0.35)]'
+                      ? 'bg-gradient-to-r from-[#FF3E3E] via-[#A200FF] to-[#00A3FF] text-white font-bold shadow-[0_0_12px_rgba(162,0,255,0.35)]'
                       : 'text-white/60 hover:text-white hover:bg-white/5'
                   }`}
                 >
@@ -1333,18 +1364,16 @@ function PreJoinPreview({
 
           <div className="hidden sm:inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/80">
             <span className="relative flex h-2 w-2 items-center justify-center">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00A3FF] opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#00A3FF]" />
             </span>
             <span>Ready to connect</span>
           </div>
         </div>
       </header>
 
-      {/* Main Content Area (Container matching Meeting Room) */}
       <main className="relative z-10 flex min-h-0 flex-1 flex-col justify-center px-4 sm:px-8 py-4 sm:py-6 container mx-auto w-full">
         <div className="grid w-full grid-cols-1 items-center gap-6 lg:gap-10 lg:grid-cols-12 my-auto">
-          {/* Left Column: Video Viewport & Direct Controls */}
           <div className="flex flex-col gap-3 lg:col-span-7">
             <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-neutral-950 border border-white/[0.08] shadow-[0_20px_50px_-15px_rgba(0,0,0,0.8)] ring-1 ring-white/[0.05]">
               {videoEnabled ? (
@@ -1365,23 +1394,19 @@ function PreJoinPreview({
                 </div>
               )}
 
-              {/* Candidate Badge (Top-Left) */}
               <div className="absolute top-3.5 left-3.5 z-20 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1 text-xs text-white/80 backdrop-blur-md border border-white/10">
                 <span className="font-medium">{username.trim() || 'Candidate'}</span>
                 <span className="text-white/40">(You)</span>
               </div>
 
-              {/* Audio Status Pill (Top-Right) */}
               <div className="absolute top-3.5 right-3.5 z-20">
                 {audioEnabled ? (
-                  <div className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-emerald-400 backdrop-blur-md border border-white/10">
+                  <div className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-[#FFB03A] backdrop-blur-md border border-white/10">
                     <span className="relative flex h-2 w-2 items-center justify-center">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#FFB03A] opacity-60" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#FFB03A]" />
                     </span>
-                    <span className="text-[10px] font-medium text-emerald-300">
-                      Mic active
-                    </span>
+                    <span className="text-[10px] font-medium text-[#FFB03A]">Mic active</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 rounded-full bg-rose-500/20 px-2.5 py-1 text-[10px] font-medium text-rose-300 backdrop-blur-md border border-rose-500/30">
@@ -1391,7 +1416,6 @@ function PreJoinPreview({
                 )}
               </div>
 
-              {/* Floating Bottom Action Dock */}
               <div className="absolute inset-x-0 bottom-4 z-20 flex items-center justify-center pointer-events-none">
                 <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/10 bg-neutral-950/80 px-3 py-1.5 shadow-2xl backdrop-blur-2xl">
                   <button
@@ -1431,7 +1455,7 @@ function PreJoinPreview({
                   >
                     <VolumeIcon
                       size={14}
-                      className={testPlaying ? 'text-sky-400 animate-pulse' : 'text-white/60'}
+                      className={testPlaying ? 'text-[#00A3FF] animate-pulse' : 'text-white/60'}
                     />
                     <span>{testPlaying ? 'Testing audio…' : 'Test speakers'}</span>
                   </button>
@@ -1440,7 +1464,6 @@ function PreJoinPreview({
             </div>
           </div>
 
-          {/* Right Column: Pre-Join Settings & Join Action */}
           <div className="flex flex-col lg:col-span-5">
             <div className="flex flex-col gap-6 rounded-2xl border border-white/[0.08] bg-neutral-900/40 p-6 sm:p-7 backdrop-blur-2xl shadow-xl">
               <div>
@@ -1453,7 +1476,6 @@ function PreJoinPreview({
               </div>
 
               <form onSubmit={handleEnter} className="flex flex-col gap-4">
-                {/* Full Name Input */}
                 <div>
                   <label className="block text-[11px] font-medium text-white/60 mb-1.5">
                     Your name
@@ -1464,13 +1486,11 @@ function PreJoinPreview({
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter your name"
                     required
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-sm text-white placeholder-white/20 transition-all focus:border-sky-500/60 focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-sm text-white placeholder-white/20 transition-all focus:border-[#A200FF]/60 focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-[#A200FF]/20"
                   />
                 </div>
 
-                {/* Device Configuration */}
                 <div className="space-y-3 pt-1">
-                  {/* Camera Row */}
                   <div>
                     <label className="flex items-center justify-between text-[11px] text-white/60 mb-1.5">
                       <span className="flex items-center gap-1.5">
@@ -1485,9 +1505,11 @@ function PreJoinPreview({
                       <select
                         value={selectedCam}
                         onChange={(e) => setSelectedCam(e.target.value)}
-                        className="w-full appearance-none rounded-xl border border-white/10 bg-neutral-900/80 px-3.5 py-2 text-xs text-white/90 focus:outline-none focus:border-sky-500/60 pr-8 cursor-pointer hover:bg-neutral-900 transition-colors"
+                        className="w-full appearance-none rounded-xl border border-white/10 bg-neutral-900/80 px-3.5 py-2 text-xs text-white/90 focus:outline-none focus:border-[#A200FF]/60 pr-8 cursor-pointer hover:bg-neutral-900 transition-colors"
                       >
-                        <option value="FaceTime HD Camera (Built-in)">FaceTime HD Camera (Built-in)</option>
+                        <option value="FaceTime HD Camera (Built-in)">
+                          FaceTime HD Camera (Built-in)
+                        </option>
                         <option value="Studio Camera Pro">Studio Camera Pro (External)</option>
                       </select>
                       <ChevronDownIcon
@@ -1497,7 +1519,6 @@ function PreJoinPreview({
                     </div>
                   </div>
 
-                  {/* Microphone Row with Live VU Bar */}
                   <div>
                     <label className="flex items-center justify-between text-[11px] text-white/60 mb-1.5">
                       <span className="flex items-center gap-1.5">
@@ -1512,9 +1533,11 @@ function PreJoinPreview({
                       <select
                         value={selectedMic}
                         onChange={(e) => setSelectedMic(e.target.value)}
-                        className="w-full appearance-none rounded-xl border border-white/10 bg-neutral-900/80 px-3.5 py-2 text-xs text-white/90 focus:outline-none focus:border-sky-500/60 pr-8 cursor-pointer hover:bg-neutral-900 transition-colors"
+                        className="w-full appearance-none rounded-xl border border-white/10 bg-neutral-900/80 px-3.5 py-2 text-xs text-white/90 focus:outline-none focus:border-[#A200FF]/60 pr-8 cursor-pointer hover:bg-neutral-900 transition-colors"
                       >
-                        <option value="MacBook Pro Microphone">MacBook Pro Microphone (Built-in)</option>
+                        <option value="MacBook Pro Microphone">
+                          MacBook Pro Microphone (Built-in)
+                        </option>
                         <option value="Studio USB Mic">Studio USB Mic (HD)</option>
                       </select>
                       <ChevronDownIcon
@@ -1523,13 +1546,12 @@ function PreJoinPreview({
                       />
                     </div>
 
-                    {/* Clean Live Audio Level Meter */}
                     {audioEnabled && (
                       <div className="mt-2 flex items-center gap-2">
                         <span className="text-[10px] text-white/40 shrink-0">Mic level</span>
                         <div className="flex-1 h-1 rounded-full bg-white/[0.08] overflow-hidden">
                           <div
-                            className="h-full bg-emerald-400 rounded-full transition-all duration-75"
+                            className="h-full bg-gradient-to-r from-[#FFB03A] to-[#FF3E3E] rounded-full transition-all duration-75"
                             style={{ width: `${Math.min(100, Math.max(8, micLevel))}%` }}
                           />
                         </div>
@@ -1537,7 +1559,6 @@ function PreJoinPreview({
                     )}
                   </div>
 
-                  {/* Speaker Output Row */}
                   <div>
                     <label className="flex items-center justify-between text-[11px] text-white/60 mb-1.5">
                       <span className="flex items-center gap-1.5">
@@ -1549,10 +1570,12 @@ function PreJoinPreview({
                       <select
                         value={selectedSpeaker}
                         onChange={(e) => setSelectedSpeaker(e.target.value)}
-                        className="w-full appearance-none rounded-xl border border-white/10 bg-neutral-900/80 px-3.5 py-2 text-xs text-white/90 focus:outline-none focus:border-sky-500/60 pr-8 cursor-pointer hover:bg-neutral-900 transition-colors"
+                        className="w-full appearance-none rounded-xl border border-white/10 bg-neutral-900/80 px-3.5 py-2 text-xs text-white/90 focus:outline-none focus:border-[#A200FF]/60 pr-8 cursor-pointer hover:bg-neutral-900 transition-colors"
                       >
                         <option value="MacBook Pro Speakers">MacBook Pro Speakers (Default)</option>
-                        <option value="External Studio Headphones">External Studio Headphones</option>
+                        <option value="External Studio Headphones">
+                          External Studio Headphones
+                        </option>
                       </select>
                       <ChevronDownIcon
                         size={13}
@@ -1562,7 +1585,6 @@ function PreJoinPreview({
                   </div>
                 </div>
 
-                {/* Join Interview Button */}
                 <button
                   type="submit"
                   disabled={joining}
@@ -1579,9 +1601,8 @@ function PreJoinPreview({
                 </button>
               </form>
 
-              {/* Privacy Reassurance Note */}
               <div className="flex items-center justify-center gap-1.5 text-[11px] text-white/40">
-                <ShieldCheckIcon size={13} className="text-emerald-400" />
+                <ShieldCheckIcon size={13} className="text-[#00A3FF]" />
                 <span>Audio &amp; video are private until you enter</span>
               </div>
             </div>
@@ -1589,7 +1610,6 @@ function PreJoinPreview({
         </div>
       </main>
 
-      {/* ── Footer Bar (Full Width matching Meeting Room) ── */}
       <footer className="relative z-10 w-full shrink-0 border-t border-white/[0.06] bg-neutral-950/40 px-4 sm:px-8 py-2.5 backdrop-blur-xl">
         <div className="container mx-auto flex items-center justify-between text-[11px] text-white/40">
           <span>MeeXt by HireXt</span>
@@ -1658,12 +1678,19 @@ export default function EcoDevPreview() {
               key={s}
               type="button"
               onClick={() => setCurrentMode(s)}
-              className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${currentMode === s
-                  ? 'border-eco-accent bg-eco-accent text-neutral-950 font-bold'
+              className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${
+                currentMode === s
+                  ? 'border-[#FF00A0] bg-gradient-to-r from-[#FF3E3E] via-[#FF00A0] to-[#A200FF] text-white font-bold'
                   : 'border-white/15 text-neutral-300 hover:bg-white/10'
-                }`}
+              }`}
             >
-              {s === 'both' ? 'Compare' : s === 'greenroom' ? 'Green Room' : s === 'concluded' ? 'Concluded' : s}
+              {s === 'both'
+                ? 'Compare'
+                : s === 'greenroom'
+                  ? 'Green Room'
+                  : s === 'concluded'
+                    ? 'Concluded'
+                    : s}
             </button>
           ))}
         </div>

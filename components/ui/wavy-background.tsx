@@ -1,7 +1,7 @@
-"use client";
-import { cn } from "@/lib/utils";
-import React, { useEffect, useRef } from "react";
-import { createNoise3D } from "simplex-noise";
+'use client';
+import { cn } from '@/lib/utils';
+import React, { useEffect, useRef } from 'react';
+import { createNoise3D } from 'simplex-noise';
 
 /**
  * Aceternity's WavyBackground, adapted for a bounded container.
@@ -26,7 +26,7 @@ export const WavyBackground = ({
   waveWidth,
   backgroundFill,
   blur = 10,
-  speed = "fast",
+  speed = 'fast',
   waveOpacity = 0.5,
   audioEnergy,
   isSpeaking,
@@ -39,7 +39,7 @@ export const WavyBackground = ({
   waveWidth?: number;
   backgroundFill?: string;
   blur?: number;
-  speed?: "slow" | "fast";
+  speed?: 'slow' | 'fast';
   waveOpacity?: number;
   audioEnergy?: number;
   isSpeaking?: boolean;
@@ -70,11 +70,11 @@ export const WavyBackground = ({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const noise = createNoise3D();
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const size = { w: 0, h: 0 };
     let nt = 0;
     let smoothedEnergy = 0;
@@ -82,7 +82,7 @@ export const WavyBackground = ({
     let frame: number | null = null;
 
     const waveColors = () =>
-      cfg.current.colors ?? ["#2ee6a6", "#0fb59a", "#22d3a0", "#5cf5bd", "#0ea5e9"];
+      cfg.current.colors ?? ['#2ee6a6', '#0fb59a', '#22d3a0', '#5cf5bd', '#0ea5e9'];
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -95,7 +95,8 @@ export const WavyBackground = ({
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.filter = cfg.current.blur && cfg.current.blur > 0 ? `blur(${cfg.current.blur}px)` : 'none';
+      ctx.filter =
+        cfg.current.blur && cfg.current.blur > 0 ? `blur(${cfg.current.blur}px)` : 'none';
     };
 
     const paint = () => {
@@ -125,7 +126,7 @@ export const WavyBackground = ({
       smoothedAmp += (targetAmp - smoothedAmp) * 0.12;
 
       ctx.globalAlpha = 1;
-      if (!cfg.current.backgroundFill || cfg.current.backgroundFill === "transparent") {
+      if (!cfg.current.backgroundFill || cfg.current.backgroundFill === 'transparent') {
         ctx.clearRect(0, 0, w, h);
       } else {
         ctx.fillStyle = cfg.current.backgroundFill;
@@ -137,7 +138,7 @@ export const WavyBackground = ({
       // Only advance phase if speaking/audio plays; freeze when still
       if (!reduced && !isStill) {
         const speedMultiplier = Math.min(2.5, Math.max(0.4, smoothedEnergy * 2.8));
-        nt += (cfg.current.speed === "fast" ? 0.0025 : 0.0012) * speedMultiplier;
+        nt += (cfg.current.speed === 'fast' ? 0.0025 : 0.0012) * speedMultiplier;
       }
 
       const baseOpacity = cfg.current.waveOpacity ?? 0.85;
@@ -147,8 +148,8 @@ export const WavyBackground = ({
 
       ctx.globalAlpha = Math.min(1, Math.max(0, dynamicOpacity));
       ctx.lineWidth = cfg.current.waveWidth !== undefined ? cfg.current.waveWidth : 2;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
 
       const count = reduced ? 3 : 5;
       for (let n = 0; n < count; n++) {
@@ -156,8 +157,16 @@ export const WavyBackground = ({
         ctx.beginPath();
         ctx.strokeStyle = palette[idx];
         for (let x = 0; x <= w; x += 2) {
-          // Flatten to still line when silent; undulate when audio plays
-          const y = isStill ? 0 : noise(x / 600, 0.35 * n, nt) * smoothedAmp;
+          // 1. Calculate how far across the screen we are (0.0 to 1.0)
+          const progress = x / w;
+
+          // 2. Create the mask: Math.sin(progress * Math.PI) creates an arc (0 at edges, 1 in middle).
+          // Math.pow(..., 4) pinches that arc so the wave concentrates strictly in the center,
+          // keeping the outer sides completely flat. Increase '4' to make the mouth narrower.
+          const envelope = Math.pow(Math.sin(progress * Math.PI), 4);
+
+          // 3. Multiply the noise output by the envelope
+          const y = isStill ? 0 : noise(x / 600, 0.35 * n, nt) * smoothedAmp * envelope;
           ctx.lineTo(x, y + h * 0.55);
         }
         ctx.stroke();
@@ -191,12 +200,12 @@ export const WavyBackground = ({
   return (
     <div
       className={cn(
-        "relative h-full w-full overflow-hidden flex flex-col items-center justify-center",
-        containerClassName
+        'relative h-full w-full overflow-hidden flex flex-col items-center justify-center',
+        containerClassName,
       )}
     >
       <canvas ref={canvasRef} className="absolute inset-0 z-0 h-full w-full" />
-      <div className={cn("relative z-10", className)} {...props}>
+      <div className={cn('relative z-10', className)} {...props}>
         {children}
       </div>
     </div>
