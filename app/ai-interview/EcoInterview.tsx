@@ -22,7 +22,7 @@ import {
   RoomEvent,
   Track,
 } from 'livekit-client';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { BackgroundBeams } from '@/components/ui/background-beams';
 import { WavyBackground } from '@/components/ui/wavy-background';
@@ -234,6 +234,7 @@ interface EcoPreJoinProps {
       videoDeviceId?: string;
       audioDeviceId?: string;
     },
+    frozenFrame: string | null,
   ) => void;
 }
 
@@ -451,12 +452,17 @@ function EcoPreJoin({
           : false,
       });
 
-      onJoin(tracks, username.trim(), {
-        videoEnabled,
-        audioEnabled,
-        videoDeviceId: selectedVideoId,
-        audioDeviceId: selectedAudioId,
-      });
+      onJoin(
+        tracks,
+        username.trim(),
+        {
+          videoEnabled,
+          audioEnabled,
+          videoDeviceId: selectedVideoId,
+          audioDeviceId: selectedAudioId,
+        },
+        poster,
+      );
     } catch (err: any) {
       setJoining(false);
       toast.error(`Could not initialize camera/mic: ${err.message}`);
@@ -492,7 +498,11 @@ function EcoPreJoin({
         <div className="grid w-full grid-cols-1 items-center gap-6 lg:gap-10 lg:grid-cols-12 my-auto">
           {/* Left Column: Video Viewport & Direct Controls */}
           <div className="flex flex-col gap-3 lg:col-span-7">
-            <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-neutral-950 border border-white/[0.08] ring-1 ring-white/[0.05]">
+            <motion.div
+              layoutId="eco-candidate-video"
+              transition={{ duration: 0.65, ease: EASE }}
+              className="relative aspect-video w-full overflow-hidden rounded-2xl bg-neutral-950 border border-white/[0.08] ring-1 ring-white/[0.05]"
+            >
               {videoEnabled ? (
                 <>
                   <video
@@ -592,7 +602,7 @@ function EcoPreJoin({
                   </button>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Hardware error banner if permissions failed */}
             {permissionError && (
@@ -811,6 +821,8 @@ function EcoInterviewRoom({
   resultBase,
   previewTracks,
   userChoices,
+  onReady,
+  posterUrl,
 }: {
   candidateName: string;
   interviewTitle?: string;
@@ -823,6 +835,11 @@ function EcoInterviewRoom({
     videoDeviceId?: string;
     audioDeviceId?: string;
   };
+  /** Fired once the room is connected, so the green room can cross-fade out. */
+  onReady?: () => void;
+  /** Frozen green-room frame, shown in the candidate tile until the live track
+   *  arrives so the shared-element morph has something to land on. */
+  posterUrl?: string | null;
 }) {
   const {
     cameraTrack: liveCameraPublication,
@@ -1366,6 +1383,10 @@ function EcoInterviewRoom({
   React.useEffect(() => {
     if (connection === ConnectionState.Connected) {
       hasConnected.current = true;
+      // The room is live — tell the root so it can fade the green room away.
+      // Fired here rather than on mount so the handoff covers the connect, not
+      // a blank interval before it.
+      onReady?.();
     } else if (connection === ConnectionState.Disconnected && hasConnected.current) {
       setFinalDuration((prev) => prev ?? seconds);
       setEnded(true);
@@ -2362,7 +2383,11 @@ function EcoInterviewRoom({
 
               {/* Candidate Tile (Bottom) */}
               <div className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.03] p-1.5 shadow-xl flex flex-col flex-1 min-h-0">
-                <div className="relative flex flex-1 w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-neutral-950/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
+                <motion.div
+                layoutId="eco-candidate-video"
+                transition={{ duration: 0.65, ease: EASE }}
+                className="relative flex flex-1 w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-neutral-950/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]"
+              >
                   <AnimatePresence mode="wait" initial={false}>
                     {isLocalVideoLive && localVideoMst ? (
                       <motion.div
@@ -2375,6 +2400,21 @@ function EcoInterviewRoom({
                       >
                         <LocalSelfView mst={localVideoMst} />
                       </motion.div>
+                    ) : posterUrl ? (
+                      // The frozen green-room frame, shown while the real track is
+                      // still publishing. Without it the shared-element morph
+                      // lands on an empty tile and the video pops in afterwards.
+                      <motion.img
+                        key="poster"
+                        src={posterUrl}
+                        alt=""
+                        aria-hidden
+                        className="absolute inset-0 h-full w-full scale-x-[-1] object-cover"
+                        initial={{ opacity: 1 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                      />
                     ) : (
                       <motion.div
                         key="cam-muted"
@@ -2415,7 +2455,7 @@ function EcoInterviewRoom({
                       </div>
                     )}
                   </div>
-                </div>
+                </motion.div>
               </div>
             </div>
           </div>
@@ -3001,6 +3041,53 @@ function EcoInterviewRoom({
 // ────────────────────────────────────────────────────────────────────────────
 // EcoInterview Root Gate Component
 // ────────────────────────────────────────────────────────────────────────────
+/**
+ * The join handoff: a short, sequential confirmation that the candidate's
+ * devices came up, shown over the green room while the interview room connects.
+ *
+ * Modelled on the conclude screen's line-by-line reveal so the two ends of the
+ * interview feel like the same product. It is deliberately brief (~1.1s): long
+ * enough to read, short enough not to feel like a loading screen.
+ */
+function JoinHandoff({ camera, mic }: { camera: boolean; mic: boolean }) {
+  const items = [
+    { key: 'cam', label: camera ? 'Camera Enabled' : 'Camera Off', ok: camera },
+    { key: 'mic', label: mic ? 'Microphone Enabled' : 'Microphone Off', ok: mic },
+  ];
+  return (
+    <motion.div
+      className="absolute inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+    >
+      <div className="flex flex-col gap-4">
+        {items.map((it, i) => (
+          <motion.div
+            key={it.key}
+            className="flex items-center gap-3 text-sm font-medium"
+            initial={{ opacity: 0, y: 12, filter: 'blur(6px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 0.45, delay: 0.15 + i * 0.4, ease: EASE }}
+          >
+            <span
+              className={`flex h-6 w-6 items-center justify-center rounded-full border ${
+                it.ok
+                  ? 'border-eco-accent/40 bg-eco-accent/15 text-eco-accent'
+                  : 'border-rose-500/40 bg-rose-500/15 text-rose-300'
+              }`}
+            >
+              {it.ok ? <CheckIcon size={13} /> : <WarningIcon size={13} />}
+            </span>
+            <span className="text-white/90">{it.label}</span>
+          </motion.div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
 export function EcoInterview(props: EcoInterviewProps) {
   const [preAcquiredTracks, setPreAcquiredTracks] = React.useState<Awaited<
     ReturnType<typeof createLocalTracks>
@@ -3013,40 +3100,109 @@ export function EcoInterview(props: EcoInterviewProps) {
   }>({ videoEnabled: true, audioEnabled: true });
   const [resolvedUsername, setResolvedUsername] = React.useState<string>(props.candidateName || '');
 
-  if (!preAcquiredTracks) {
-    return (
-      <EcoPreJoin
-        defaultUsername={props.candidateName}
-        isNameFixed={props.isNameFixed}
-        interviewTitle={props.interviewTitle || 'Assessment'}
-        companyName={props.companyName || 'HireXt'}
-        onJoin={(tracks, name, choices) => {
-          setResolvedUsername(name);
-          setUserChoices(choices);
-          setPreAcquiredTracks(tracks);
-        }}
-      />
-    );
-  }
+  // Cross-fade the green room into the interview.
+  //
+  // This used to be an abrupt return: joining unmounted the green room and
+  // mounted LiveKitRoom in the same commit, so the screen cut hard and there was
+  // nothing on screen while the room connected. The green room now stays mounted
+  // as an overlay until the interview room reports it is actually connected, then
+  // fades out over it.
+  // Explicit phases. Two components share layoutId="eco-candidate-video", and a
+  // duplicate layoutId in the tree is undefined behaviour in Framer Motion (it
+  // cannot know which one to fly from). Phases guarantee only one is mounted:
+  //   green   -> green room
+  //   handoff -> green room + the device checklist
+  //   morph   -> green room unmounts, interview room mounts in the same commit,
+  //              so the shared element travels from one layout to the other
+  //   live    -> room connected
+  const [phase, setPhase] = React.useState<'green' | 'handoff' | 'morph' | 'live'>('green');
+  const [poster, setPoster] = React.useState<string | null>(null);
+  const greenMounted = phase === 'green' || phase === 'handoff';
+  const roomMounted = phase === 'morph' || phase === 'live';
+
+  // Let the checklist be read, then hand over. Bounded so a slow (or failed)
+  // connection cannot leave the overlay covering the UI forever.
+  React.useEffect(() => {
+    if (phase !== 'handoff') return;
+    const t = setTimeout(() => setPhase('morph'), 1300);
+    return () => clearTimeout(t);
+  }, [phase]);
+
+  // Safety net: if the room never reports ready, stop covering the screen so the
+  // candidate is not stuck on the green room. The room's own UI shows its
+  // connecting state from here.
+  React.useEffect(() => {
+    if (phase !== 'morph') return;
+    const t = setTimeout(() => setPhase('live'), 8000);
+    return () => clearTimeout(t);
+  }, [phase]);
 
   return (
-    <LiveKitRoom
-      token={props.token}
-      serverUrl={props.liveKitUrl}
-      connect
-      audio={false}
-      video={false}
-      className="w-full h-full min-h-[100dvh] flex flex-col"
-    >
-      <RoomAudioRenderer />
-      <EcoInterviewRoom
-        candidateName={resolvedUsername || 'Candidate'}
-        interviewTitle={props.interviewTitle}
-        companyName={props.companyName}
-        resultBase={props.resultBase}
-        previewTracks={preAcquiredTracks}
-        userChoices={userChoices}
-      />
-    </LiveKitRoom>
+    // LayoutGroup so the candidate video is a SHARED element: the same
+    // layoutId in the green room and in the interview room lets Framer Motion
+    // move it from one layout to the other instead of cutting between them.
+    <LayoutGroup>
+      <div className="relative w-full h-full min-h-[100dvh] bg-black">
+        {roomMounted && preAcquiredTracks && (
+          <LiveKitRoom
+            token={props.token}
+            serverUrl={props.liveKitUrl}
+            connect
+            audio={false}
+            video={false}
+            className="w-full h-full min-h-[100dvh] flex flex-col"
+          >
+            <RoomAudioRenderer />
+            <EcoInterviewRoom
+              candidateName={resolvedUsername || 'Candidate'}
+              interviewTitle={props.interviewTitle}
+              companyName={props.companyName}
+              resultBase={props.resultBase}
+              previewTracks={preAcquiredTracks}
+              userChoices={userChoices}
+              posterUrl={poster}
+              onReady={() => setPhase('live')}
+            />
+          </LiveKitRoom>
+        )}
+
+        <AnimatePresence>
+          {greenMounted && (
+            <motion.div
+              key="green-room"
+              className="absolute inset-0 z-50"
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.55, ease: EASE }}
+            >
+              <EcoPreJoin
+                defaultUsername={props.candidateName}
+                isNameFixed={props.isNameFixed}
+                interviewTitle={props.interviewTitle || 'Assessment'}
+                companyName={props.companyName || 'HireXt'}
+                onJoin={(tracks, name, choices, frozen) => {
+                  setResolvedUsername(name);
+                  setUserChoices(choices);
+                  setPoster(frozen ?? null);
+                  setPreAcquiredTracks(tracks);
+                  setPhase('handoff');
+                }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Device confirmation, then the video travels into place. */}
+        <AnimatePresence>
+          {phase === 'handoff' && (
+            <JoinHandoff
+              key="handoff"
+              camera={userChoices.videoEnabled}
+              mic={userChoices.audioEnabled}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+    </LayoutGroup>
   );
 }
