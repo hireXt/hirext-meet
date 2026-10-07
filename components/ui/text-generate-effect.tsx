@@ -7,14 +7,31 @@ export const TextGenerateEffect = ({
   words,
   className,
   typingSpeed = 15, // Milliseconds per character
+  durationMs,
+  interrupted = false,
 }: {
   words: string;
   className?: string;
   typingSpeed?: number;
+  /**
+   * Length of the spoken audio for this line. When given, the typing is paced so
+   * it finishes at roughly the same moment the voice does, instead of at a fixed
+   * characters-per-millisecond rate that drifts out of sync with longer lines.
+   */
+  durationMs?: number;
+  /**
+   * True once the listener has interrupted playback. Typing stops dead and the
+   * line is left truncated at whatever was actually revealed, so the transcript
+   * never keeps "talking" over someone who has already answered.
+   */
+  interrupted?: boolean;
 }) => {
   const textRef = useRef<HTMLSpanElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isDoneTyping, setIsDoneTyping] = useState(false);
+  // Read inside the interval without re-creating it on every keystroke.
+  const interruptedRef = useRef(interrupted);
+  interruptedRef.current = interrupted;
 
   useEffect(() => {
     if (!textRef.current) return;
@@ -45,7 +62,21 @@ export const TextGenerateEffect = ({
 
     if (intervalRef.current) clearInterval(intervalRef.current);
 
+    // Pace to the audio when we know how long it is. Never faster than 8ms per
+    // character, otherwise a long line driven by a long duration turns into a
+    // blur rather than a reveal.
+    const remaining = targetText.length - currentIndex;
+    const perChar =
+      durationMs && durationMs > 0 && remaining > 0
+        ? Math.max(8, durationMs / remaining)
+        : typingSpeed;
+
     intervalRef.current = setInterval(() => {
+      if (interruptedRef.current) {
+        setIsDoneTyping(true);
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        return;
+      }
       if (currentIndex < targetText.length) {
         textRef.current!.textContent += targetText[currentIndex];
         currentIndex++;
@@ -54,12 +85,12 @@ export const TextGenerateEffect = ({
         setIsDoneTyping(true);
         if (intervalRef.current) clearInterval(intervalRef.current);
       }
-    }, typingSpeed);
+    }, perChar);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [words, typingSpeed]);
+  }, [words, typingSpeed, durationMs]);
 
   return (
     <div className={cn('inline-block relative text-left leading-relaxed', className)}>

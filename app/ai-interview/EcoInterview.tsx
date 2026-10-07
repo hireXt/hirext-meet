@@ -5,6 +5,7 @@ import {
   LiveKitRoom,
   RoomAudioRenderer,
   useConnectionState,
+  useIsSpeaking,
   useLocalParticipant,
   useMultibandTrackVolume,
   useParticipants,
@@ -62,6 +63,15 @@ export interface EcoInterviewProps {
   interviewTitle?: string;
   companyName?: string;
 }
+
+/**
+ * Rough spoken length of a line, used to pace the transcript typing against the
+ * voice instead of a fixed rate. 150wpm is a normal interview pace, so the text
+ * and the audio finish at roughly the same moment instead of drifting apart on
+ * long lines.
+ */
+const estimateSpeechMs = (text: string): number =>
+  Math.max(900, (text.length / ((150 / 60) * 5)) * 1000);
 
 const ECO_IDENTITY = 'eco-avatar';
 
@@ -1473,6 +1483,31 @@ function EcoInterviewRoom({
 
   const isEco = (id: string) => id === ECO_IDENTITY || id.startsWith('agent') || id === 'eco';
 
+  // VAD barge-in. `energy` above is measured from the AGENT's audio, so it tells us
+  // when Monica talks, not when the candidate does — it cannot detect an
+  // interruption. useIsSpeaking on the local participant is the server-side VAD,
+  // and a rising edge means the listener has started talking over the line in
+  // progress. That line's audio stops, so its typing has to stop with it.
+  const localSpeaking = useIsSpeaking(localParticipant);
+  const [bargeInLineIds, setBargeInLineIds] = React.useState<ReadonlySet<string>>(new Set());
+  const wasLocalSpeakingRef = React.useRef(false);
+  const latestEcoLineIdRef = React.useRef<string | null>(null);
+  latestEcoLineIdRef.current = [...lines].reverse().find((l) => isEco(l.identity))?.id ?? null;
+
+  React.useEffect(() => {
+    const rising = localSpeaking && !wasLocalSpeakingRef.current;
+    wasLocalSpeakingRef.current = localSpeaking;
+    if (!rising) return;
+    const target = latestEcoLineIdRef.current;
+    if (!target) return;
+    setBargeInLineIds((prev) => {
+      if (prev.has(target)) return prev;
+      const next = new Set(prev);
+      next.add(target);
+      return next;
+    });
+  }, [localSpeaking]);
+
   // Auto-scroll transcript container
   React.useEffect(() => {
     if (autoScroll && transcriptEndRef.current) {
@@ -2260,7 +2295,9 @@ function EcoInterviewRoom({
                 {lines.length === 0 ? (
                   <div className="flex flex-col gap-2 py-8 my-auto opacity-60">
                     <div className="inline-flex items-center text-xs font-semibold uppercase tracking-wider text-[#20C8F5]">
-                      <span>Ready to Begin</span>
+                      <span>
+                        Wait for interviewer to start
+                      </span>
                     </div>
                     <p className="text-sm text-white/50 max-w-md leading-relaxed">
                       As you and Monica speak, the live dialogue will flow here dynamically with
@@ -2302,6 +2339,10 @@ function EcoInterviewRoom({
                               <TextGenerateEffect
                                 words={l.text}
                                 typingSpeed={10}
+                                // Only the agent is paced to a spoken length; the
+                                // candidate's own words have no audio to match.
+                                durationMs={ecoLine ? estimateSpeechMs(l.text) : undefined}
+                                interrupted={ecoLine && bargeInLineIds.has(l.id)}
                                 className={`font-semibold ${ecoLine ? 'text-white text-left' : 'text-[#53E0EC] text-right'}`}
                               />
                             </div>
