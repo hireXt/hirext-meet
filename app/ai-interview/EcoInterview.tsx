@@ -874,7 +874,6 @@ function EcoInterviewRoom({
 
   const env = (t: TrackReferenceOrPlaceholder) => t.participant?.identity === ECO_IDENTITY;
   const ecoAudio = tracks.find((t) => env(t) && t.source === Track.Source.Microphone);
-  const ecoVideo = tracks.find((t) => env(t) && t.source === Track.Source.Camera);
   const screenShareTrack = tracks.find((t) => t.source === Track.Source.ScreenShare);
   const isScreenSharingActive = !!screenShareTrack;
   // Derived early: the auto-share listener below needs them, and they used to be
@@ -1465,7 +1464,6 @@ function EcoInterviewRoom({
     }
   };
 
-  const showVideo = !!ecoVideo;
   const speaking = energy > 0.04;
   const statusWord = speaking
     ? 'Speaking'
@@ -2224,23 +2222,11 @@ function EcoInterviewRoom({
               {/* Floating Picture-in-Picture Dock for AI & Candidate */}
               <div className="absolute bottom-4 right-4 z-20 flex gap-3">
                 <div className="relative h-28 w-44 overflow-hidden rounded-2xl border border-white/15 bg-neutral-900 shadow-2xl backdrop-blur-xl">
-                  {showVideo ? (
-                    <VideoTrack
-                      trackRef={ecoVideo!}
-                      className="absolute inset-0 block h-full w-full"
-                      /* Inline objectFit, not just the class: LiveKit's VideoTrack
-                         renders its own <video> and sets object-fit inline, which
-                         a utility class cannot override — the clip stayed
-                         letterboxed inside the tile instead of filling it. */
-                      style={{ objectFit: 'cover' }}
+                  <div className="flex h-full w-full items-center justify-center bg-black/70">
+                    <span
+                      className={`h-3 w-3 rounded-full ${speaking ? 'bg-eco-accent animate-ping' : 'bg-white/30'}`}
                     />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-black/70">
-                      <span
-                        className={`h-3 w-3 rounded-full ${speaking ? 'bg-eco-accent animate-ping' : 'bg-white/30'}`}
-                      />
-                    </div>
-                  )}
+                  </div>
                   <span className="absolute bottom-1.5 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90">
                     Monica
                   </span>
@@ -2295,9 +2281,7 @@ function EcoInterviewRoom({
                 {lines.length === 0 ? (
                   <div className="flex flex-col gap-2 py-8 my-auto opacity-60">
                     <div className="inline-flex items-center text-xs font-semibold uppercase tracking-wider text-[#20C8F5]">
-                      <span>
-                        Wait for interviewer to start
-                      </span>
+                      <span>Wait for interviewer to start</span>
                     </div>
                     <p className="text-sm text-white/50 max-w-md leading-relaxed">
                       As you and Monica speak, the live dialogue will flow here dynamically with
@@ -2361,84 +2345,57 @@ function EcoInterviewRoom({
               {/* Eco AI Interviewer Tile (Top) */}
               <div className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.03] p-1.5 shadow-xl flex flex-col flex-1 min-h-0">
                 <div className="relative flex flex-1 min-h-0 w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-neutral-950/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
-                  {showVideo ? (
-                    /* The intro clip is 16:9 like any camera feed, so it must fill
-                       this tile edge-to-edge rather than letterboxing inside it.
-                       object-cover + a block-level video is what actually fills:
-                       an inline <video> leaves a baseline gap that makes cover
-                       resolve against the wrong box. */
-                    <VideoTrack
-                      trackRef={ecoVideo!}
-                      className="absolute inset-0 block h-full w-full"
-                      /* Inline objectFit, not just the class: LiveKit's VideoTrack
-                         renders its own <video> and sets object-fit inline, which
-                         a utility class cannot override — the clip stayed
-                         letterboxed inside the tile instead of filling it. */
-                      style={{ objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <div className="relative flex h-full w-full items-center justify-center">
-                      {/* Bottom Wavy Audio Flow (Thin Sharp Lines) */}
-                      <div className="absolute inset-x-0 bottom-0 h-28 sm:h-32 overflow-hidden pointer-events-none [mask-image:linear-gradient(to_top,black_70%,transparent_100%)]">
-                        <WavyBackground
-                          blur={0}
-                          waveWidth={1.8}
-                          waveOpacity={0.9}
-                          speed="fast"
-                          backgroundFill="transparent"
-                          colors={['#FFC45E', '#FF7049', '#F34BB5', '#245BFF', '#20C8F5']}
-                          audioEnergy={energy}
-                          isSpeaking={speaking}
-                          containerClassName="h-full w-full"
-                        />
+                  <div className="relative flex h-full w-full items-center justify-center">
+                    {/* Bottom Wavy Audio Flow (Thin Sharp Lines) */}
+                    <div className="absolute inset-x-0 bottom-0 h-28 sm:h-32 overflow-hidden pointer-events-none [mask-image:linear-gradient(to_top,black_70%,transparent_100%)]">
+                      <WavyBackground
+                        blur={0}
+                        waveWidth={1.8}
+                        waveOpacity={0.9}
+                        speed="fast"
+                        backgroundFill="transparent"
+                        colors={['#FFC45E', '#FF7049', '#F34BB5', '#245BFF', '#20C8F5']}
+                        audioEnergy={energy}
+                        isSpeaking={speaking}
+                        containerClassName="h-full w-full"
+                      />
+                    </div>
+
+                    {/* Central Normal User DP with simple circle around */}
+                    <div className="relative z-10 flex flex-col items-center gap-3">
+                      <div
+                        className={`relative rounded-full p-1 transition-all duration-300 ${
+                          speaking
+                            ? 'ring-2 ring-[#20C8F5] ring-offset-2 ring-offset-neutral-950 shadow-[0_0_20px_rgba(32,200,245,0.35)]'
+                            : 'ring-1 ring-white/20 ring-offset-2 ring-offset-neutral-950'
+                        }`}
+                      >
+                        <div className="relative h-20 w-20 sm:h-24 sm:w-24 overflow-hidden rounded-full border border-white/10 bg-neutral-900 shadow-xl">
+                          <img
+                            src="/images/eco-avatar.png"
+                            alt="Monica"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
                       </div>
 
-                      {/* Central Normal User DP with simple circle around */}
-                      <div className="relative z-10 flex flex-col items-center gap-3">
-                        <div
-                          className={`relative rounded-full p-1 transition-all duration-300 ${
-                            speaking
-                              ? 'ring-2 ring-[#20C8F5] ring-offset-2 ring-offset-neutral-950 shadow-[0_0_20px_rgba(32,200,245,0.35)]'
-                              : 'ring-1 ring-white/20 ring-offset-2 ring-offset-neutral-950'
-                          }`}
-                        >
-                          <div className="relative h-20 w-20 sm:h-24 sm:w-24 overflow-hidden rounded-full border border-white/10 bg-neutral-900 shadow-xl">
-                            <img
-                              src="/images/eco-avatar.png"
-                              alt="Monica"
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3.5 py-1 text-[11px] font-medium text-white/90 backdrop-blur-md shadow-md">
-                          <span>Monica</span>
-                        </div>
+                      <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3.5 py-1 text-[11px] font-medium text-white/90 backdrop-blur-md shadow-md">
+                        <span>Monica</span>
                       </div>
                     </div>
-                  )}
+                  </div>
 
-                  {/* Eco Bottom Pill — camera/mic state.
-                      The avatar is audio-only whenever the intro clip is not
-                      playing, so the camera icon reads red then, and returns to
-                      the normal (live) colour while the clip plays. Without it
-                      the tile looked identical in both states and the video
-                      felt like an unrelated pop-in. */}
+                  {/* Eco Bottom Pill — mic state. Monica's avatar video is
+                      retired: she is audio-only, so the camera icon is
+                      permanently off and her name always shows. */}
                   <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white/90 backdrop-blur-md border border-white/10">
-                    <span
-                      className="flex items-center gap-1"
-                      title={showVideo ? 'Camera on' : 'Camera off'}
-                    >
-                      {showVideo ? (
-                        <CameraIcon size={12} className="text-eco-accent" />
-                      ) : (
-                        <CameraOffIcon size={12} className="text-[#F52D45]" />
-                      )}
+                    <span className="flex items-center gap-1" title="Camera off">
+                      <CameraOffIcon size={12} className="text-[#F52D45]" />
                     </span>
                     <span className="flex items-center gap-1" title="Microphone live">
                       <MicIcon size={12} className="text-eco-accent" />
                     </span>
-                    {showVideo && <span>Monica</span>}
+                    <span>Monica</span>
                   </div>
                 </div>
               </div>
@@ -2446,10 +2403,10 @@ function EcoInterviewRoom({
               {/* Candidate Tile (Bottom) */}
               <div className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.03] p-1.5 shadow-xl flex flex-col flex-1 min-h-0">
                 <motion.div
-                layoutId="eco-candidate-video"
-                transition={{ duration: 0.65, ease: EASE }}
-                className="relative flex flex-1 w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-neutral-950/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]"
-              >
+                  layoutId="eco-candidate-video"
+                  transition={{ duration: 0.65, ease: EASE }}
+                  className="relative flex flex-1 w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-neutral-950/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]"
+                >
                   <AnimatePresence mode="wait" initial={false}>
                     {isLocalVideoLive && localVideoMst ? (
                       <motion.div
