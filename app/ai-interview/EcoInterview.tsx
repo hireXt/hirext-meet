@@ -403,6 +403,10 @@ function EcoPreJoin({
 
   const handleEnterInterview = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Enter fullscreen here, while the click is still a user gesture — the join
+    // button is the last point the browser allows a fullscreen request. If it is
+    // dismissed, the live view detects it and offers a re-enter prompt.
+    document.documentElement.requestFullscreen?.().catch(() => undefined);
     if (!username.trim()) {
       toast.error('Please enter your name to proceed');
       return;
@@ -1147,7 +1151,13 @@ function EcoInterviewRoom({
   const [participantsOpen, setParticipantsOpen] = React.useState(false);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [testSoundPlaying, setTestSoundPlaying] = React.useState(false);
-  const [fullscreen, setFullscreen] = React.useState(false);
+  const [fullscreen, setFullscreen] = React.useState(
+    () => typeof document !== 'undefined' && !!document.fullscreenElement,
+  );
+  // Some browsers (e.g. iPhone Safari) have no Fullscreen API; never nudge there.
+  const canRequestFullscreen =
+    typeof document !== 'undefined' &&
+    typeof document.documentElement.requestFullscreen === 'function';
 
   // AI Noise Cancellation (Krisp)
   const [noiseFilterEnabled, setNoiseFilterEnabled] = React.useState(true);
@@ -1416,6 +1426,14 @@ function EcoInterviewRoom({
     document.addEventListener('fullscreenchange', handleFsChange);
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
+
+  // Drop fullscreen the moment the interview concludes so the "Interview
+  // Concluded" end screen is shown in normal (non-fullscreen) window chrome.
+  React.useEffect(() => {
+    if (ended && typeof document !== 'undefined' && document.fullscreenElement) {
+      document.exitFullscreen().catch(() => undefined);
+    }
+  }, [ended]);
 
   const copyMeetingLink = () => {
     if (typeof window !== 'undefined') {
@@ -1963,21 +1981,21 @@ function EcoInterviewRoom({
                             disabled={fbSubmitting}
                             onClick={async () => {
                               setFbError(null);
-                              if (fbOverall === 0) {
-                                setFbError('Please give an overall rating.');
-                                return;
-                              }
-                              const missing = (
-                                [
-                                  'knowledge',
-                                  'communication',
-                                  'professionalism',
-                                  'clarity',
-                                  'experience',
-                                ] as const
-                              ).find((k) => fbAspects[k] === 0);
-                              if (missing) {
-                                setFbError('Please rate all five aspects.');
+                              // The rating is optional, but not partial: either
+                              // every star is given or none.
+                              const aspectKeys = [
+                                'knowledge',
+                                'communication',
+                                'professionalism',
+                                'clarity',
+                                'experience',
+                              ] as const;
+                              const ratingComplete =
+                                fbOverall > 0 && aspectKeys.every((k) => fbAspects[k] > 0);
+                              const ratingEmpty =
+                                fbOverall === 0 && aspectKeys.every((k) => fbAspects[k] === 0);
+                              if (!ratingComplete && !ratingEmpty) {
+                                setFbError('Please rate every question, or leave the rating blank.');
                                 return;
                               }
                               if (!fbSuggestion.trim()) {
@@ -2002,14 +2020,14 @@ function EcoInterviewRoom({
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     credentials: 'include',
-                                    // suggestion is required by the API (min 1 char) and
-                                    // validated client-side above, so it is never empty and
-                                    // never a placeholder — a stored "—" would pollute the
-                                    // admin feedback data.
+                                    // Suggestion is required; the rating is
+                                    // optional, so the stars are only sent when
+                                    // every one of them was given.
                                     body: JSON.stringify({
-                                      overall: fbOverall,
-                                      aspects: fbAspects,
                                       suggestion: fbSuggestion.trim(),
+                                      ...(ratingComplete
+                                        ? { overall: fbOverall, aspects: fbAspects }
+                                        : {}),
                                     }),
                                   },
                                 );
@@ -2092,6 +2110,29 @@ function EcoInterviewRoom({
   return (
     <div className="relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-black font-sans text-eco-fg antialiased select-none">
       <BackgroundBeams />
+
+      {/* ── Fullscreen detection ──
+          The interview opens fullscreen on join. If the candidate leaves it, a
+          non-blocking nudge offers to return; they may continue either way. */}
+      <AnimatePresence>
+        {!fullscreen && canRequestFullscreen && (
+          <motion.button
+            key="fullscreen-nudge"
+            type="button"
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.3, ease: EASE }}
+            onClick={() => {
+              document.documentElement.requestFullscreen?.().catch(() => undefined);
+            }}
+            className="fixed left-1/2 top-3 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full border border-amber-300/30 bg-amber-500/15 px-3.5 py-1.5 text-[11px] font-semibold text-amber-100 backdrop-blur-md transition-colors hover:bg-amber-500/25 cursor-pointer"
+          >
+            <ExpandIcon size={14} />
+            You left fullscreen — tap to re-enter
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* ── Reconnect Recovery Overlay ── */}
       <AnimatePresence>
