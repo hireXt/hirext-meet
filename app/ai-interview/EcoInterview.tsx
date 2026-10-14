@@ -1621,8 +1621,12 @@ function EcoInterviewRoom({
   // screen. Doing it for the candidate means the interview does not stall on
   // them finding the button.
   const sharePromptedRef = React.useRef(false);
+  // Set once the agent signals the interview is over, so the end-screen
+  // transition fires exactly once even though the message is sent reliably.
+  const concludedSignalRef = React.useRef(false);
   React.useEffect(() => {
     if (!room) return;
+    let concludeTimer: number | undefined;
     const onData = (
       payload: Uint8Array,
       _participant?: unknown,
@@ -1636,6 +1640,26 @@ function EcoInterviewRoom({
       } catch {
         return;
       }
+
+      // The agent has finished its closing line and told us the interview is
+      // over. It deliberately keeps the candidate in the room (no disconnect to
+      // key off), so we drive the wrap-up screen from this signal ourselves.
+      if (msg?.type === 'interview_concluded') {
+        if (concludedSignalRef.current) return;
+        concludedSignalRef.current = true;
+        // Let the final syllable drain before swapping to the concluded screen.
+        concludeTimer = window.setTimeout(() => {
+          setFinalDuration((prev) => prev ?? secondsRef.current);
+          setEnded(true);
+          try {
+            room.disconnect();
+          } catch (err) {
+            console.warn('Disconnect error on conclude:', err);
+          }
+        }, 1000);
+        return;
+      }
+
       if (msg?.type !== 'request_screen_share') return;
       if (sharePromptedRef.current || sharing || isScreenSharingActive) return;
       sharePromptedRef.current = true;
@@ -1656,6 +1680,7 @@ function EcoInterviewRoom({
     room.on(RoomEvent.DataReceived, onData);
     return () => {
       room.off(RoomEvent.DataReceived, onData);
+      if (concludeTimer) window.clearTimeout(concludeTimer);
     };
   }, [room, localParticipant, sharing, isScreenSharingActive]);
 
