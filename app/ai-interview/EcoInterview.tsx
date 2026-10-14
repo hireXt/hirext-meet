@@ -12,6 +12,7 @@ import {
   useRoomContext,
   useTracks,
   useTranscriptions,
+  useVoiceAssistant,
   VideoTrack,
   type TrackReferenceOrPlaceholder,
 } from '@livekit/components-react';
@@ -74,6 +75,11 @@ const estimateSpeechMs = (text: string): number =>
   Math.max(900, (text.length / ((150 / 60) * 5)) * 1000);
 
 const ECO_IDENTITY = 'eco-avatar';
+// How long a candidate's client waits for LiveKit to recover after a transient
+// drop (having already seen a reconnect attempt) before showing the concluded
+// screen. Long enough to ride out a Wi-Fi handover, short enough not to strand
+// someone whose network is genuinely gone.
+const RECONNECT_GRACE_MS = 20000;
 
 /**
  * Quick-pick reasons for the required suggestion box, shown only when the
@@ -1061,6 +1067,10 @@ function EcoInterviewRoom({
   }, [connection, previewTracks, room, userChoices]);
 
   const [seconds, setSeconds] = React.useState(0);
+  // Mirror of `seconds` for effects that must not re-run on every tick (the
+  // reconnect grace timer would otherwise be reset before it could fire).
+  const secondsRef = React.useRef(seconds);
+  secondsRef.current = seconds;
   const [sharing, setSharing] = React.useState(false);
   // Set when the automatic picker is refused (browser needs a user gesture), so
   // the share banner is surfaced instead of leaving the candidate stuck.
@@ -1068,6 +1078,17 @@ function EcoInterviewRoom({
   const [ended, setEnded] = React.useState(false);
   const [finalDuration, setFinalDuration] = React.useState<number | null>(null);
   const [concludedStage, setConcludedStage] = React.useState<'center' | 'settled'>('center');
+
+  // LiveKit publishes the AI agent's own state (listening / thinking / speaking)
+  // as the `lk.agent.state` participant attribute. We drive the status pill and
+  // the "Monica is joining…" / "thinking…" affordances from this instead of the
+  // audio-energy heuristic, which cannot tell "she is generating a reply" from
+  // "she is idle but her last note is still ringing".
+  const { state: agentState } = useVoiceAssistant();
+  // A transient network drop moves the connection through `reconnecting`; we
+  // surface a recovery overlay instead of ending the interview outright.
+  const [reconnecting, setReconnecting] = React.useState(false);
+  const sawReconnectingRef = React.useRef(false);
 
   // Feedback form state
   const [feedbackView, setFeedbackView] = React.useState<'form' | 'done'>('form');
@@ -1413,15 +1434,39 @@ function EcoInterviewRoom({
   React.useEffect(() => {
     if (connection === ConnectionState.Connected) {
       hasConnected.current = true;
+      sawReconnectingRef.current = false;
+      setReconnecting(false);
       // The room is live — tell the root so it can fade the green room away.
       // Fired here rather than on mount so the handoff covers the connect, not
       // a blank interval before it.
       onReady?.();
-    } else if (connection === ConnectionState.Disconnected && hasConnected.current) {
-      setFinalDuration((prev) => prev ?? seconds);
-      setEnded(true);
+      return;
     }
-  }, [connection, seconds]);
+    if (!hasConnected.current || ended) return;
+
+    // A drop (Wi-Fi blip, laptop sleep, mobile network switch) surfaces as
+    // `reconnecting` while LiveKit retries. Show the recovery overlay and do
+    // NOT end the interview — a few seconds of silence beats a dead session.
+    if (
+      connection === ConnectionState.Reconnecting ||
+      connection === ConnectionState.SignalReconnecting
+    ) {
+      sawReconnectingRef.current = true;
+      setReconnecting(true);
+      return;
+    }
+
+    // Terminal disconnect. If we got here through a reconnect attempt, give the
+    // client one more grace window to come back before showing the concluded
+    // screen; a clean server-side close ends immediately.
+    setReconnecting(false);
+    const graceMs = sawReconnectingRef.current ? RECONNECT_GRACE_MS : 0;
+    const t = setTimeout(() => {
+      setFinalDuration((prev) => prev ?? secondsRef.current);
+      setEnded(true);
+    }, graceMs);
+    return () => clearTimeout(t);
+  }, [connection, ended]);
 
   // Clean up all local media hardware tracks when session ends
   React.useEffect(() => {
@@ -1465,11 +1510,23 @@ function EcoInterviewRoom({
   };
 
   const speaking = energy > 0.04;
-  const statusWord = speaking
-    ? 'Speaking'
-    : connection === ConnectionState.Connected
-      ? 'Listening'
-      : 'Connecting';
+  // The agent is only "in the room" once LiveKit has reported one of its SDK
+  // states. Until then a connected candidate is still waiting on Monica.
+  const agentReady =
+    agentState === 'listening' ||
+    agentState === 'thinking' ||
+    agentState === 'speaking' ||
+    agentState === 'idle';
+  const statusWord =
+    connection !== ConnectionState.Connected
+      ? 'Connecting'
+      : !agentReady
+        ? 'Joining'
+        : agentState === 'speaking'
+          ? 'Speaking'
+          : agentState === 'thinking'
+            ? 'Thinking'
+            : 'Listening';
 
   const lines = (transcriptions as any[])
     .map((t, idx) => ({
@@ -2011,6 +2068,30 @@ function EcoInterviewRoom({
     <div className="relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-black font-sans text-eco-fg antialiased select-none">
       <BackgroundBeams />
 
+      {/* ── Reconnect Recovery Overlay ── */}
+      <AnimatePresence>
+        {reconnecting && !ended && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/75 backdrop-blur-md"
+            role="status"
+            aria-live="assertive"
+          >
+            <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-[#20C8F5]" />
+            <div className="flex flex-col items-center gap-1 text-center">
+              <span className="text-sm font-semibold text-white">Reconnecting…</span>
+              <span className="text-xs text-white/50">
+                Your connection dropped. The interview will resume automatically — please stay on
+                this page.
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Top Header ── */}
       <header className="relative z-20 flex w-full shrink-0 items-center justify-between border-b border-white/[0.06] bg-neutral-950/40 px-4 sm:px-8 py-3 backdrop-blur-xl">
         {/* Brand & Interview Session Info */}
@@ -2037,12 +2118,17 @@ function EcoInterviewRoom({
         {/* Live Status Indicators */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* AI State Pill */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/80">
+          <div
+            className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/80"
+            aria-live="polite"
+          >
             <span
               className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
-                speaking
+                agentState === 'speaking'
                   ? 'bg-[#F34BB5] shadow-[0_0_8px_#F34BB5]'
-                  : 'bg-[#20C8F5] shadow-[0_0_6px_#20C8F5]'
+                  : agentState === 'thinking'
+                    ? 'bg-[#FFC45E] animate-pulse shadow-[0_0_8px_#FFC45E]'
+                    : 'bg-[#20C8F5] shadow-[0_0_6px_#20C8F5]'
               }`}
             />
             <span>Monica is {statusWord.toLowerCase()}</span>
@@ -2279,13 +2365,21 @@ function EcoInterviewRoom({
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black to-transparent z-10" />
 
                 {lines.length === 0 ? (
-                  <div className="flex flex-col gap-2 py-8 my-auto opacity-60">
-                    <div className="inline-flex items-center text-xs font-semibold uppercase tracking-wider text-[#20C8F5]">
-                      <span>Wait for interviewer to start</span>
+                  <div className="flex flex-col gap-2 py-8 my-auto opacity-80">
+                    <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#20C8F5]">
+                      {agentReady ? (
+                        <span>Monica is ready to begin</span>
+                      ) : (
+                        <>
+                          <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/20 border-t-[#20C8F5]" />
+                          <span>Monica is joining…</span>
+                        </>
+                      )}
                     </div>
                     <p className="text-sm text-white/50 max-w-md leading-relaxed">
-                      As you and Monica speak, the live dialogue will flow here dynamically with
-                      real-time recognition.
+                      {agentReady
+                        ? 'As you and Monica speak, the live dialogue will flow here dynamically with real-time recognition.'
+                        : 'Hang tight while Monica connects — your camera and microphone are already live.'}
                     </p>
                   </div>
                 ) : (
@@ -2336,6 +2430,20 @@ function EcoInterviewRoom({
                     })}
                     <div ref={transcriptEndRef} />
                   </div>
+                )}
+
+                {/* "Thinking" affordance — the pill covers the header, but the
+                    candidate is looking at the transcript, so the cue belongs
+                    here too. Only while Monica is actually generating. */}
+                {agentState === 'thinking' && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="pointer-events-none flex items-center gap-2 px-1 pt-1 text-[11px] font-medium text-white/40"
+                  >
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#FFC45E]" />
+                    <span>Monica is thinking…</span>
+                  </motion.div>
                 )}
               </div>
             </div>
