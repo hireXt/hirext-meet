@@ -1158,6 +1158,22 @@ function EcoInterviewRoom({
   const canRequestFullscreen =
     typeof document !== 'undefined' &&
     typeof document.documentElement.requestFullscreen === 'function';
+  // Phones (and touch-only iPads, which report themselves as "Macintosh") cannot
+  // capture their screen, so the whole share flow is hidden there and the agent
+  // is told up front not to ask for it.
+  const isMobileDevice = React.useMemo(() => {
+    if (typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua)) {
+      return true;
+    }
+    return /Macintosh/.test(ua) && (navigator.maxTouchPoints ?? 0) > 1;
+  }, []);
+  // Set while we are (or just were) opening the screen-share picker: the picker
+  // closes fullscreen as a side effect, and this tells the fullscreenchange
+  // handler that the drop was not the candidate choosing to leave, so it is
+  // worth one automatic attempt to restore it.
+  const restoreFullscreenRef = React.useRef(false);
 
   // AI Noise Cancellation (Krisp)
   const [noiseFilterEnabled, setNoiseFilterEnabled] = React.useState(true);
@@ -1411,9 +1427,16 @@ function EcoInterviewRoom({
     }
   };
 
+  const enterFullscreen = React.useCallback(() => {
+    if (typeof document === 'undefined') return;
+    const el = document.documentElement;
+    if (typeof el.requestFullscreen !== 'function') return;
+    el.requestFullscreen().catch(() => undefined);
+  }, []);
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => undefined);
+      enterFullscreen();
       setFullscreen(true);
     } else {
       document.exitFullscreen().catch(() => undefined);
@@ -1422,15 +1445,33 @@ function EcoInterviewRoom({
   };
 
   React.useEffect(() => {
-    const handleFsChange = () => setFullscreen(!!document.fullscreenElement);
+    const handleFsChange = () => {
+      const active = !!document.fullscreenElement;
+      setFullscreen(active);
+      if (active) {
+        restoreFullscreenRef.current = false;
+        return;
+      }
+      if (ended) return;
+      // The screen-share picker closes fullscreen as a side effect. When the
+      // drop follows a share attempt (flag set), make one automatic attempt to
+      // restore it. A deliberate exit (Esc / the dock button) leaves the flag
+      // clear, so the candidate is never trapped — the warning banner below
+      // simply offers a one-tap return.
+      if (restoreFullscreenRef.current) {
+        restoreFullscreenRef.current = false;
+        document.documentElement.requestFullscreen?.().catch(() => undefined);
+      }
+    };
     document.addEventListener('fullscreenchange', handleFsChange);
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
-  }, []);
+  }, [ended]);
 
   // Drop fullscreen the moment the interview concludes so the "Interview
   // Concluded" end screen is shown in normal (non-fullscreen) window chrome.
   React.useEffect(() => {
     if (ended && typeof document !== 'undefined' && document.fullscreenElement) {
+      restoreFullscreenRef.current = false;
       document.exitFullscreen().catch(() => undefined);
     }
   }, [ended]);
@@ -1596,12 +1637,19 @@ function EcoInterviewRoom({
   };
 
   const toggleShare = async () => {
+    if (isMobileDevice) {
+      toast.error('Screen sharing is not available on mobile devices.');
+      return;
+    }
     try {
       const next = !sharing;
+      // Opening the picker drops fullscreen; ask to restore it once it closes.
+      if (next) restoreFullscreenRef.current = true;
       await localParticipant.setScreenShareEnabled(next);
       setSharing(next);
     } catch {
       /* user dismissed browser picker */
+      restoreFullscreenRef.current = false;
     }
   };
 
@@ -1634,6 +1682,39 @@ function EcoInterviewRoom({
         shareSignalledRef.current = false;
       });
   }, [screenShareTrack, localParticipant]);
+
+  // Warn the candidate if their screen share stops mid-interview. The agent
+  // works from what it can see, so a silent stop looks like the candidate going
+  // quiet. `stoppedSharingRef` de-dupes the warning across re-renders.
+  const stoppedSharingRef = React.useRef(false);
+  React.useEffect(() => {
+    if (isScreenSharingActive && localScreenShare) {
+      stoppedSharingRef.current = false;
+      return;
+    }
+    if (ended || isMobileDevice) return;
+    if (!shareSignalledRef.current || stoppedSharingRef.current) return;
+    stoppedSharingRef.current = true;
+    toast.error('Screen sharing stopped — share again so the interview can continue.');
+  }, [isScreenSharingActive, localScreenShare, ended, isMobileDevice]);
+
+  // Tell the agent what this device can do, as soon as the room is live. A
+  // phone cannot screen-share, so this is what stops the agent from asking.
+  React.useEffect(() => {
+    if (connection !== ConnectionState.Connected || !room?.localParticipant) return;
+    const payload = new TextEncoder().encode(
+      JSON.stringify({ type: 'client_capabilities', screen_share: !isMobileDevice }),
+    );
+    const publish = () =>
+      room.localParticipant
+        .publishData(payload, { reliable: true, topic: 'eco-screen-share' })
+        .catch((e: unknown) => console.warn('client_capabilities publish failed', e));
+    void publish();
+    // Re-send once shortly after, in case the agent's data handler was not
+    // wired at the instant we connected.
+    const t = window.setTimeout(publish, 1500);
+    return () => window.clearTimeout(t);
+  }, [room, connection, isMobileDevice]);
 
   // The agent asks us to open the share picker as soon as it prompts for the
   // screen. Doing it for the candidate means the interview does not stall on
@@ -1679,8 +1760,13 @@ function EcoInterviewRoom({
       }
 
       if (msg?.type !== 'request_screen_share') return;
+      // We told the agent up front that a phone cannot share; ignore a prompt
+      // that raced that message rather than trying a picker that would fail.
+      if (isMobileDevice) return;
       if (sharePromptedRef.current || sharing || isScreenSharingActive) return;
       sharePromptedRef.current = true;
+      // Opening the picker drops fullscreen; ask to restore it once it closes.
+      restoreFullscreenRef.current = true;
       // Chrome requires transient user activation for getDisplayMedia, so this
       // can be refused when the candidate has not clicked recently. Surface the
       // button and tell them rather than failing silently.
@@ -1690,6 +1776,7 @@ function EcoInterviewRoom({
           setSharing(true);
         } catch {
           sharePromptedRef.current = false;
+          restoreFullscreenRef.current = false;
           setSharePromptVisible(true);
           toast('Please choose what to share — click “Share screen”.');
         }
@@ -1700,7 +1787,7 @@ function EcoInterviewRoom({
       room.off(RoomEvent.DataReceived, onData);
       if (concludeTimer) window.clearTimeout(concludeTimer);
     };
-  }, [room, localParticipant, sharing, isScreenSharingActive]);
+  }, [room, localParticipant, sharing, isScreenSharingActive, isMobileDevice]);
 
   const downloadTranscript = () => {
     if (lines.length === 0) {
@@ -1995,7 +2082,9 @@ function EcoInterviewRoom({
                               const ratingEmpty =
                                 fbOverall === 0 && aspectKeys.every((k) => fbAspects[k] === 0);
                               if (!ratingComplete && !ratingEmpty) {
-                                setFbError('Please rate every question, or leave the rating blank.');
+                                setFbError(
+                                  'Please rate every question, or leave the rating blank.',
+                                );
                                 return;
                               }
                               if (!fbSuggestion.trim()) {
@@ -2112,24 +2201,23 @@ function EcoInterviewRoom({
       <BackgroundBeams />
 
       {/* ── Fullscreen detection ──
-          The interview opens fullscreen on join. If the candidate leaves it, a
-          non-blocking nudge offers to return; they may continue either way. */}
+          The interview opens fullscreen on join. If fullscreen is dropped (the
+          screen-share picker does this on its own), we try to restore it; when
+          the browser refuses, this warning offers a one-tap return. */}
       <AnimatePresence>
         {!fullscreen && canRequestFullscreen && (
           <motion.button
-            key="fullscreen-nudge"
+            key="fullscreen-warning"
             type="button"
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.3, ease: EASE }}
-            onClick={() => {
-              document.documentElement.requestFullscreen?.().catch(() => undefined);
-            }}
-            className="fixed left-1/2 top-3 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full border border-amber-300/30 bg-amber-500/15 px-3.5 py-1.5 text-[11px] font-semibold text-amber-100 backdrop-blur-md transition-colors hover:bg-amber-500/25 cursor-pointer"
+            onClick={enterFullscreen}
+            className="fixed left-1/2 top-3 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full border border-amber-300/40 bg-amber-500/20 px-4 py-2 text-[11px] font-semibold text-amber-50 shadow-lg shadow-amber-950/30 backdrop-blur-md transition-colors hover:bg-amber-500/30 cursor-pointer"
           >
-            <ExpandIcon size={14} />
-            You left fullscreen — tap to re-enter
+            <WarningIcon size={14} />
+            Fullscreen was exited — tap to return for the best interview experience
           </motion.button>
         )}
       </AnimatePresence>
@@ -2682,7 +2770,7 @@ function EcoInterviewRoom({
           </motion.div>
         )}
 
-        {!sharing && !isScreenSharingActive && (
+        {!isMobileDevice && !sharing && !isScreenSharingActive && (
           <motion.div
             className="relative z-10 mx-auto max-w-md w-full flex items-center justify-between gap-3 rounded-full border border-[#20C8F5]/20 bg-[#20C8F5]/[0.05] px-4 py-2 text-[11px] text-white/80 backdrop-blur-md mb-2 shadow-lg"
             initial={{ opacity: 0, y: 8 }}
@@ -2919,20 +3007,22 @@ function EcoInterviewRoom({
             </AnimatePresence>
           </div>
 
-          {/* Screen Share Button */}
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={toggleShare}
-            className={`inline-flex h-11 items-center gap-2 rounded-full border px-4 text-xs font-semibold transition-all duration-200 ${
-              sharing
-                ? 'border-[#245BFF] bg-gradient-to-r from-[#245BFF] to-[#20C8F5] text-white font-bold shadow-[0_0_18px_rgba(36,91,255,0.4)]'
-                : 'border-white/10 bg-white/[0.06] text-white/90 hover:bg-white/[0.12] hover:text-white'
-            }`}
-            title={sharing ? 'Stop sharing screen' : 'Share your screen'}
-          >
-            <ScreenShareIcon size={16} />
-            <span className="hidden sm:inline">{sharing ? 'Sharing' : 'Share'}</span>
-          </motion.button>
+          {/* Screen Share Button (hidden on phones, which cannot share) */}
+          {!isMobileDevice && (
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleShare}
+              className={`inline-flex h-11 items-center gap-1.5 rounded-full border px-3 sm:px-4 transition-all duration-200 ${
+                sharing
+                  ? 'border-[#20C8F5]/60 bg-[#20C8F5]/15 text-[#20C8F5]'
+                  : 'border-white/10 bg-white/[0.06] text-white/80 hover:bg-white/[0.12] hover:text-white'
+              }`}
+              title={sharing ? 'Stop sharing screen' : 'Share your screen'}
+            >
+              <ScreenShareIcon size={17} />
+              <span className="hidden sm:inline">{sharing ? 'Sharing' : 'Share'}</span>
+            </motion.button>
+          )}
 
           {/* Settings Button */}
           <motion.button
