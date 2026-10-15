@@ -479,8 +479,8 @@ function Screen({
     <div className="relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-black font-sans text-[#eef1f5] antialiased select-none">
       <BackgroundBeams />
 
-      <header className="relative z-20 flex shrink-0 items-center justify-between border-b border-white/[0.06] bg-neutral-950/40 px-6 py-3.5 backdrop-blur-xl">
-        <div className="flex items-center gap-3">
+      <header className="relative z-20 flex w-full shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] bg-neutral-950/40 px-4 sm:px-6 py-3.5 backdrop-blur-xl">
+        <div className="flex min-w-0 items-center gap-3">
           <img
             src="/logo.png"
             alt="HireXt Logo"
@@ -493,14 +493,14 @@ function Screen({
 
           <span className="h-3.5 w-px bg-white/15" />
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-white/80">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="hidden sm:inline text-xs font-medium text-white/80 truncate">
               Senior Software Engineer Assessment
             </span>
           </div>
         </div>
 
-        <div className="hidden lg:flex items-center gap-2">
+        <div className="hidden xl:flex items-center gap-2">
           {onModeChange && (
             <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
               {(['video', 'audio', 'both', 'greenroom', 'concluded'] as const).map((s) => (
@@ -552,8 +552,8 @@ function Screen({
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/80">
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="hidden sm:inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/80">
             <span
               className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
                 speaking
@@ -677,7 +677,7 @@ function Screen({
       </header>
 
       <main className="relative z-10 flex min-h-0 flex-1 flex-col gap-2.5 px-3 sm:px-6 py-2 container mx-auto w-full">
-        <div className="grid flex-1 grid-cols-1 lg:grid-cols-12 gap-5 min-h-0 w-full h-full items-stretch">
+        <div className="grid flex-1 grid-cols-1 grid-rows-[auto_1fr] lg:grid-rows-none lg:grid-cols-12 gap-5 min-h-0 w-full h-full items-stretch">
           <div className="lg:col-span-7 xl:col-span-8 flex flex-col justify-between min-h-0 h-full relative py-2 px-1 sm:px-3 order-2 lg:order-1">
             <div
               ref={transcriptContainerRef}
@@ -726,8 +726,8 @@ function Screen({
             </div>
           </div>
 
-          <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-3 min-h-0 h-full justify-center order-1 lg:order-2">
-            <div className="rounded-[1.75rem] p-1.5 flex flex-col flex-1 min-h-0">
+          <div className="lg:col-span-5 xl:col-span-4 flex flex-row lg:flex-col gap-3 min-h-0 h-full justify-center order-1 lg:order-2">
+            <div className="rounded-[1.75rem] p-1.5 flex flex-col flex-1 min-h-0 aspect-square lg:aspect-auto">
               <div className="relative flex flex-1 w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)]">
                 {showVideo ? (
                   <video
@@ -786,7 +786,7 @@ function Screen({
               </div>
             </div>
 
-            <div className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.03] p-1.5 shadow-xl flex flex-col flex-1 min-h-0">
+            <div className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.03] p-1.5 shadow-xl flex flex-col flex-1 min-h-0 aspect-square lg:aspect-auto">
               <div className="relative flex flex-1 w-full items-center justify-center overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-neutral-950/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
                 {cameraEnabled ? (
                   <video
@@ -833,9 +833,9 @@ function Screen({
         </div>
       </main>
 
-      <div className="relative z-20 flex shrink-0 justify-center px-4 pb-3 sm:pb-4 pt-1">
+      <div className="relative z-20 flex shrink-0 justify-center px-2 sm:px-4 pb-3 sm:pb-4 pt-1">
         <motion.footer
-          className="inline-flex items-center gap-2 rounded-full border border-white/[0.12] bg-neutral-950/85 p-2 backdrop-blur-2xl shadow-[0_16px_48px_rgba(0,0,0,0.7)]"
+          className="inline-flex items-center justify-center gap-1 sm:gap-2 rounded-full border border-white/[0.12] bg-neutral-950/85 p-1.5 sm:p-2 backdrop-blur-2xl shadow-[0_16px_48px_rgba(0,0,0,0.7)]"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: EASE }}
@@ -851,13 +851,13 @@ function Screen({
               <button
                 type="button"
                 onClick={() => setMicEnabled(!micEnabled)}
-                className="inline-flex items-center gap-2 pl-3.5 pr-2.5 text-xs font-semibold hover:bg-white/10 transition-colors active:scale-95"
+                className="inline-flex items-center gap-2 px-3 sm:pl-3.5 sm:pr-2.5 text-xs font-semibold hover:bg-white/10 transition-colors active:scale-95"
                 title={micEnabled ? 'Mute microphone' : 'Unmute microphone'}
               >
                 {micEnabled ? <MicIcon size={16} /> : <MicOffIcon size={16} />}
-                <span>{micEnabled ? 'Mic' : 'Muted'}</span>
+                <span className="hidden sm:inline">{micEnabled ? 'Mic' : 'Muted'}</span>
               </button>
-              <div className="w-px self-stretch bg-white/15 my-2" />
+              <div className="hidden sm:block w-px self-stretch bg-white/15 my-2" />
               <button
                 type="button"
                 onClick={() => {
@@ -865,7 +865,7 @@ function Screen({
                   setCameraMenuOpen(false);
                   setMoreMenuOpen(false);
                 }}
-                className="inline-flex items-center px-2.5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                className="hidden sm:inline-flex items-center px-2.5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
                 title="Microphone & speaker settings"
               >
                 <ChevronUpIcon
@@ -965,13 +965,13 @@ function Screen({
               <button
                 type="button"
                 onClick={() => setCameraEnabled(!cameraEnabled)}
-                className="inline-flex items-center gap-2 pl-3.5 pr-2.5 text-xs font-semibold hover:bg-white/10 transition-colors active:scale-95"
+                className="inline-flex items-center gap-2 px-3 sm:pl-3.5 sm:pr-2.5 text-xs font-semibold hover:bg-white/10 transition-colors active:scale-95"
                 title={cameraEnabled ? 'Turn off camera' : 'Turn on camera'}
               >
                 {cameraEnabled ? <CameraIcon size={16} /> : <CameraOffIcon size={16} />}
-                <span>{cameraEnabled ? 'Camera' : 'Cam off'}</span>
+                <span className="hidden sm:inline">{cameraEnabled ? 'Camera' : 'Cam off'}</span>
               </button>
-              <div className="w-px self-stretch bg-white/15 my-2" />
+              <div className="hidden sm:block w-px self-stretch bg-white/15 my-2" />
               <button
                 type="button"
                 onClick={() => {
@@ -979,7 +979,7 @@ function Screen({
                   setMicMenuOpen(false);
                   setMoreMenuOpen(false);
                 }}
-                className="inline-flex items-center px-2.5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                className="hidden sm:inline-flex items-center px-2.5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
                 title="Camera device settings"
               >
                 <ChevronUpIcon
@@ -1034,7 +1034,7 @@ function Screen({
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setSharing(!sharing)}
-            className={`inline-flex h-11 items-center gap-2 rounded-full border px-4 text-xs font-semibold transition-all duration-200 ${
+            className={`hidden sm:inline-flex h-11 items-center gap-2 rounded-full border px-3 sm:px-4 text-xs font-semibold transition-all duration-200 ${
               sharing
                 ? 'border-[#FF00A0] bg-gradient-to-r from-[#FF3E3E] via-[#FF00A0] to-[#A200FF] text-white font-bold shadow-[0_0_16px_rgba(255,0,160,0.4)]'
                 : 'border-white/10 bg-white/[0.06] text-white/90 hover:bg-white/[0.12] hover:text-white'
@@ -1048,7 +1048,7 @@ function Screen({
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setSettingsOpen(true)}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/80 hover:bg-white/[0.12] hover:text-white transition-all duration-200"
+            className="hidden sm:inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/80 hover:bg-white/[0.12] hover:text-white transition-all duration-200"
             title="Audio & Video Settings"
           >
             <SettingsIcon size={17} />
@@ -1123,11 +1123,11 @@ function Screen({
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setConfirmLeaveOpen(true)}
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-[#F52D45] px-5 text-xs font-bold text-white transition-all duration-200 hover:bg-[#d92238] active:bg-[#b8182c] shadow-[0_2px_16px_rgba(245,45,69,0.45)] hover:shadow-[0_4px_24px_rgba(245,45,69,0.65)] cursor-pointer"
+            className="inline-flex h-11 items-center gap-2 rounded-full bg-[#F52D45] px-4 sm:px-5 text-xs font-bold text-white transition-all duration-200 hover:bg-[#d92238] active:bg-[#b8182c] shadow-[0_2px_16px_rgba(245,45,69,0.45)] hover:shadow-[0_4px_24px_rgba(245,45,69,0.65)] cursor-pointer"
             title="Conclude interview session"
           >
             <PhoneOffIcon size={16} />
-            <span>End Interview</span>
+            <span className="hidden sm:inline">End Interview</span>
           </motion.button>
         </motion.footer>
       </div>
@@ -1362,7 +1362,7 @@ function PreJoinPreview({
             </div>
           )}
 
-          <div className="hidden sm:inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/80">
+          <div className="hidden sm:inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/80">
             <span className="relative flex h-2 w-2 items-center justify-center">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00A3FF] opacity-60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#00A3FF]" />
