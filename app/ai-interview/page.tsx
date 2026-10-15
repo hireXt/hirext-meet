@@ -22,6 +22,10 @@ export default async function AiInterviewPage(props: {
   const interviewTitle = pick('title') || pick('role') || 'Assessment';
   const companyName = pick('company') || 'HireXt';
   const resultBase = pick('resultBase');
+  // Present only when the API has candidate-side recording enabled: it is the
+  // browser's authorisation to upload chunks for this session, and the switch
+  // that turns the recorder on in the room.
+  const recordToken = pick('recordToken');
 
   if (!liveKitUrl || !token) {
     return (
@@ -66,6 +70,7 @@ export default async function AiInterviewPage(props: {
       candidateName={candidateName}
       isNameFixed={!!candidateName}
       resultBase={resultBase}
+      recordToken={recordToken}
       interviewTitle={interviewTitle}
       companyName={companyName}
     />

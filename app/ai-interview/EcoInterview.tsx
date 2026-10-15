@@ -32,6 +32,8 @@ import { TextGenerateEffect } from '@/components/ui/text-generate-effect';
 import { playSpeakerTestSound } from '@/lib/audioTest';
 import { LiveKitVoiceNoiseProcessor } from '@/lib/audioNoiseFilter';
 import { BrandLogo } from '@/lib/ailink/BrandLogo';
+import { isMobileBrowser } from '@/lib/device';
+import { useInterviewRecorder } from '@/lib/useInterviewRecorder';
 import {
   CameraIcon,
   CameraOffIcon,
@@ -63,6 +65,12 @@ export interface EcoInterviewProps {
   resultBase?: string;
   interviewTitle?: string;
   companyName?: string;
+  /**
+   * Short-lived token minted by the API with the join URL. Its presence is what
+   * switches the candidate-side recorder on — no token means the server has it
+   * disabled, and the room shows no recording affordance at all.
+   */
+  recordToken?: string;
 }
 
 /**
@@ -241,6 +249,8 @@ interface EcoPreJoinProps {
   isNameFixed?: boolean;
   interviewTitle: string;
   companyName: string;
+  /** This device can record the interview (desktop browser + server enabled). */
+  recordingAvailable?: boolean;
   onJoin: (
     tracks: Awaited<ReturnType<typeof createLocalTracks>>,
     username: string,
@@ -259,6 +269,7 @@ function EcoPreJoin({
   isNameFixed = false,
   interviewTitle,
   companyName,
+  recordingAvailable = false,
   onJoin,
 }: EcoPreJoinProps) {
   const [username, setUsername] = React.useState(defaultUsername);
@@ -775,6 +786,41 @@ function EcoPreJoin({
                   </div>
                 </div>
 
+                {/* Recording notice — set the expectation before they join.
+                    Phones genuinely cannot record (no desktop-class canvas and
+                    no upload headroom for the length of an interview), so say it
+                    here rather than letting a candidate assume they were taped. */}
+                <div
+                  className={`mt-1 flex items-start gap-2.5 rounded-xl border px-3 py-2.5 text-[11px] leading-relaxed ${
+                    recordingAvailable
+                      ? 'border-emerald-400/25 bg-emerald-400/[0.07] text-emerald-100/90'
+                      : 'border-amber-400/25 bg-amber-400/[0.07] text-amber-100/90'
+                  }`}
+                >
+                  <span className="mt-0.5 shrink-0">
+                    {recordingAvailable ? (
+                      <ShieldCheckIcon size={13} className="text-emerald-300" />
+                    ) : (
+                      <WarningIcon size={13} className="text-amber-300" />
+                    )}
+                  </span>
+                  <span>
+                    {recordingAvailable ? (
+                      <>
+                        This interview is{' '}
+                        <strong className="font-semibold text-white">recorded</strong> for review. A
+                        copy is saved to your device the moment you finish.
+                      </>
+                    ) : (
+                      <>
+                        Recording needs a laptop or desktop with Chrome or Edge. You can still{' '}
+                        <strong className="font-semibold text-white">take the interview</strong> on
+                        this device — it just will not be recorded.
+                      </>
+                    )}
+                  </span>
+                </div>
+
                 {/* Join Interview Button */}
                 <button
                   type="submit"
@@ -843,11 +889,14 @@ function EcoInterviewRoom({
   userChoices,
   onReady,
   posterUrl,
+  recordToken,
 }: {
   candidateName: string;
   interviewTitle?: string;
   companyName?: string;
   resultBase?: string;
+  /** Server-minted token that switches the candidate-side recorder on. */
+  recordToken?: string;
   previewTracks: Awaited<ReturnType<typeof createLocalTracks>>;
   userChoices: {
     videoEnabled: boolean;
@@ -1161,14 +1210,25 @@ function EcoInterviewRoom({
   // Phones (and touch-only iPads, which report themselves as "Macintosh") cannot
   // capture their screen, so the whole share flow is hidden there and the agent
   // is told up front not to ask for it.
-  const isMobileDevice = React.useMemo(() => {
-    if (typeof navigator === 'undefined') return false;
-    const ua = navigator.userAgent || '';
-    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua)) {
-      return true;
-    }
-    return /Macintosh/.test(ua) && (navigator.maxTouchPoints ?? 0) > 1;
-  }, []);
+  const isMobileDevice = React.useMemo(() => isMobileBrowser(), []);
+
+  // ── Candidate-side recording ──────────────────────────────────────────────
+  // The interview is recorded in this browser (lib/useInterviewRecorder), so the
+  // LiveKit SFU carries no extra load and 30 concurrent sessions stay smooth.
+  // Desktop only — the green room tells phone candidates up front that they can
+  // still interview, just without a recording.
+  const recordingEnabled = !!recordToken && !isMobileDevice;
+  const recorder = useInterviewRecorder({
+    enabled: recordingEnabled,
+    armed: connection === ConnectionState.Connected,
+    ending: ended,
+    room,
+    sessionId: room.name,
+    recordToken,
+    apiBase: (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, ''),
+    interviewerName: 'Monica',
+    candidateName: candidateName || 'You',
+  });
   // Set while we are (or just were) opening the screen-share picker: the picker
   // closes fullscreen as a side effect, and this tells the fullscreenchange
   // handler that the drop was not the candidate choosing to leave, so it is
@@ -1550,6 +1610,13 @@ function EcoInterviewRoom({
   const handleEndAndSubmit = () => {
     setConfirmLeaveOpen(false);
     setFinalDuration(seconds);
+    // Finalize the recording BEFORE the tracks die, otherwise the last
+    // timeslice is captured from already-stopped audio/video tracks.
+    try {
+      recorder.stop();
+    } catch {
+      /* already finalised */
+    }
     setEnded(true);
     try {
       previewTracks?.forEach((t) => {
@@ -1935,6 +2002,26 @@ function EcoInterviewRoom({
                     <dt className="text-white/40">Status</dt>
                     <dd className="text-emerald-400 font-medium">Submitted</dd>
                   </div>
+                  {/* Recording outcome. The candidate's copy is downloaded the
+                      moment the interview ends; "Saved" means the server has
+                      its copy too, "On your device" means only the local one
+                      survives, so it is called out rather than hidden. */}
+                  {recorder.label && (
+                    <div className="flex items-center gap-2">
+                      <dt className="text-white/40">Recording</dt>
+                      <dd
+                        className={
+                          recorder.status === 'saved'
+                            ? 'text-emerald-400 font-medium'
+                            : recorder.status === 'device-only'
+                              ? 'text-amber-300 font-medium'
+                              : 'text-sky-400 font-medium'
+                        }
+                      >
+                        {recorder.label}
+                      </dd>
+                    </div>
+                  )}
                 </motion.dl>
               </div>
 
@@ -2288,9 +2375,27 @@ function EcoInterviewRoom({
             <span>Monica is {statusWord.toLowerCase()}</span>
           </div>
 
-          {/* Recording & Timer */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#F52D45]/30 bg-[#F52D45]/15 px-3 py-1.5 text-[11px] font-semibold text-[#F52D45]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#F52D45] animate-pulse" />
+          {/* Recording & Timer — the red light only burns while this browser is
+              actually recording. Phones cannot record, so they get a neutral
+              timer instead of a recording indicator that would be a lie. */}
+          <div
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${
+              recorder.status === 'recording'
+                ? 'border-[#F52D45]/30 bg-[#F52D45]/15 text-[#F52D45]'
+                : 'border-white/[0.08] bg-white/[0.03] text-white/70'
+            }`}
+            title={
+              recorder.status === 'recording'
+                ? 'This interview is being recorded'
+                : 'Elapsed time'
+            }
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                recorder.status === 'recording' ? 'bg-[#F52D45] animate-pulse' : 'bg-white/30'
+              }`}
+            />
+            {recorder.status === 'recording' && <span className="hidden sm:inline">REC</span>}
             <span className="font-mono tabular-nums">{fmt(seconds)}</span>
           </div>
 
@@ -3420,6 +3525,14 @@ export function EcoInterview(props: EcoInterviewProps) {
     return () => clearTimeout(t);
   }, [phase]);
 
+  // Recording availability for the green-room notice: a phone can still join,
+  // it just cannot be recorded, and the server only mints a token when
+  // candidate-side recording is enabled.
+  const recordingAvailable = React.useMemo(
+    () => !!props.recordToken && !isMobileBrowser(),
+    [props.recordToken],
+  );
+
   return (
     // LayoutGroup so the candidate video is a SHARED element: the same
     // layoutId in the green room and in the interview room lets Framer Motion
@@ -3444,6 +3557,7 @@ export function EcoInterview(props: EcoInterviewProps) {
               previewTracks={preAcquiredTracks}
               userChoices={userChoices}
               posterUrl={poster}
+              recordToken={props.recordToken}
               onReady={() => setPhase('live')}
             />
           </LiveKitRoom>
@@ -3463,6 +3577,7 @@ export function EcoInterview(props: EcoInterviewProps) {
                 isNameFixed={props.isNameFixed}
                 interviewTitle={props.interviewTitle || 'Assessment'}
                 companyName={props.companyName || 'HireXt'}
+                recordingAvailable={recordingAvailable}
                 onJoin={(tracks, name, choices, frozen) => {
                   setResolvedUsername(name);
                   setUserChoices(choices);
