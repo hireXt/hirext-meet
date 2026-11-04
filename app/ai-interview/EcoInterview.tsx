@@ -1800,7 +1800,7 @@ function EcoInterviewRoom({
       topic?: string,
     ) => {
       if (topic && topic !== 'eco-screen-share') return;
-      let msg: { type?: string } | null = null;
+      let msg: { type?: string; device?: string } | null = null;
       try {
         msg = JSON.parse(new TextDecoder().decode(payload));
       } catch {
@@ -1823,6 +1823,46 @@ function EcoInterviewRoom({
             console.warn('Disconnect error on conclude:', err);
           }
         }, 1000);
+        return;
+      }
+
+      // The interviewer can switch the microphone or camera back on for the
+      // candidate. The agent fires this and moves on without waiting, so the
+      // outcome is reported back on the same channel: the agent treats a browser
+      // refusal differently from a request the candidate ignored, and stops
+      // escalating a device the platform will not give us.
+      if (msg?.type === 'request_media') {
+        const device = msg.device;
+        if (device !== 'camera' && device !== 'mic') return;
+        const label = device === 'camera' ? 'Camera' : 'Microphone';
+        void (async () => {
+          try {
+            if (device === 'camera') {
+              await localParticipant.setCameraEnabled(true);
+            } else {
+              await localParticipant.setMicrophoneEnabled(true);
+            }
+            // Never silent: the candidate is told who turned it on.
+            toast(`${label} turned on by the interviewer`);
+            await localParticipant.publishData(
+              new TextEncoder().encode(JSON.stringify({ type: 'media_enabled', device })),
+              { reliable: true, topic: 'eco-screen-share' },
+            );
+          } catch (e) {
+            console.warn(`${device} enable request failed`, e);
+            toast.error(
+              device === 'camera'
+                ? 'Could not turn on your camera — please switch it on yourself.'
+                : 'Could not turn on your microphone — please switch it on yourself.',
+            );
+            await localParticipant
+              .publishData(
+                new TextEncoder().encode(JSON.stringify({ type: 'media_denied', device })),
+                { reliable: true, topic: 'eco-screen-share' },
+              )
+              .catch(() => undefined);
+          }
+        })();
         return;
       }
 
